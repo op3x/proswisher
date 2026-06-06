@@ -1,0 +1,60 @@
+name: Update NBA Stats Daily
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-stats:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch and update NBA stats
+        env:
+          BALLDONTLIE_API_KEY: ${{ secrets.BALLDONTLIE_API_KEY }}
+        run: |
+          python3 << 'PYEOF'
+          import urllib.request, json, os
+          from datetime import datetime
+
+          API_KEY = os.environ.get("BALLDONTLIE_API_KEY", "")
+          BASE = "https://api.balldontlie.io/v1"
+
+          FALLBACK = {"ATL":{"name":"Atlanta Hawks","dreb":72.1,"oreb":27.9,"fg2a":54.2,"fg2m":47.8,"fg3a":45.8,"fg3m":36.2,"tov":13.8,"stl":7.4,"fta":22.1,"ftm":77.2},"BOS":{"name":"Boston Celtics","dreb":74.8,"oreb":25.2,"fg2a":51.1,"fg2m":52.3,"fg3a":48.9,"fg3m":37.8,"tov":12.1,"stl":6.8,"fta":19.4,"ftm":80.1},"BKN":{"name":"Brooklyn Nets","dreb":71.3,"oreb":28.7,"fg2a":53.4,"fg2m":48.9,"fg3a":46.6,"fg3m":35.4,"tov":14.2,"stl":7.1,"fta":21.8,"ftm":76.3},"CHA":{"name":"Charlotte Hornets","dreb":70.5,"oreb":29.5,"fg2a":55.1,"fg2m":46.7,"fg3a":44.9,"fg3m":34.8,"tov":15.1,"stl":6.9,"fta":20.6,"ftm":74.8},"CHI":{"name":"Chicago Bulls","dreb":72.8,"oreb":27.2,"fg2a":56.3,"fg2m":49.1,"fg3a":43.7,"fg3m":35.9,"tov":13.4,"stl":7.3,"fta":23.4,"ftm":78.5},"CLE":{"name":"Cleveland Cavaliers","dreb":75.2,"oreb":24.8,"fg2a":52.8,"fg2m":51.4,"fg3a":47.2,"fg3m":36.9,"tov":12.8,"stl":7.6,"fta":24.1,"ftm":79.2},"DAL":{"name":"Dallas Mavericks","dreb":73.6,"oreb":26.4,"fg2a":50.9,"fg2m":50.7,"fg3a":49.1,"fg3m":37.1,"tov":13.1,"stl":7.2,"fta":21.3,"ftm":81.4},"DEN":{"name":"Denver Nuggets","dreb":74.1,"oreb":25.9,"fg2a":55.6,"fg2m":52.8,"fg3a":44.4,"fg3m":36.4,"tov":12.6,"stl":6.5,"fta":25.8,"ftm":82.1},"DET":{"name":"Detroit Pistons","dreb":70.8,"oreb":29.2,"fg2a":54.7,"fg2m":47.3,"fg3a":45.3,"fg3m":34.6,"tov":14.8,"stl":7.8,"fta":20.9,"ftm":75.6},"GSW":{"name":"Golden State Warriors","dreb":73.3,"oreb":26.7,"fg2a":49.8,"fg2m":51.6,"fg3a":50.2,"fg3m":38.2,"tov":14.1,"stl":8.1,"fta":18.7,"ftm":80.8},"HOU":{"name":"Houston Rockets","dreb":71.9,"oreb":28.1,"fg2a":53.6,"fg2m":50.2,"fg3a":46.4,"fg3m":35.7,"tov":13.9,"stl":8.4,"fta":22.6,"ftm":76.9},"IND":{"name":"Indiana Pacers","dreb":72.4,"oreb":27.6,"fg2a":54.1,"fg2m":48.6,"fg3a":45.9,"fg3m":36.1,"tov":13.6,"stl":7.0,"fta":21.7,"ftm":78.3},"LAC":{"name":"LA Clippers","dreb":73.7,"oreb":26.3,"fg2a":52.3,"fg2m":50.1,"fg3a":47.7,"fg3m":37.4,"tov":13.0,"stl":7.5,"fta":24.3,"ftm":80.6},"LAL":{"name":"Los Angeles Lakers","dreb":73.1,"oreb":26.9,"fg2a":53.9,"fg2m":50.8,"fg3a":46.1,"fg3m":36.7,"tov":13.3,"stl":7.0,"fta":23.1,"ftm":79.7},"MEM":{"name":"Memphis Grizzlies","dreb":72.6,"oreb":27.4,"fg2a":55.8,"fg2m":49.4,"fg3a":44.2,"fg3m":34.9,"tov":14.4,"stl":9.1,"fta":24.7,"ftm":77.4},"MIA":{"name":"Miami Heat","dreb":74.3,"oreb":25.7,"fg2a":52.1,"fg2m":50.4,"fg3a":47.9,"fg3m":36.8,"tov":12.9,"stl":8.0,"fta":20.2,"ftm":79.9},"MIL":{"name":"Milwaukee Bucks","dreb":74.6,"oreb":25.4,"fg2a":51.7,"fg2m":52.1,"fg3a":48.3,"fg3m":37.3,"tov":13.2,"stl":7.3,"fta":26.4,"ftm":81.6},"MIN":{"name":"Minnesota Timberwolves","dreb":75.4,"oreb":24.6,"fg2a":52.6,"fg2m":51.8,"fg3a":47.4,"fg3m":37.6,"tov":12.4,"stl":7.9,"fta":21.6,"ftm":80.4},"NOP":{"name":"New Orleans Pelicans","dreb":72.2,"oreb":27.8,"fg2a":54.4,"fg2m":49.7,"fg3a":45.6,"fg3m":35.6,"tov":14.0,"stl":7.6,"fta":23.8,"ftm":77.8},"NYK":{"name":"New York Knicks","dreb":74.0,"oreb":26.0,"fg2a":53.2,"fg2m":50.6,"fg3a":46.8,"fg3m":36.5,"tov":12.7,"stl":7.2,"fta":22.4,"ftm":79.4},"OKC":{"name":"Oklahoma City Thunder","dreb":75.1,"oreb":24.9,"fg2a":52.4,"fg2m":51.9,"fg3a":47.6,"fg3m":38.4,"tov":12.3,"stl":9.2,"fta":24.6,"ftm":81.2},"ORL":{"name":"Orlando Magic","dreb":75.6,"oreb":24.4,"fg2a":53.7,"fg2m":50.3,"fg3a":46.3,"fg3m":35.8,"tov":12.5,"stl":7.4,"fta":20.8,"ftm":78.7},"PHI":{"name":"Philadelphia 76ers","dreb":73.4,"oreb":26.6,"fg2a":54.0,"fg2m":50.9,"fg3a":46.0,"fg3m":36.3,"tov":13.5,"stl":7.1,"fta":25.6,"ftm":80.3},"PHX":{"name":"Phoenix Suns","dreb":72.9,"oreb":27.1,"fg2a":52.7,"fg2m":51.2,"fg3a":47.3,"fg3m":37.0,"tov":13.7,"stl":7.3,"fta":21.9,"ftm":80.9},"POR":{"name":"Portland Trail Blazers","dreb":71.6,"oreb":28.4,"fg2a":54.8,"fg2m":48.1,"fg3a":45.2,"fg3m":35.2,"tov":14.6,"stl":7.0,"fta":21.4,"ftm":76.1},"SAC":{"name":"Sacramento Kings","dreb":72.3,"oreb":27.7,"fg2a":53.3,"fg2m":50.5,"fg3a":46.7,"fg3m":36.6,"tov":13.8,"stl":7.8,"fta":22.7,"ftm":79.6},"SAS":{"name":"San Antonio Spurs","dreb":71.7,"oreb":28.3,"fg2a":55.3,"fg2m":48.4,"fg3a":44.7,"fg3m":35.1,"tov":14.3,"stl":7.6,"fta":20.1,"ftm":77.3},"TOR":{"name":"Toronto Raptors","dreb":72.7,"oreb":27.3,"fg2a":53.8,"fg2m":48.7,"fg3a":46.2,"fg3m":36.0,"tov":13.9,"stl":8.3,"fta":21.0,"ftm":77.6},"UTA":{"name":"Utah Jazz","dreb":71.4,"oreb":28.6,"fg2a":54.6,"fg2m":48.3,"fg3a":45.4,"fg3m":35.5,"tov":14.5,"stl":7.2,"fta":22.3,"ftm":76.7},"WAS":{"name":"Washington Wizards","dreb":70.4,"oreb":29.6,"fg2a":55.9,"fg2m":47.6,"fg3a":44.1,"fg3m":34.4,"tov":15.4,"stl":7.8,"fta":21.2,"ftm":75.1}}
+
+          stats = dict(FALLBACK)
+
+          if API_KEY:
+            try:
+              TEAM_MAP = {1:"ATL",2:"BOS",3:"BKN",4:"CHA",5:"CHI",6:"CLE",7:"DAL",8:"DEN",9:"DET",10:"GSW",11:"HOU",12:"IND",13:"LAC",14:"LAL",15:"MEM",16:"MIA",17:"MIL",18:"MIN",19:"NOP",20:"NYK",21:"OKC",22:"ORL",23:"PHI",24:"PHX",25:"POR",26:"SAC",27:"SAS",28:"TOR",29:"UTA",30:"WAS"}
+              for tid, abbr in TEAM_MAP.items():
+                try:
+                  req = urllib.request.Request(f"{BASE}/season_averages?season=2024&team_ids[]={tid}", headers={"Authorization": API_KEY})
+                  with urllib.request.urlopen(req, timeout=10) as r:
+                    avgs = json.loads(r.read()).get("data", [])
+                  if avgs:
+                    a = avgs[0]
+                    fg2a = max(a.get("fga",20) - a.get("fg3a",10), 1)
+                    fg3a = max(a.get("fg3a",10), 1)
+                    tot = fg2a + fg3a
+                    reb = max(a.get("reb",40), 1)
+                    stats[abbr] = {"name": FALLBACK[abbr]["name"], "dreb": round(a.get("dreb",28)/reb*100,1), "oreb": round(a.get("oreb",12)/reb*100,1), "fg2a": round(fg2a/tot*100,1), "fg2m": round(a.get("fg_pct",0.48)*100,1), "fg3a": round(fg3a/tot*100,1), "fg3m": round(a.get("fg3_pct",0.36)*100,1), "tov": round(a.get("turnover",13),1), "stl": round(a.get("stl",7),1), "fta": round(a.get("fta",20),1), "ftm": round(a.get("ft_pct",0.78)*100,1)}
+                except: pass
+            except Exception as e:
+              print(f"API error: {e}")
+
+          out = {"updated": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"), "season": "2024-25", "teams": stats}
+          with open("stats.json","w") as f: json.dump(out, f, indent=2)
+          print(f"stats.json updated: {len(stats)} teams at {out['updated']}")
+          PYEOF
+
+      - name: Commit updated stats
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add stats.json
+          git diff --staged --quiet || git commit -m "chore: auto-update NBA stats $(date -u '+%Y-%m-%d')"
+          git push

@@ -83,7 +83,7 @@ test("451 only on sign-up page and checkout creation; health and webhook never g
     const [, params] = stripe.calls.find(([n]) => n === "checkout.sessions.create");
     assert.equal(params.mode, "subscription"); assert.equal(params.billing_address_collection, "required");
     // P10 consent record: time, IP, text version, price, 21+ (the one place a raw IP is kept)
-    assert.equal(params.metadata.consent_ip, "192.0.2.50"); assert.equal(params.metadata.consent_version, "consent-v1-2026-10-25");
+    assert.equal(params.metadata.consent_ip, undefined); assert.equal(params.subscription_data.metadata.consent_ip, "192.0.2.50"); assert.equal(params.metadata.consent_version, "consent-v1-2026-10-25");
     assert.equal(params.metadata.age_21_confirmed, "true"); assert.ok(params.metadata.price_shown.startsWith("$9"));
     assert.equal(params.metadata.ip_country, "US");
   } finally { s.close(); }

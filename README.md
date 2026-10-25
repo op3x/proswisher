@@ -16,7 +16,7 @@ Web-only (no app-store packaging). Vite + React + TypeScript + Tailwind, served 
   `predictions.json` holds the featured game, every game that has tipped off, and a `sealed` hash commitment
   (sha256 of nonce + pick fields) for every other logged pick, revealed with its nonce at tip-off. Members get
   upcoming picks from the gated `GET /api/predictions`. The pipeline therefore runs on the server
-  (`PIPELINE_INTERVAL_MIN`, needs a volume), not in GitHub Actions; `ops/update-stats.yml` now only runs tests.
+  (see *First data run* below), not in GitHub Actions; `ops/update-stats.yml` now only runs tests.
 - `public/data/*.json` in the repo are empty skeletons (reset 2026-10-25; earlier preview data came from an unlicensed feed).
 - All copy is in `src/config/site.ts`, `src/config/commerce.json` and `src/content/*.md` (Larry's legal drafts).
 
@@ -99,7 +99,49 @@ First-party and cookieless, with no third-party analytics, trackers or pixels. I
 
 ## Membership reference and consent retention
 - **R9:** the client sends the Checkout Session id in the `X-PS-Session` header, never in a URL. That applies to `GET /api/me` and `GET /api/predictions`, and `POST /api/portal` takes it in the body. The only time it appears in a URL is Stripe's success redirect (`/account?session_id=…`), which the page removes from the address bar right away.
-- **R4(d):** consent records keep the raw IP for the subscription's life plus 4 years. `server/consent-purge.mjs` runs daily inside the server (when `CONSENT_DIR` is set and payments are on), or on demand with `npm run purge:consent`. After the retention period it sets `consent_ip` to null in `consent.jsonl` and to `""` on the Subscription's metadata (`subscriptions.update`). A completed Checkout Session's metadata can't be edited through the API, so the copy on the Session object needs a manual or Stripe-support step.
+- **R4(d):** consent records keep the raw IP for the subscription's life plus 4 years. `server/consent-purge.mjs` runs daily inside the server (when `CONSENT_DIR` is set and payments are on), or on demand with `npm run purge:consent`. After the retention period it sets `consent_ip` to null in `consent.jsonl` and to `""` on the Subscription's metadata (`subscriptions.update`).
+- **Larry ruling 3:** the IP is written only to the Subscription's metadata and `consent.jsonl`, never to the Checkout Session's metadata. A completed Session's metadata can't be edited, so it could never be purged there.
+- **Manual cleanup step (purge runbook):** Sessions created by builds before this rule may still carry `consent_ip`. Run `railway run npm run consent:sessions-with-ip` (read-only; it uses `checkout.sessions.list` and needs *Checkout Sessions: Read* on the restricted key). It prints only Session ids and dates, never the IP. If it lists any, ask Stripe support to redact that metadata, and record the request next to `consent.jsonl`. Run it once now, and again after any rollback to an older build.
+- **Consent text version:** every consent record (`consent.jsonl`, Session and Subscription metadata) carries `text_version` = `terms-v1,privacy-a2,privacy-b1`. That value is read from the `Version:` lines of the same `src/content` files the pages render, and a test enforces it.
+
+## Legal effective dates (Larry's date rule)
+- The pages show `Effective: {date}` only in production. The date comes from release-time Railway variables, in `YYYY-MM-DD` form: `LEGAL_EFFECTIVE_TERMS`, `LEGAL_EFFECTIVE_PRIVACY_A`, `LEGAL_EFFECTIVE_PRIVACY_B` and `LEGAL_EFFECTIVE_REFUND`. It is rendered as "October 26, 2026" (US Central calendar day).
+- Set each variable on the day that version first goes live in production. If a variable is unset, or the app runs in preview, the page says **"Effective on launch"**. Nothing is hard-coded.
+- Privacy §B and the refund page stay unpublished: §B renders only when payments are on, and there is no refund page yet. They get their own dates on the day checkout opens.
+- Version strings: terms-v1, privacy-a2, privacy-b1. Superseded texts are kept in `legal/archive/`.
+
+## First data run (runbook)
+The image ships python3 (`railpack.json` adds Python 3.12 to the Node build). On every start the server logs `[pipeline] python3 available: Python 3.12.x`, then runs `scripts/update_data.py`, and repeats every `PIPELINE_INTERVAL_MIN` minutes (default 60).
+- **No keys:** it logs `[pipeline] skipped: BALLDONTLIE_API_KEY is not set …` once and does nothing more. The server keeps running.
+- **No volume:** it logs `[pipeline] PUBLIC_DATA_DIR … using ephemeral /tmp/proswisher/… (data is lost on every redeploy/restart; attach a volume)` and still serves pages from /tmp.
+- **Source refusal (401/403/persistent 429):** it logs `STOPPED` and won't retry until the next deploy (memo 20).
+
+**1. Volume (Ryan; costs money):** in Railway → proswisher → preview → `web`, choose Attach volume and set the **mount path to `/data`**. Railway then sets `RAILWAY_VOLUME_MOUNT_PATH=/data` itself. A service with a volume has a few seconds of downtime on each redeploy.
+
+**2. Variables** (Railway → `web` → Variables). Values are typed by Ryan only; none go in the repo.
+
+| Variable | Value |
+|---|---|
+| `BALLDONTLIE_API_KEY` | your balldontlie Free key (required) |
+| `ODDS_API_KEY` | your The Odds API free key (optional; without it, Winner grading only, no ATS) |
+| `PUBLIC_DATA_DIR` | `/data/public` |
+| `PREDICTIONS_PRIVATE_DIR` | `/data/private` |
+| `PIPELINE_INTERVAL_MIN` | `60` (or leave unset; `0` = on start only) |
+| `CONSENT_DIR` *(optional, for later)* | `/data/consent` |
+| `STATS_DIR` *(optional, only if counting is on)* | `/data/stats` |
+
+Do **not** set `PIPELINE_DRY_RUN` on Railway. Saving the variables redeploys the service, and the redeploy runs the pipeline.
+
+**3. Trigger a run:**
+- **Redeploy or restart** the service. Each start runs the pipeline once.
+- Or, with `ADMIN_TOKEN` set: `curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://<host>/admin/pipeline/run`. Check status with `GET /admin/pipeline`.
+- Or, from a shell in the service (`railway ssh`): `npm run data`.
+
+**4. Check:**
+- The deploy log should show `balldontlie-free: N games fetched …` then `[pipeline] run #1 finished OK`. The first run pulls the season plus last season at 5 requests/min, so it takes a few minutes.
+- `/data/games.json` should list games, and `/games/<yyyy-mm-dd>/<away>-vs-<home>` should render with its title.
+
+**Dry run (synthetic fixtures, no keys, never production):** `npm run data:dry-run` writes made-up games and lines to `/tmp/proswisher-dryrun/{public,private}`. Locally, `PIPELINE_DRY_RUN=true npm start` serves the site from that output. The pipeline refuses a dry run when `APP_ENV=production`, when either output dir is inside the repo, or when the private dir already holds a real log. `tests/server/pipeline.test.mjs` runs the dry run end to end and checks that game pages, `/data` and the member gate render from it.
 
 ## Tests
 `npm test` runs `tests/server/*.test.mjs` and the Python pipeline tests. The node:test suite covers:
@@ -108,4 +150,6 @@ First-party and cookieless, with no third-party analytics, trackers or pixels. I
 - counter off by default; daily and UTM totals with '<5' suppression and same-visit CTA attribution;
 - IP truncation; salt rotation with nothing persisted; aggregates only; 30-day and 25-month retention;
 - the UTM allowlist; GPC/DNT and EEA/UK/CH skips;
-- the X-PS-Session header; the consent-IP purge; the no-raw-IP logging guard.
+- the X-PS-Session header; the consent-IP purge; the no-raw-IP logging guard;
+- no IP in Checkout Session metadata, plus the Session audit; `text_version` matching the page versions; effective dates;
+- the pipeline runner (/tmp fallback, no keys, no python3, refusal stop, minimal child env) and the dry run rendering game pages.

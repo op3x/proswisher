@@ -9,6 +9,8 @@ import { clientIp, geoipDecision, openGeoip, isBlocked, geoConfig, GEOIP_PATH } 
 import { paymentsMode, makeStripe, verifyPrice, handleCheckoutCompleted } from "./payments.mjs";
 import { createCounter } from "./counter.mjs";
 import { purgeConsent } from "./consent-purge.mjs";
+import { legalEffective, legalVersions } from "./legal.mjs";
+import { resolveDataDirs, createPipeline } from "./pipeline.mjs";
 import { fetchGeoip } from "../scripts/fetch-geoip.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -39,7 +41,9 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     if (Date.now() - gamesAt < 120000) return;
     gamesAt = Date.now();
     try {
-      games = JSON.parse(fs.readFileSync(path.join(publicDataDir || path.join(dist, "data"), "games.json"), "utf8")).games || {};
+      const pub = publicDataDir && path.join(publicDataDir, "games.json");
+      const file = pub && fs.existsSync(pub) ? pub : path.join(dist, "data", "games.json"); // empty volume -> shipped skeleton
+      games = JSON.parse(fs.readFileSync(file, "utf8")).games || {};
       const best = new Map();
       for (const g of Object.values(games)) {
         const d = new Date(g.date).toLocaleDateString("en-CA", { timeZone: "America/Chicago" }), c = best.get(d);
@@ -111,17 +115,25 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     res.status(204).end();
   });
   app.get("/go/subscribe", (req, res) => { if (mayCount(req)) counter.click(clientIp(req), req.headers["user-agent"]); res.redirect(302, "/subscribe"); });
-  app.get("/admin/stats", (req, res) => {
+  const admin = (req, res) => {
     const tok = env.ADMIN_TOKEN || "";
-    if (!tok) return res.status(404).end(); // disabled when unset
+    if (!tok) { res.status(404).end(); return false; } // disabled when unset
     const got = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
     const a = crypto.createHash("sha256").update(got).digest(), b = crypto.createHash("sha256").update(tok).digest();
-    if (!got || !crypto.timingSafeEqual(a, b)) return res.status(401).end();
-    res.set("Cache-Control", "no-store").json(counter.report());
+    if (!got || !crypto.timingSafeEqual(a, b)) { res.status(401).end(); return false; }
+    res.set("Cache-Control", "no-store"); return true;
+  };
+  app.get("/admin/stats", (req, res) => { if (admin(req, res)) res.json(counter.report()); });
+  // Pipeline status / manual trigger (ADMIN_TOKEN). The runner is attached by the main block (app.locals.pipeline).
+  app.get("/admin/pipeline", (req, res) => { if (admin(req, res)) res.json(app.locals.pipeline?.status() || { enabled: false }); });
+  app.post("/admin/pipeline/run", async (req, res) => {
+    if (!admin(req, res)) return;
+    const p = app.locals.pipeline; if (!p) return res.status(503).json({ error: "pipeline not attached" });
+    res.json(await p.run());
   });
 
   // ---- payments ----
-  app.get("/api/config", (_req, res) => res.json({ payments: { enabled: mode.enabled, reason: mode.enabled ? null : "disabled" }, counting: !!counter.enabled, geoblock: geoConfig }));
+  app.get("/api/config", (_req, res) => res.json({ payments: { enabled: mode.enabled, reason: mode.enabled ? null : "disabled" }, counting: !!counter.enabled, geoblock: geoConfig, legal: { effective: legalEffective(env), versions: legalVersions() } }));
   app.post("/api/checkout", async (req, res) => {
     if (geoGate(req).blocked) return res.status(451).json({ error: "geoblocked", ...commerce.geoBlockCopy });
     if (!mode.enabled) return res.status(503).json({ error: "payments_disabled" });
@@ -137,12 +149,16 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     if (b.age21 !== true) return res.status(400).json({ error: "age_confirmation_required" });
     // Larry P10: legal consent record (time, IP, consent-text version, price shown, 21+ confirmation).
     // The ONE place a raw IP is kept; separate from visit counting (counter only sees a truncated, hashed form). Stored in Stripe
-    // metadata (durable) and, if CONSENT_DIR is set, an append-only JSONL file.
+    // Subscription metadata (durable) and, if CONSENT_DIR is set, an append-only JSONL file. Larry ruling 3: the raw IP is
+    // NOT written to the Checkout Session's metadata (Session metadata can't be edited later, so it couldn't be purged).
     const consent = {
       consent_at: new Date().toISOString(), consent_ip: clientIp(req), consent_version: commerce.consentVersion,
       price_shown: commerce.priceShown, age_21_confirmed: "true",
+      // Larry: must equal the on-page version strings (read from the same src/content files the pages render).
+      text_version: (({ terms, privacyA, privacyB }) => `${terms},${privacyA},${privacyB}`)(legalVersions()),
     };
     const meta = { ...consent, declared_country: country, declared_state: st, ip_country: g.country || "", ip_region: g.region || "" };
+    const { consent_ip: _omitIp, ...sessionMeta } = meta;
     try {
       const s = await stripe.checkout.sessions.create({
         mode: "subscription",
@@ -152,7 +168,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
         cancel_url: `${base}/subscribe`,
         custom_text: { submit: { message: commerce.renewalDisclosure.slice(0, 1200) } },
         automatic_tax: { enabled: env.STRIPE_AUTOMATIC_TAX === "true" },
-        metadata: meta, subscription_data: { metadata: meta },
+        metadata: sessionMeta, subscription_data: { metadata: meta },
       });
       if (env.CONSENT_DIR) {
         try { fs.mkdirSync(env.CONSENT_DIR, { recursive: true }); fs.appendFileSync(path.join(env.CONSENT_DIR, "consent.jsonl"), JSON.stringify({ ...consent, checkout_session: s.id || null }) + "\n"); }
@@ -225,18 +241,20 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   };
   app.get("/game/:id", gamePage);
   app.get("/games/:date/:slug", gamePage);
-  if (publicDataDir) app.use("/data", express.static(publicDataDir, { maxAge: "1m" }));
   app.use("/data", (req, res, next) => (/^\/(games|predictions|stats|prior)\.json$/.test(req.path) ? next() : res.status(404).end()));
+  if (publicDataDir) app.use("/data", express.static(publicDataDir, { maxAge: "1m" }));
   app.use(express.static(dist, { index: false, maxAge: "5m", setHeaders: (r, p) => { if (p.includes("/assets/")) r.setHeader("Cache-Control", "public, max-age=31536000, immutable"); } }));
   app.get(/.*/, (_req, res) => sendPage(res, indexHtml()));
-  Object.assign(app.locals, { counter, state, mode: () => mode, stripe });
+  Object.assign(app.locals, { counter, state, mode: () => mode, stripe, reloadGames: () => { gamesAt = 0; } });
   return app;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   if (!fs.existsSync(GEOIP_PATH)) await fetchGeoip();
   const counter = createCounter({ enabled: process.env.COUNTING_ENABLED === "true" });
-  const app = await createApp({ counter });
+  // Data dirs are resolved BEFORE the app so /data and the game pages read exactly where the pipeline writes.
+  const dirs = resolveDataDirs(process.env);
+  const app = await createApp({ counter, env: { ...process.env, PUBLIC_DATA_DIR: dirs.publicDir, PREDICTIONS_PRIVATE_DIR: dirs.privateDir } });
   // Larry memo 21 R4(d): daily consent-IP retention purge (sub life + 4 years). Needs CONSENT_DIR and payments on.
   if (process.env.CONSENT_DIR && app.locals.mode().enabled) {
     const purge = () => purgeConsent({ dir: process.env.CONSENT_DIR, stripe: app.locals.stripe }).catch((e) => console.warn("[consent] purge failed", e?.type || e?.name));
@@ -244,14 +262,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   setInterval(() => { try { counter.flush(); } catch (e) { console.warn("[stats] flush failed", e.message); } }, 5 * 60 * 1000).unref();
   setInterval(async () => { if (await fetchGeoip()) { app.locals.state.geo = await openGeoip(); } }, 7 * 864e5).unref();
-  // Optional server-side pipeline (P6): keeps the full log in PREDICTIONS_PRIVATE_DIR (needs a volume).
-  // Off unless PIPELINE_INTERVAL_MIN is set; the pipeline itself also needs a licensed source (memo 20).
-  const every = Number(process.env.PIPELINE_INTERVAL_MIN || 0);
-  if (every > 0 && process.env.PREDICTIONS_PRIVATE_DIR && process.env.PUBLIC_DATA_DIR) {
-    const { spawn } = await import("node:child_process");
-    const run = () => spawn("python3", [path.join(ROOT, "scripts/update_data.py")], { stdio: "inherit" }).on("error", (e) => console.warn("[pipeline] not run:", e.code));
-    run(); setInterval(run, every * 60000).unref();
-  }
+  // Server-side pipeline (P6): on start, then every PIPELINE_INTERVAL_MIN (default 60). Skips cleanly without keys.
+  app.locals.pipeline = createPipeline({ env: process.env, dirs, onDone: app.locals.reloadGames });
+  app.locals.pipeline.start();
   const port = Number(process.env.PORT || 3000);
   app.listen(port, "0.0.0.0", () => console.log(`[server] listening on :${port}`));
   for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { try { counter.flush(); } catch {} process.exit(0); });

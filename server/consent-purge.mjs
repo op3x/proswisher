@@ -1,8 +1,9 @@
 // Larry memo 21 R4(d): consent records keep the raw IP for the subscription's life + 4 years, then the IP is purged
 // from CONSENT_DIR/consent.jsonl and from the Subscription's metadata (consent_ip set to "").
 // Stripe API calls: checkout.sessions.retrieve (expand subscription) and subscriptions.update (metadata only).
-// Limitation: a completed Checkout Session's metadata cannot be edited through the API, so consent_ip stays on the
-// Session object at Stripe; see README "Retention" (manual/Stripe-support step).
+// Larry ruling 3 (10:13): the IP is no longer written to Checkout Session metadata at all (a completed Session's metadata
+// can't be edited, so it could never be purged). Sessions created by older builds may still carry it:
+// `npm run consent:sessions-with-ip` lists their ids (never the IPs) for the manual cleanup step in the README runbook.
 // Runs daily inside the server when CONSENT_DIR is set and payments are enabled; also `npm run purge:consent`.
 import fs from "node:fs";
 import path from "node:path";
@@ -41,9 +42,25 @@ export async function purgeConsent({ dir, stripe, now = () => new Date(), log = 
   return { checked, purged };
 }
 
+// Read-only audit: ids + created date of Checkout Sessions whose metadata still has a non-empty consent_ip.
+// Uses checkout.sessions.list (Checkout Sessions Read). Never returns or prints the IP itself.
+export async function sessionsWithIp(stripe, { limit = 100 } = {}) {
+  const out = [];
+  for await (const s of stripe.checkout.sessions.list({ limit })) {
+    if (s?.metadata?.consent_ip) out.push({ id: s.id, created: new Date(s.created * 1000).toISOString().slice(0, 10) });
+  }
+  return out;
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { paymentsMode, makeStripe } = await import("./payments.mjs");
   const mode = paymentsMode(process.env);
   if (!mode.enabled) { console.log("[consent] payments disabled; nothing to purge"); process.exit(0); }
-  await purgeConsent({ dir: process.env.CONSENT_DIR, stripe: makeStripe(mode) });
+  if (process.argv.includes("--sessions-with-ip")) {
+    const list = await sessionsWithIp(makeStripe(mode));
+    console.log(`[consent] ${list.length} Checkout Session(s) still carry an address in metadata${list.length ? ":" : "."}`);
+    for (const s of list) console.log(`  ${s.id} (created ${s.created})`);
+  } else {
+    await purgeConsent({ dir: process.env.CONSENT_DIR, stripe: makeStripe(mode) });
+  }
 }

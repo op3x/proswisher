@@ -2,13 +2,21 @@ import { useEffect, useState } from "react";
 
 // Runtime state from our own server (no cookies). Payments are enabled only when the server has a valid
 // TEST key + webhook secret + price (preview) — otherwise everything renders in "payments off" mode.
-type Cfg = { payments: { enabled: boolean }; counting?: boolean };
+type Legal = { effective: Record<string, string>; versions: Record<string, string> };
+type Cfg = { payments: { enabled: boolean }; counting?: boolean; legal?: Legal };
 let cfgP: Promise<Cfg> | null = null;
 const getCfg = () => (cfgP ||= fetch("/api/config").then((r) => (r.ok ? r.json() : { payments: { enabled: false } })).catch(() => ({ payments: { enabled: false } })));
 export function usePaymentsEnabled(): boolean {
   const [on, setOn] = useState(false);
   useEffect(() => { getCfg().then((c) => setOn(!!c.payments?.enabled)); }, []);
   return on;
+}
+
+// Larry's date rule: effective dates come from the server at runtime (release-time env); preview = "Effective on launch".
+export function useLegalEffective(): Record<string, string> {
+  const [e, setE] = useState<Record<string, string>>({});
+  useEffect(() => { getCfg().then((c) => setE(c.legal?.effective || {})); }, []);
+  return e;
 }
 
 // Membership: the Checkout Session id from the success redirect, kept in localStorage (not a cookie).

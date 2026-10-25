@@ -168,6 +168,74 @@ class OddsApiFree(OddsProvider):
         return out
 
 
+# ---------------- dry run (synthetic fixtures; no network, no keys) ----------------
+# Deterministic, made-up games relative to "now" so every page has something to render. Scores and lines are
+# synthetic (NOT real results or odds). Dry runs are refused in production and must write to explicit
+# non-repo dirs (see update_data.py), so this data can't reach the public repo or the live site.
+def _fx(seed: str, lo: int, hi: int) -> int:
+    import hashlib
+    return lo + int(hashlib.sha256(seed.encode()).hexdigest()[:8], 16) % (hi - lo + 1)
+
+
+def _fx_game(gid: str, when: datetime, home: str, away: str, final: bool) -> dict:
+    side = lambda ab, sc: {"abbr": ab, "name": TEAMS[ab][0], "short": TEAMS[ab][1], "score": sc}
+    hs, as_ = (_fx(gid + "h", 96, 128), _fx(gid + "a", 94, 126)) if final else (None, None)
+    if final and hs == as_:
+        hs += 1
+    return {"id": gid, "date": when.strftime("%Y-%m-%dT%H:%MZ"), "seasonYear": 0, "seasonType": 2,
+            "state": "post" if final else "pre", "final": final, "status": "Final" if final else "Scheduled",
+            "statusName": "STATUS_FINAL" if final else "STATUS_SCHEDULED", "neutral": False,
+            "home": side(home, hs), "away": side(away, as_)}
+
+
+class FixtureSchedule(ScheduleProvider):
+    name = "fixture"
+    ABBRS = sorted(TEAMS)
+
+    def __init__(self, now: datetime | None = None):
+        self.now = now or datetime.now(timezone.utc)
+
+    def _with_year(self, g: dict, year: int) -> dict:
+        g["seasonYear"] = year
+        return g
+
+    def season_games(self, season_end_year: int) -> list:
+        base = datetime(season_end_year - 1, 11, 1, 0, 0, tzinfo=timezone.utc)
+        out, a = [], self.ABBRS
+        for r in range(6):  # 6 rounds x 15 games: every team plays 6 times
+            for i in range(15):
+                h, v = a[(i + r) % 30], a[(29 - i + r) % 30]
+                out.append(self._with_year(_fx_game(f"fxp-{r}-{i}", base + timedelta(days=r * 3), h, v, True), season_end_year))
+        return out
+
+    def games_between(self, start: str, end: str) -> list:
+        year = self.season_of(self.now)["year"]
+        out, a = [], self.ABBRS
+        day0 = self.now.replace(hour=0, minute=0, second=0, microsecond=0)
+        for d in range(-3, 4):  # 3 days of finals, today, 3 days ahead; 4 games a day
+            for i in range(4):
+                tip = day0 + timedelta(days=d, hours=23, minutes=30 * i)  # 23:00Z+ = evening US Central
+                k = (d * 4 + i) % 15
+                h, v = a[(2 * k + d) % 30], a[(2 * k + 1 + d) % 30]
+                if h == v:
+                    continue
+                out.append(self._with_year(_fx_game(f"fx-{tip:%Y%m%d}-{i}", tip, h, v, tip < self.now - timedelta(hours=3)), year))
+        return [g for g in out if start <= g["date"][:10] <= end]
+
+
+class FixtureOdds(OddsProvider):
+    name = "fixture-odds"
+
+    def spreads(self, now: datetime) -> dict:
+        out = {}
+        for g in FixtureSchedule(now).games_between("0000", "9999"):
+            if not g["final"]:
+                out[(g["home"]["abbr"], g["away"]["abbr"], g["date"][:10])] = {
+                    "homeLine": _fx(g["id"] + "l", -16, 16) / 2, "source": "fixture (synthetic, not a real line)",
+                    "bookCount": 0, "recordedAt": now.isoformat(timespec="seconds")}
+        return out
+
+
 SCHEDULE_PROVIDERS = {"balldontlie-free": BallDontLieFree}
 ODDS_PROVIDERS = {"the-odds-api-free": OddsApiFree}
 

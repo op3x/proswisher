@@ -1,5 +1,5 @@
 **ProSwisher Privacy Policy**
-Effective: [DATE] · Version: privacy-b2
+Effective: {EFFECTIVE} · Version: privacy-b1
 
 This policy explains how **Op3x LLC** ("we," "us"), an Illinois limited liability company, collects and uses personal information through ProSwisher (proswisher.com).
 
@@ -16,7 +16,7 @@ This policy explains how **Op3x LLC** ("we," "us"), an Illinois limited liabilit
 
 **2. How we use it**
 - **To run and improve the site.** We use server logs to operate, debug and secure the site, and aggregate visit totals to understand how many people use it and which of our marketing links work. We don't use them to profile you or target ads, and we don't try to re-identify anyone from the totals.
-- **To provide the membership.** Sign-in, access to every game, renewals, receipts and the required account emails. Those emails are your confirmation, the annual reminder, notices of changes, and cancellation confirmations.
+- **To provide the membership:** process your payment through Stripe and recognize your membership in your browser using your Stripe checkout reference.
 - **To check where subscriptions are available.** When you open the subscription page or start checkout, our server estimates your country and state from your IP address using a location database stored on our own server; your IP address isn't sent to a location service. We also check the billing country and state or ZIP you give. We keep only the country and state codes (plus the IP address in the consent record described above). Subscriptions aren't available in Washington, Hawaii, Utah or Japan.
 - **To keep a record of your consent** to the 21+ confirmation and the automatic renewal terms, and to handle refunds, disputes and chargebacks.
 - **To secure the site,** prevent fraud and enforce our Terms. That includes detecting scraping or reselling of member predictions.

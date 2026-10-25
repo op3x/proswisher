@@ -1,5 +1,5 @@
 **ProSwisher Terms of Service**
-Effective: [DATE] · Version: terms-v1
+Effective: {EFFECTIVE} · Version: terms-v1
 
 These Terms are an agreement between you and **Op3x LLC**, an Illinois limited liability company ("Op3x," "we," "us"), which operates ProSwisher at proswisher.com (the "Service"). By using the Service you agree to these Terms and to our Privacy Policy. If you subscribe, you also confirm the checkout consent described in §5.
 

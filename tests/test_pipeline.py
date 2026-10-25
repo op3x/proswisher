@@ -126,3 +126,49 @@ class T(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DryRun(unittest.TestCase):
+    """Dry-run mode: synthetic fixtures, no keys, explicit non-repo dirs; game pages get real-shaped data."""
+    def _run(self, env, argv=("update_data.py", "--dry-run")):
+        old = {k: os.environ.get(k) for k in env}
+        os.environ.update({k: v for k, v in env.items() if v is not None})
+        for k, v in env.items():
+            if v is None: os.environ.pop(k, None)
+        try:
+            ud.DATA = os.environ.get("PUBLIC_DATA_DIR") or os.path.join(ud.ROOT, "public", "data")
+            ud.PRIVATE = os.environ.get("PREDICTIONS_PRIVATE_DIR") or os.path.join(ud.ROOT, "private-data")
+            ud.get_schedule = P.schedule_provider; ud.get_odds = P.odds_provider
+            return ud.main(list(argv))
+        finally:
+            for k, v in old.items():
+                if v is None: os.environ.pop(k, None)
+                else: os.environ[k] = v
+
+    def test_dry_run_writes_fixture_data(self):
+        with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as out:
+            ud.ROOT = root
+            pub, priv = os.path.join(out, "pub"), os.path.join(out, "priv")
+            self._run({"PUBLIC_DATA_DIR": pub, "PREDICTIONS_PRIVATE_DIR": priv, "BALLDONTLIE_API_KEY": None, "ODDS_API_KEY": None, "APP_ENV": "preview"})
+            games = json.load(open(os.path.join(pub, "games.json")))
+            self.assertEqual(games["provider"], "fixture"); self.assertTrue(games["dryRun"])
+            self.assertGreaterEqual(len(games["games"]), 20)
+            with_pred = [g for g in games["games"].values() if "prediction" in g]
+            full = json.load(open(os.path.join(priv, "games-full.json")))["games"]
+            self.assertGreater(sum("prediction" in g for g in full.values()), len(with_pred))  # members get more than public
+            self.assertTrue(all(e["loggedBy"] == "dry-run" for e in json.load(open(os.path.join(priv, "predictions-full.json")))["entries"].values()))
+            self.assertFalse(os.path.exists(os.path.join(root, "stats.json")))  # nothing written into the repo root
+
+    def test_dry_run_refusals(self):
+        with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as out:
+            ud.ROOT = root
+            pub, priv = os.path.join(out, "pub"), os.path.join(out, "priv")
+            for env, msg in [({"APP_ENV": "production", "PUBLIC_DATA_DIR": pub, "PREDICTIONS_PRIVATE_DIR": priv}, "production"),
+                             ({"APP_ENV": "preview", "PUBLIC_DATA_DIR": None, "PREDICTIONS_PRIVATE_DIR": None}, "explicit"),
+                             ({"APP_ENV": "preview", "PUBLIC_DATA_DIR": os.path.join(root, "public", "data"), "PREDICTIONS_PRIVATE_DIR": priv}, "outside the repo")]:
+                with self.assertRaisesRegex(RuntimeError, msg):
+                    self._run(env)
+            os.makedirs(priv)
+            json.dump({"modelVersion": "pd-v1", "entries": {"bdl-1": {}}}, open(os.path.join(priv, "predictions-full.json"), "w"))
+            with self.assertRaisesRegex(RuntimeError, "real prediction log"):
+                self._run({"APP_ENV": "preview", "PUBLIC_DATA_DIR": pub, "PREDICTIONS_PRIVATE_DIR": priv})

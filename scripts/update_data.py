@@ -191,8 +191,24 @@ def featured_ids(games: list) -> set:
     return {g["id"] for g in best.values()}
 
 
-def main():
+def dry_run_requested(argv=None) -> bool:
+    return "--dry-run" in (sys.argv if argv is None else argv) or os.environ.get("PIPELINE_DRY_RUN", "").lower() in ("1", "true", "yes")
+
+
+def main(argv=None):
+    global get_schedule, get_odds
     now = datetime.now(timezone.utc)
+    dry = dry_run_requested(argv)
+    if dry:
+        # Synthetic fixtures only. Never in production, never into the repo's public/data (it's committed).
+        if os.environ.get("APP_ENV") == "production":
+            raise RuntimeError("dry run refused: APP_ENV=production")
+        if not (os.environ.get("PUBLIC_DATA_DIR") and os.environ.get("PREDICTIONS_PRIVATE_DIR")):
+            raise RuntimeError("dry run needs explicit PUBLIC_DATA_DIR and PREDICTIONS_PRIVATE_DIR (outside the repo)")
+        if os.path.realpath(DATA).startswith(os.path.realpath(ROOT) + os.sep) or os.path.realpath(PRIVATE).startswith(os.path.realpath(ROOT) + os.sep):
+            raise RuntimeError("dry run refused: output dirs must be outside the repo")
+        get_schedule, get_odds = (lambda: P.FixtureSchedule(now)), (lambda: P.FixtureOdds())
+        print("DRY RUN: synthetic fixture data (not real games, scores or lines)")
     if os.environ.get("GITHUB_ACTIONS") == "true" and not os.environ.get("PREDICTIONS_PRIVATE_DIR"):
         # P6: the full log (member picks + nonces) must persist privately; a CI runner can't hold it and the
         # public repo must never receive it. Run on the server with a volume instead (PIPELINE_INTERVAL_MIN).
@@ -209,6 +225,8 @@ def main():
 
     gpath = os.path.join(PRIVATE, "games-full.json")
     store = load(gpath, None) or load(os.path.join(DATA, "games.json"), {"seasonYear": year, "games": {}})
+    if dry and store.get("games") and store.get("provider") not in (None, sched.name):
+        raise RuntimeError("dry run refused: PREDICTIONS_PRIVATE_DIR already holds real game data")
     if store.get("seasonYear") != year or store.get("provider") != sched.name:
         store = {"seasonYear": year, "provider": sched.name, "games": {}}  # never mix sources (ids differ)
     games = store["games"]
@@ -233,6 +251,10 @@ def main():
     # predictions log: append-only, locked at first log
     ppath = os.path.join(PRIVATE, "predictions-full.json")
     log = load(ppath, None) or load(os.path.join(DATA, "predictions.json"), {"modelVersion": MODEL_VERSION, "startedAt": now.isoformat(timespec="seconds"), "entries": {}})
+    if dry and log.get("entries") and not log.get("dryRun"):  # never mix synthetic picks into a real (append-only) log
+        raise RuntimeError("dry run refused: PREDICTIONS_PRIVATE_DIR already holds a real prediction log")
+    if not dry and log.get("dryRun"):  # a real run never inherits a dry-run log
+        log = {"modelVersion": MODEL_VERSION, "startedAt": now.isoformat(timespec="seconds"), "entries": {}}
     entries = log["entries"]
     LOCKED = COMMIT_FIELDS + ("nonce", "commitment")
     SET_ONCE = ("marketSpread", "atsLean", "result", "projScore")  # may go null -> value once, never change afterwards
@@ -254,7 +276,7 @@ def main():
                         "loggedAt": now.isoformat(timespec="seconds"), "modelVersion": MODEL_VERSION,
                         "pick": pr["pick"], "pickProb": pr["pickProb"], "spread": pr["spread"], "total": pr["total"],
                         "homeMargin": pr["homeMargin"], "marketSpread": None, "atsLean": None, "result": None,
-                        "loggedBy": "github-actions" if os.environ.get("GITHUB_ACTIONS") == "true" else "manual-run",
+                        "loggedBy": "dry-run" if dry else ("github-actions" if os.environ.get("GITHUB_ACTIONS") == "true" else os.environ.get("PIPELINE_RUNNER", "manual-run")),
                         "nonce": secrets.token_hex(16),
                     }
                     entries[g["id"]]["commitment"] = commitment(entries[g["id"]])
@@ -304,6 +326,8 @@ def main():
     store["games"] = games
     store["updatedAt"] = now.isoformat(timespec="seconds")
     store["seasonLabel"] = info["label"]; store["provider"] = sched.name
+    if dry:
+        store["dryRun"] = True; log["dryRun"] = True
     dump(gpath, store)   # private (full)
     dump(ppath, log)     # private (full)
     # ---- public projections (safe to serve statically and to commit) ----
@@ -329,7 +353,8 @@ def main():
              "model": {"homeCourt": HOME_COURT, "priorGames": PRIOR_GAMES, "priorRegress": PRIOR_REGRESS, "sigma": SIGMA},
              "priorSeason": prior["label"], **R}
     dump(os.path.join(DATA, "stats.json"), stats)
-    dump(os.path.join(ROOT, "stats.json"), stats)  # legacy path kept for anything still reading it
+    if not os.environ.get("PUBLIC_DATA_DIR"):
+        dump(os.path.join(ROOT, "stats.json"), stats)  # legacy path, only for repo-local runs
     graded = [e for e in entries.values() if e["result"]]
     print(f"teams={len(R['teams'])} upcoming={len(upcoming)} logged={len(entries)} graded={len(graded)}")
 

@@ -13,15 +13,15 @@ export default function Layout() {
         </div>
       )}
       <header className="sticky top-0 z-20 bg-ink/90 backdrop-blur border-b border-line">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2 font-extrabold tracking-tight text-lg">
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
+          <Link to="/" className="flex items-center gap-2 font-extrabold tracking-tight text-base sm:text-lg shrink-0">
             <span className="inline-block h-6 w-6 rounded-full bg-gradient-to-br from-accent to-sky-600" />
             {site.name}
           </Link>
-          <nav className="flex gap-1 text-sm">
+          <nav className="flex gap-0.5 sm:gap-1 text-xs sm:text-sm overflow-x-auto">
             {site.nav.map((n) => (
               <NavLink key={n.to} to={n.to} end
-                className={({ isActive }) => `px-2.5 py-1.5 rounded-md ${isActive ? "bg-panel text-white" : "text-slate-400 hover:text-white"}`}>
+                className={({ isActive }) => `whitespace-nowrap px-2 sm:px-2.5 py-1.5 rounded-md ${isActive ? "bg-panel text-white" : "text-slate-400 hover:text-white"}`}>
                 {n.label}
               </NavLink>
             ))}

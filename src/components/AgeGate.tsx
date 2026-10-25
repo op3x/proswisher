@@ -27,7 +27,7 @@ export default function AgeGate({ children }: { children: React.ReactNode }) {
             </div>
           </>
         )}
-        <p className="text-xs text-slate-400">{g.help}</p>
+        <p className="text-xs text-slate-400">{g.locationNote} {g.help}</p>
       </div>
     </div>
   );

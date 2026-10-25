@@ -62,6 +62,19 @@ export function useData<T>(name: "games" | "stats" | "predictions") {
   return { data, error };
 }
 
+// Canonical shareable game URL (used in posts): /games/{yyyy-mm-dd CT}/{away-slug}-vs-{home-slug}. Same rule in server/index.mjs.
+const kebab = (x: string) => x.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+export const gamePath = (g: Game) =>
+  `/games/${new Date(g.date).toLocaleDateString("en-CA", { timeZone: "America/Chicago" })}/${kebab(g.away.short)}-vs-${kebab(g.home.short)}`;
+
+// Members: non-featured pre-tip predictions come ONLY from the gated server API (Larry P6), never /data/*.json.
+let memberP: Promise<Record<string, Prediction>> | null = null;
+export function loadMemberPredictions(sid: string | null) {
+  if (!sid) return Promise.resolve({});
+  return (memberP ||= fetch(`/api/predictions?session_id=${encodeURIComponent(sid)}`, { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : { predictions: {} })).then((j) => j.predictions || {}).catch(() => ({})));
+}
+
 export const pct = (p: number) => `${Math.round(p * 100)}%`;
 export const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 export const fmtLine = (n: number) => (n === 0 ? "PK" : n > 0 ? `+${n}` : `${n}`);

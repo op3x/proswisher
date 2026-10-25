@@ -41,7 +41,7 @@ export const site = {
   year: 2026,
   // ── Placeholders: clearly marked, must be filled before launch ──
   supportEmail: "support@proswisher.com",
-  supportEmailActive: false, // no MX on proswisher.com yet; UI shows "(not yet active)"
+  supportEmailActive: commerce.supportEmailActive === true, // Larry P11: support@ is HIDDEN everywhere until it works (commerce.json)
   mailingAddress: "[MAILING ADDRESS TBD]",
   // refund text: see legal.refunds (Larry's exact wording, 9:36)
   cancelUrl: "[CANCEL_URL TBD]",
@@ -94,7 +94,7 @@ export const site = {
       ["Every game on the slate,", "posted before tip-off."],
       ["Projected score and projected spread", "for both sides."],
       ["Our model's lean:", "which side the numbers favor, and by how much."],
-      ["The why:", "the key stat gaps behind every prediction."],
+      ["The why:", "the rating gap and home-court edge behind each prediction."], // Larry P7
       ["No locks. No guarantees.", "Just the model's read, plainly stated."],
       ["Cancel any time, online.", "No calls, no emails, no hoops."],
     ],
@@ -124,10 +124,10 @@ export const site = {
     ["What's free, and what do members get?", "Every day, one featured game's full prediction is free on its game page, with no account or sign-up, plus the public track record. Members ($9/month) get every game on the slate.", true],
     ["How have your predictions done?", "See our Track record page. Every prediction we've posted since launch is timestamped before tip-off and graded afterward, with nothing removed. No prediction is guaranteed, and past results do not guarantee future results."],
     // Laye asked Perry to confirm source wording: this is the accurate version for the shipped model.
-    ["Where does the data come from?", "We build predictions from publicly available game results: schedules and final scores from a public scoreboard feed, turned into team scoring-margin ratings."],
+    ["Where does the data come from?", "We build predictions from game results: schedules and final scores from a licensed sports-data provider, turned into team scoring-margin ratings. Market spreads, where shown, are the median across US books from a licensed odds provider, with the time we recorded them."],
     ["Are you affiliated with the league or any team?", "No. ProSwisher is independent and isn't affiliated with or endorsed by the NBA, its teams or players. Team names are used only to identify games."],
     ["Who can use ProSwisher?", "Adults 21 and older. Subscriptions aren't available in Washington, Hawaii, Utah or Japan, though anyone 21+ can browse our public pages, the featured free game and the track record."],
-    ["How much does it cost?", "The daily featured game costs nothing and needs no account. Membership is $9 a month plus applicable tax and renews monthly until you cancel. If the price ever changes, we'll email you at least 7 days before it applies to you.", true],
+    ["How much does it cost?", "The daily featured game costs nothing and needs no account. Membership is $9 a month plus applicable tax and renews monthly until you cancel. If the price or other terms ever change, we'll email you first, and changes apply from your first renewal at least 14 days after that email.", true],
     ["How do I cancel?", "Go to Account settings → Cancel subscription and confirm. It takes about a minute, with no call or email required. Your access continues through the end of your current billing period, and we email you a confirmation.", true],
     // HOLD (Larry 9:38): refund copy ships only once support@proswisher.com works (site.supportEmailActive).
     ["Do you offer refunds?", "{refunds}", true],
@@ -194,7 +194,9 @@ export const site = {
     { to: "/privacy", label: "Privacy" },
     { to: "/faq", label: "FAQ" },
   ],
-  dataCredit: "Schedules and final scores come from a public scoreboard feed.",
+  dataCredit: "Schedules and final scores come from a licensed sports-data provider.",
+  // Ingus 10:00: required GeoLite2 attribution (MaxMind EULA). Footer, every page.
+  geoCredit: "This product includes GeoLite2 data created by MaxMind, available from https://www.maxmind.com",
   empty: {
     noUpcoming: "No upcoming games in the next 7 days. Check back soon.",
     noLog: "The public log started recently. Picks appear here once their games are final.",
@@ -242,10 +244,11 @@ export const legal = {
     "Refunds. You can cancel anytime online in Account settings. Cancellation stops future charges, and you keep paid access until the end of your current billing period. Because predictions are delivered as soon as they're posted, we don't refund partial months or unused time, except where the law requires. If you were charged in error or charged after you canceled, email support@proswisher.com within 60 days and we'll refund that charge. If you dispute a charge with your card issuer, we may suspend paid access while it's reviewed.",
   responsible: [
     "ProSwisher publishes statistical projections for entertainment and informational purposes only. Nothing on this site is betting, financial, or investment advice, and no projection is a guarantee of any outcome.",
+    // Keep in sync with Terms §12. (Larry P12)
     "ProSwisher does not accept wagers, does not operate a sportsbook, and does not link to or receive payment from any sportsbook.",
     "You must be 21 or older to use this site. Sports wagering is not legal everywhere; it is your responsibility to know and follow the laws where you are.",
     "If gambling stops being fun, stop. Set limits on time and money before you start, never chase losses, and never wager money you need for essentials.",
-    "If you or someone you know has a gambling problem, call or text 1-800-GAMBLER (1-800-426-2537), or visit the National Council on Problem Gambling at ncpgambling.org.",
+    "If you or someone you know has a gambling problem, call 1-800-GAMBLER (1-800-426-2537), or visit ncpgambling.org for chat and text options.", // Larry P9
   ],
   terms: [
     "These terms govern your use of ProSwisher, operated by Op3x LLC. By using the site you agree to them.",
@@ -253,18 +256,13 @@ export const legal = {
     "You are solely responsible for any decision you make, including any wager. Op3x LLC is not liable for losses arising from use of the site.",
     "You must be 21+ to use the site. Do not use the site where doing so would violate local law.",
     "ProSwisher is independent and is not affiliated with, endorsed by, or sponsored by any professional league, team, or player. Team names are used only to identify games.",
-    "We may change or discontinue the site or these terms at any time.",
+    // Larry P2: no "change at any time". Full Terms v1 (src/content/terms-v1.md) renders once support@ works.
+    "We may update these Terms. Changes apply from your first renewal at least 14 days after we email you about them.",
   ],
-  // PLACEHOLDER for counsel/Larry. Reflects what the code actually does.
-  privacy: [
-    "ProSwisher has no free accounts and sets no cookies. We use no third-party analytics or advertising trackers.",
-    "Visit counting: our own server counts daily unique visitors, weekly viewers of the featured free game, and clicks on the membership button. To do that it computes a one-way hash of your IP address and browser user agent with a random value that is replaced every day and never stored. We never store your IP address or user agent, and the hash can't be linked across days. We keep only the daily totals.",
-    "Location: when you open the subscription page or start checkout, we look up your approximate country and state from your IP address (on our server, using a local database) to apply our location limits. We record only the country and state code with your subscription, never the IP address.",
-    "Our age confirmation is remembered only for your browser session (session storage, not a cookie). If you subscribe, your browser stores your checkout reference locally so the site can recognize your membership; you can clear it any time.",
-    "Payments are processed by Stripe. We receive your name, email, billing address and subscription status from Stripe; we never see or store full card numbers. We record when you agreed to the subscription terms.",
-    "Our hosting provider may keep standard server logs (such as IP address, user agent and request time) for security and operations.",
-    "We do not sell or share personal information.",
-    "Questions: support@proswisher.com (not yet active). Mailing address: [MAILING ADDRESS TBD].",
-  ],
+  // Larry P4: privacy text now comes from src/content/privacy-a.md (always) and privacy-b.md (only when payments are on).
+  // Kiko's cookieless counting is not in Larry's §A; the bullet below fills {COUNTING} and is PENDING LARRY's review.
+  privacyCounting:
+    "Our own server counts daily unique visitors, viewers of the free featured game, visits from our own tagged links and clicks on the membership button. It does this with a one-way hash of your IP address and browser type mixed with a random value that is replaced every day and never stored, so the hash can't be linked across days. We keep only daily totals, never your IP address or browser details. This is first-party counting, not a third-party tracker.",
+
 
 };

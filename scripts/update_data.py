@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """ProSwisher data pipeline (stdlib only).
 
-1. Pulls the current season's schedule + final scores (public scoreboard JSON, no key).
+1. Pulls the current season's schedule + final scores from a licensed ScheduleProvider (scripts/providers.py;
+   default balldontlie Free tier, key in BALLDONTLIE_API_KEY). Larry memo 20: licensed sources only.
 2. Builds transparent team ratings (point differential, regressed toward last season).
 3. Projects every upcoming game (margin, spread, total, win probability).
 4. Appends NEW predictions to an append-only log *before* tip-off, with the MARKET point spread
@@ -12,16 +13,23 @@
 
 Fails loudly (non-zero exit) on fetch errors instead of silently writing stale data.
 """
-import json, math, os, sys, time, urllib.request, urllib.error
+import hashlib, json, math, os, secrets, sys, time
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import providers as P
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA = os.path.join(ROOT, "public", "data")
-SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates={d}"
+DATA = os.environ.get("PUBLIC_DATA_DIR") or os.path.join(ROOT, "public", "data")
+# Larry P6: member (non-featured) predictions must never reach public /data/*.json or the public repo before
+# tip-off. The FULL log lives in a private dir (server-side, e.g. a Railway volume; gitignored locally).
+# Public outputs only carry the featured game's prediction pre-tip, plus a hash commitment for every other
+# logged pick; the full entry (with its nonce, so the commitment can be verified) is published at tip-off.
+PRIVATE = os.environ.get("PREDICTIONS_PRIVATE_DIR") or os.path.join(ROOT, "private-data")
+CT = ZoneInfo("America/Chicago")
 MODEL_VERSION = "pd-v1"
-# The 30 franchises (feed abbreviations). Anything else (all-star/exhibition sides) is ignored.
-TEAMS = {"ATL","BOS","BKN","CHA","CHI","CLE","DAL","DEN","DET","GS","HOU","IND","LAC","LAL","MEM","MIA",
-         "MIL","MIN","NO","NY","OKC","ORL","PHI","PHX","POR","SA","SAC","TOR","UTAH","WSH"}
+# The 30 franchises (our abbreviations; see providers.TEAMS). Anything else is ignored.
+TEAMS = set(P.TEAMS)
 
 # ---- model constants (documented on the How-it-works page; keep in sync with src/config/site.ts) ----
 HOME_COURT = 2.5      # points added to the home side (0 on neutral courts)
@@ -30,74 +38,9 @@ PRIOR_REGRESS = 0.5   # last season's margin is shrunk 50% toward league average
 SIGMA = 12.0          # std-dev of NBA game margins vs projection (points)
 LEAGUE_PPG = 114.0    # fallback league scoring average
 
-# ---- market spread source (Larry round 2). No sportsbook scraping. ----
-# The Odds API (https://the-odds-api.com) licensed aggregator; key is a GitHub Actions secret read ONLY here.
-# Unset -> marketSpread stays null and only the Winner grade is recorded.
-ODDS_URL = ("https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
-            "?regions=us&markets=spreads&oddsFormat=american&dateFormat=iso&apiKey={key}")
-# Odds API full team names that differ from the scoreboard feed's displayName
-ODDS_NAME_ALIASES = {"Los Angeles Clippers": "LA Clippers"}
-
-
-def fetch(day: str, retries: int = 3) -> dict:
-    url = SCOREBOARD.format(d=day)
-    last = None
-    for i in range(retries):
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "proswisher-data/1.0"})
-            with urllib.request.urlopen(req, timeout=30) as r:
-                return json.load(r)
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
-            last = e
-            time.sleep(2 * (i + 1))
-    raise RuntimeError(f"fetch failed for {day}: {last}")
-
-
-def parse_events(payload: dict) -> list:
-    out = []
-    for e in payload.get("events", []):
-        stype = e.get("season", {}).get("type")
-        if stype not in (2, 3, 5):  # regular season, postseason, play-in; skip preseason/all-star
-            continue
-        c = e["competitions"][0]
-        teams = {t["homeAway"]: t for t in c["competitors"]}
-        if "home" not in teams or "away" not in teams:
-            continue
-        if {teams["home"]["team"].get("abbreviation"), teams["away"]["team"].get("abbreviation")} - TEAMS:
-            continue
-        st = e["status"]["type"]
-
-        def side(t):
-            score = t.get("score")
-            return {
-                "abbr": t["team"].get("abbreviation"),
-                "name": t["team"].get("displayName"),
-                "short": t["team"].get("shortDisplayName"),
-                "score": int(score) if (score not in (None, "") and st.get("state") != "pre") else None,
-            }
-
-        out.append({
-            "id": e["id"],
-            "date": e["date"],
-            "seasonYear": e.get("season", {}).get("year"),
-            "seasonType": stype,
-            "state": st.get("state"),           # pre | in | post
-            "final": bool(st.get("completed")),
-            "status": st.get("shortDetail") or st.get("description"),
-            "statusName": st.get("name"),       # e.g. STATUS_FINAL, STATUS_POSTPONED, STATUS_CANCELED
-            "neutral": bool(c.get("neutralSite")),
-            "home": side(teams["home"]),
-            "away": side(teams["away"]),
-        })
-    return out
-
-
-def season_info(today: datetime) -> dict:
-    p = fetch(today.strftime("%Y%m%d"))
-    lg = p["leagues"][0]
-    s = lg["season"]
-    cal = [d[:10].replace("-", "") for d in lg.get("calendar", []) if isinstance(d, str)]
-    return {"year": s["year"], "label": s.get("displayName"), "calendar": cal, "today": parse_events(p)}
+# ---- sources (Larry memo 20, Kiko 9:58): swap vendors/tiers in scripts/providers.py, not here ----
+get_schedule = P.schedule_provider   # tests monkeypatch these two
+get_odds = P.odds_provider
 
 
 def load(path, default):
@@ -132,26 +75,20 @@ def team_table(games: list) -> dict:
     return t
 
 
-def prior_season(prior_year: int) -> dict:
-    """Last season's per-team ppg / opp ppg / margin. Cached in public/data/prior.json."""
+def prior_season(prior_year: int, sched) -> dict:
+    """Last season's per-team ppg / opp ppg / margin. Cached in public/data/prior.json (aggregates only)."""
     path = os.path.join(DATA, "prior.json")
     cached = load(path, None)
-    if cached and cached.get("seasonYear") == prior_year:
+    if cached and cached.get("seasonYear") == prior_year and cached.get("provider") == sched.name:
         return cached
-    # find that season's calendar by querying a mid-season date (January of season year)
-    info = fetch(f"{prior_year}0115")
-    cal = [d[:10].replace("-", "") for d in info["leagues"][0].get("calendar", []) if isinstance(d, str)]
-    games = []
-    for d in cal:
-        games += [g for g in parse_events(fetch(d)) if g["seasonType"] == 2]
-        time.sleep(0.2)
+    games = [g for g in sched.season_games(prior_year) if g["seasonType"] == 2]
     tbl = team_table(games)
     if len(tbl) != 30:
         raise RuntimeError(f"prior season table incomplete ({len(tbl)} teams)")
     teams = {k: {"name": v["name"], "gp": v["gp"], "w": v["w"], "l": v["l"],
                  "ppg": round(v["pf"] / v["gp"], 2), "oppg": round(v["pa"] / v["gp"], 2),
                  "margin": round((v["pf"] - v["pa"]) / v["gp"], 2)} for k, v in tbl.items()}
-    out = {"seasonYear": prior_year, "label": f"{prior_year-1}-{str(prior_year)[2:]}", "games": len(games), "teams": teams}
+    out = {"seasonYear": prior_year, "label": f"{prior_year-1}-{str(prior_year)[2:]}", "provider": sched.name, "games": len(games), "teams": teams}
     dump(path, out)
     return out
 
@@ -225,43 +162,6 @@ def project(g: dict, R: dict) -> dict | None:
     }
 
 
-def fetch_market_spreads(now: datetime) -> dict:
-    """Returns {(homeName, awayName, YYYY-MM-DD commence UTC): {...}} or {} if no source configured.
-    Line = median home point spread across the US books returned (negative = home favored)."""
-    key = os.environ.get("ODDS_API_KEY", "").strip()
-    if not key:
-        return {}
-    req = urllib.request.Request(ODDS_URL.format(key=key), headers={"User-Agent": "proswisher-data/1.0"})
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            events = json.loads(r.read().decode())
-    except Exception as ex:  # never print the URL (it carries the key)
-        raise RuntimeError(f"market spread fetch failed: {type(ex).__name__}") from None
-    out = {}
-    for ev in events:
-        home, away = ev.get("home_team"), ev.get("away_team")
-        pts, books = [], []
-        for b in ev.get("bookmakers", []):
-            for m in b.get("markets", []):
-                if m.get("key") != "spreads":
-                    continue
-                for o in m.get("outcomes", []):
-                    if o.get("name") == home and isinstance(o.get("point"), (int, float)):
-                        pts.append(float(o["point"])); books.append(b.get("key"))
-        if not pts:
-            continue
-        pts.sort(); n = len(pts)
-        med = pts[n // 2] if n % 2 else (pts[n // 2 - 1] + pts[n // 2]) / 2
-        h = ODDS_NAME_ALIASES.get(home, home); a = ODDS_NAME_ALIASES.get(away, away)
-        out[(h, a, ev["commence_time"][:10])] = {
-            "homeLine": round(med * 2) / 2,
-            "source": f"The Odds API, median of {n} US books",
-            "books": sorted(set(books)),
-            "recordedAt": now.isoformat(timespec="seconds"),
-        }
-    return out
-
-
 def ats_lean(home_margin: float, home_line: float):
     """Our lean vs the market: home if the model expects home to beat the market number, else away."""
     market_margin = -home_line
@@ -272,50 +172,74 @@ def ats_lean(home_margin: float, home_line: float):
     return None
 
 
+COMMIT_FIELDS = ("gameId", "date", "home", "away", "loggedAt", "modelVersion", "pick", "pickProb", "spread", "total", "homeMargin")
+
+
+def commitment(e: dict) -> str:
+    body = json.dumps({k: e.get(k) for k in COMMIT_FIELDS}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256((e["nonce"] + "|" + body).encode()).hexdigest()
+
+
+def featured_ids(games: list) -> set:
+    """Earliest tip-off per CT calendar day, ties by id (same rule as src/lib/access.ts and server/index.mjs)."""
+    best = {}
+    for g in games:
+        d = datetime.fromisoformat(g["date"].replace("Z", "+00:00")).astimezone(CT).date()
+        c = best.get(d)
+        if c is None or g["date"] < c["date"] or (g["date"] == c["date"] and g["id"] < c["id"]):
+            best[d] = g
+    return {g["id"] for g in best.values()}
+
+
 def main():
     now = datetime.now(timezone.utc)
+    if os.environ.get("GITHUB_ACTIONS") == "true" and not os.environ.get("PREDICTIONS_PRIVATE_DIR"):
+        # P6: the full log (member picks + nonces) must persist privately; a CI runner can't hold it and the
+        # public repo must never receive it. Run on the server with a volume instead (PIPELINE_INTERVAL_MIN).
+        raise RuntimeError("refusing to run in CI without a persistent PREDICTIONS_PRIVATE_DIR (Larry P6)")
+    try:
+        sched = get_schedule()
+    except P.NotConfigured as e:
+        print(f"No licensed schedule source configured ({e}). Nothing fetched or written.")
+        return
     os.makedirs(DATA, exist_ok=True)
-    info = season_info(now)
+    os.makedirs(PRIVATE, exist_ok=True)
+    info = sched.season_of(now)
     year = info["year"]
 
-    gpath = os.path.join(DATA, "games.json")
-    store = load(gpath, {"seasonYear": year, "games": {}})
-    if store.get("seasonYear") != year:
-        store = {"seasonYear": year, "games": {}}
+    gpath = os.path.join(PRIVATE, "games-full.json")
+    store = load(gpath, None) or load(os.path.join(DATA, "games.json"), {"seasonYear": year, "games": {}})
+    if store.get("seasonYear") != year or store.get("provider") != sched.name:
+        store = {"seasonYear": year, "provider": sched.name, "games": {}}  # never mix sources (ids differ)
     games = store["games"]
 
-    horizon = (now + timedelta(days=7)).strftime("%Y%m%d")
-    start_reg = None
-    fetched = 0
-    for d in info["calendar"]:
-        if d > horizon:
-            break
-        day_games = [g for g in games.values() if g.get("day") == d]
-        if day_games and all(g["final"] for g in day_games):
-            continue  # cached & complete
-        for g in parse_events(fetch(d)):
-            g["day"] = d
-            games[g["id"]] = g
-        fetched += 1
-        time.sleep(0.2)
-    print(f"fetched {fetched} scoreboard days; {len(games)} games cached for {info['label']}")
+    # refetch from the earliest unfinished cached game (or season start) through +7 days
+    open_days = [g["date"][:10] for g in games.values() if not g["final"]]
+    season_start = f"{year - 1}-09-15"
+    start = min(open_days) if open_days else (max((g["date"][:10] for g in games.values()), default=season_start))
+    end = (now + timedelta(days=7)).strftime("%Y-%m-%d")
+    fetched = sched.games_between(start, end)
+    for g in fetched:
+        games[g["id"]] = g
+    print(f"{sched.name}: {len(fetched)} games fetched ({start}..{end}); {len(games)} cached for {info['label']}")
 
     glist = sorted(games.values(), key=lambda g: g["date"])
     if not glist:
         raise RuntimeError("no regular-season games found; refusing to write empty data")
-    prior = prior_season(year - 1)
+    prior = prior_season(year - 1, sched)
     cur = team_table(glist)
     R = ratings(cur, prior)
 
     # predictions log: append-only, locked at first log
-    ppath = os.path.join(DATA, "predictions.json")
-    log = load(ppath, {"modelVersion": MODEL_VERSION, "startedAt": now.isoformat(timespec="seconds"), "entries": {}})
+    ppath = os.path.join(PRIVATE, "predictions-full.json")
+    log = load(ppath, None) or load(os.path.join(DATA, "predictions.json"), {"modelVersion": MODEL_VERSION, "startedAt": now.isoformat(timespec="seconds"), "entries": {}})
     entries = log["entries"]
-    LOCKED = ("gameId", "date", "home", "away", "loggedAt", "modelVersion", "pick", "pickProb", "spread", "total", "homeMargin")
+    LOCKED = COMMIT_FIELDS + ("nonce", "commitment")
     SET_ONCE = ("marketSpread", "atsLean", "result", "projScore")  # may go null -> value once, never change afterwards
     before = {k: {f: v.get(f) for f in LOCKED + SET_ONCE} for k, v in entries.items()}
-    market = fetch_market_spreads(now)
-    log["marketSource"] = "the-odds-api" if os.environ.get("ODDS_API_KEY", "").strip() else None
+    odds = get_odds()
+    market = odds.spreads(now)  # derived fields only (median line, book count, time)
+    log["marketSource"] = odds.name if odds.name != "none" else None
     upcoming = []
     for g in glist:
         g_dt = datetime.fromisoformat(g["date"].replace("Z", "+00:00"))
@@ -331,12 +255,14 @@ def main():
                         "pick": pr["pick"], "pickProb": pr["pickProb"], "spread": pr["spread"], "total": pr["total"],
                         "homeMargin": pr["homeMargin"], "marketSpread": None, "atsLean": None, "result": None,
                         "loggedBy": "github-actions" if os.environ.get("GITHUB_ACTIONS") == "true" else "manual-run",
+                        "nonce": secrets.token_hex(16),
                     }
+                    entries[g["id"]]["commitment"] = commitment(entries[g["id"]])
                 e = entries[g["id"]]
                 e.setdefault("projScore", pr["projScore"])  # posted with the pick (pre-tip-off only)
                 # record the market spread once, only before tip-off
                 if e.get("marketSpread") is None and market:
-                    m = market.get((g["home"]["name"], g["away"]["name"], g["date"][:10]))
+                    m = market.get((g["home"]["abbr"], g["away"]["abbr"], g["date"][:10]))
                     if m:
                         e["marketSpread"] = m
                         e["atsLean"] = ats_lean(e["homeMargin"], m["homeLine"])
@@ -377,9 +303,27 @@ def main():
 
     store["games"] = games
     store["updatedAt"] = now.isoformat(timespec="seconds")
-    store["seasonLabel"] = info["label"]
-    dump(gpath, store)
-    dump(ppath, log)
+    store["seasonLabel"] = info["label"]; store["provider"] = sched.name
+    dump(gpath, store)   # private (full)
+    dump(ppath, log)     # private (full)
+    # ---- public projections (safe to serve statically and to commit) ----
+    feat = featured_ids(glist)
+    tipped = lambda iso: datetime.fromisoformat(iso.replace("Z", "+00:00")) <= now
+    pub_games = {}
+    for gid, g in games.items():
+        pg = dict(g)
+        if "prediction" in pg and gid not in feat:
+            pg.pop("prediction")  # member-only until tip-off (served by the gated API)
+        pub_games[gid] = pg
+    dump(os.path.join(DATA, "games.json"), {**store, "games": pub_games})
+    pub_entries, sealed = {}, {}
+    for k, e in entries.items():
+        if e["result"] is not None or tipped(e["date"]) or k in feat:
+            pub_entries[k] = e
+        else:
+            sealed[k] = {"gameId": k, "date": e["date"], "loggedAt": e["loggedAt"], "commitment": e.get("commitment")}
+    dump(os.path.join(DATA, "predictions.json"), {**log, "entries": pub_entries, "sealed": sealed,
+        "commitmentNote": "sha256(nonce + '|' + canonical JSON of the posted fields); the nonce is published with the entry at tip-off."})
     stats = {"updated": now.strftime("%Y-%m-%d %H:%M UTC"), "season": info["label"], "seasonYear": year,
              "modelVersion": MODEL_VERSION,
              "model": {"homeCourt": HOME_COURT, "priorGames": PRIOR_GAMES, "priorRegress": PRIOR_REGRESS, "sigma": SIGMA},
@@ -393,6 +337,9 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except P.SourceBlocked as ex:  # memo 20: a source refused us -> stop and report, never route around it
+        print(f"BLOCKED: {ex}", file=sys.stderr)
+        sys.exit(3)
     except Exception as ex:  # fail loudly so the Action goes red instead of committing stale data
         print(f"ERROR: {ex}", file=sys.stderr)
         sys.exit(1)

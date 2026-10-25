@@ -1,0 +1,29 @@
+import { Fragment, type ReactNode } from "react";
+
+// Tiny renderer for the legal drafts in src/content (bold, headings, bullets, paragraphs, bare links). No HTML passthrough.
+function inline(t: string): ReactNode[] {
+  return t.split(/(\*\*[^*]+\*\*|https?:\/\/[^\s)]+[^\s).,;])/g).map((part, i) => {
+    if (/^\*\*[^*]+\*\*$/.test(part)) return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (/^https?:\/\//.test(part)) return <a key={i} href={part} className="text-accent underline" target="_blank" rel="noreferrer">{part}</a>;
+    return <Fragment key={i}>{part}</Fragment>;
+  });
+}
+
+export function Markdown({ text }: { text: string }) {
+  const blocks = text.replace(/\r/g, "").split(/\n{2,}/);
+  return (
+    <>
+      {blocks.map((b, i) => {
+        const lines = b.split("\n").filter(Boolean);
+        if (!lines.length) return null;
+        if (lines.every((l) => /^[-*] /.test(l)))
+          return <ul key={i} className="list-disc pl-5 space-y-2">{lines.map((l, j) => <li key={j}>{inline(l.slice(2))}</li>)}</ul>;
+        const h = /^#{1,4} (.*)$/.exec(lines[0]) || /^\*\*([^*]+)\*\*$/.exec(lines[0]);
+        if (h) return <Fragment key={i}><h2 className="text-lg font-bold pt-2">{inline(h[1])}</h2>{lines.length > 1 && <Markdown text={lines.slice(1).join("\n")} />}</Fragment>;
+        if (lines.some((l) => /^[-*] /.test(l)))
+          return <Fragment key={i}>{lines.map((l, j) => /^[-*] /.test(l) ? <ul key={j} className="list-disc pl-5"><li>{inline(l.slice(2))}</li></ul> : <p key={j}>{inline(l)}</p>)}</Fragment>;
+        return <p key={i}>{lines.map((l, j) => <Fragment key={j}>{j > 0 && <br />}{inline(l)}</Fragment>)}</p>;
+      })}
+    </>
+  );
+}

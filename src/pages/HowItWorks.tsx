@@ -27,7 +27,7 @@ export default function HowItWorks() {
         Each side's expected points = its scoring rate + the opponent's points-allowed rate − league average (both blended with last season the same way), plus or minus half the home-court edge.
       </Step>
       <Step n={5} t="Logged before tip-off, graded after">
-        A scheduled job runs several times a day. It projects every game in the next 7 days and appends any new prediction to a public, append-only log with a timestamp. Logged predictions are never changed. After the game it records the final score next to the prediction.
+        A scheduled job runs several times a day. It projects every game in the next 7 days and appends any new prediction to an append-only log with a timestamp. The free featured game is public right away; every other prediction is sealed with a published hash and revealed in full at tip-off, so anyone can check it wasn't changed. Logged predictions are never changed. After the game it records the final score next to the prediction.
       </Step>
       <h2 className="text-lg font-bold pt-2">What it ignores</h2>
       <p className="text-slate-400 text-sm">Injuries, rest, travel, lineup changes, schedule strength and market prices. The model is a transparent baseline, not an edge. Treat it accordingly.</p>

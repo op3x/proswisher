@@ -4,10 +4,11 @@ import { usePaymentsEnabled } from "../lib/runtime";
 // Pricing section. Rendered only when the server reports payments enabled (test key + webhook secret + price set).
 export default function Subscribe() {
   const selling = usePaymentsEnabled();
-  if (!selling) return null;
   const p = site.pricing;
+  // #pricing is a shared-link anchor (Laye x_members_d6_v1); keep a stub there while membership is closed.
+  if (!selling) return <section id="pricing" className="scroll-mt-20 text-sm text-slate-400">{site.gamePage.paymentsOff}</section>;
   return (
-    <section className="space-y-3">
+    <section id="pricing" className="space-y-3 scroll-mt-20">
       <h2 className="text-lg font-bold">{p.title}</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl bg-panel border border-line p-4 space-y-2">

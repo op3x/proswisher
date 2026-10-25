@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { site, geoblock } from "../config/site";
 import { usePaymentsEnabled } from "../lib/runtime";
 
@@ -22,7 +23,7 @@ export default function SubscribePage() {
     setBusy(true);
     try {
       const r = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ consent: true, country: country === "OTHER" ? "ZZ" : country, state }) });
+        body: JSON.stringify({ consent: true, age21: true, country: country === "OTHER" ? "ZZ" : country, state }) });
       const j = await r.json().catch(() => ({}));
       if (r.ok && j.url) { window.location.href = j.url; return; }
       setErr(r.status === 451 ? site.geoBlockCopy.checkoutBilling : site.gamePage.paymentsOff);
@@ -55,11 +56,13 @@ export default function SubscribePage() {
             <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             <span className="text-slate-300">{c.consentCheckbox.replace("{price}", price)}</span>
           </label>
+          <p className="text-xs text-slate-400">Read the <Link className="text-accent underline" to="/terms" target="_blank">Terms</Link> and <Link className="text-accent underline" to="/privacy" target="_blank">Privacy Policy</Link>.</p>
           {err && <p className="text-loss">{err}</p>}
-          <button onClick={submit} disabled={busy} className="rounded-lg bg-accent text-ink font-semibold px-4 py-2 disabled:opacity-50">{c.cta.replace("{price}", price)}</button>
-          <p className="text-xs text-slate-500">{site.pickDisclaimer}</p>
+          <button onClick={submit} disabled={busy || !consent} className="rounded-lg bg-accent text-ink font-semibold px-4 py-2 disabled:opacity-50">{c.cta.replace("{price}", price)}</button>
         </div>
       )}
+      {/* memo 20 condition 5: full disclaimer on the checkout page too */}
+      <p className="text-xs text-slate-500">{site.footerDisclaimer}</p>
     </div>
   );
 }

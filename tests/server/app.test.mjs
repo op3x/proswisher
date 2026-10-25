@@ -61,8 +61,10 @@ test("451 only on sign-up page and checkout creation; health and webhook never g
   const s = await serve(app);
   try {
     for (const ip of ["203.0.113.10", "198.51.100.20"]) {
-      assert.equal((await fetch(s.url + "/subscribe", { headers: xff(ip) })).status, 451);
-      const r = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", ...xff(ip) }, body: JSON.stringify({ consent: true, country: "US", state: "TX" }) });
+      const bp = await fetch(s.url + "/subscribe", { headers: xff(ip) });
+      assert.equal(bp.status, 451);
+      assert.ok(!(await bp.text()).includes("support@")); // P11: hidden until the alias works
+      const r = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", ...xff(ip) }, body: JSON.stringify({ consent: true, age21: true, country: "US", state: "TX" }) });
       assert.equal(r.status, 451);
       assert.equal((await fetch(s.url + "/", { headers: xff(ip) })).status, 200);
       assert.equal((await fetch(s.url + "/track-record", { headers: xff(ip) })).status, 200);
@@ -71,16 +73,19 @@ test("451 only on sign-up page and checkout creation; health and webhook never g
       assert.equal(wh.status, 400); // reached signature check, not 451
     }
     // declared billing state is the second gate
-    const d = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", ...xff("192.0.2.50") }, body: JSON.stringify({ consent: true, country: "US", state: "HI" }) });
+    const d = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", ...xff("192.0.2.50") }, body: JSON.stringify({ consent: true, age21: true, country: "US", state: "HI" }) });
     assert.equal(d.status, 451);
     // consent required (unchecked by default)
     const nc = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", ...xff("192.0.2.50") }, body: JSON.stringify({ country: "US", state: "TX" }) });
     assert.equal(nc.status, 400);
-    const ok = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", ...xff("192.0.2.50") }, body: JSON.stringify({ consent: true, country: "US", state: "TX" }) });
+    const ok = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", ...xff("192.0.2.50") }, body: JSON.stringify({ consent: true, age21: true, country: "US", state: "TX" }) });
     assert.equal(ok.status, 200);
     const [, params] = stripe.calls.find(([n]) => n === "checkout.sessions.create");
     assert.equal(params.mode, "subscription"); assert.equal(params.billing_address_collection, "required");
-    assert.equal(params.metadata.ip_country, "US"); assert.ok(!JSON.stringify(params).includes("192.0.2.50")); // no raw IP stored
+    // P10 consent record: time, IP, text version, price, 21+ (the one place a raw IP is kept)
+    assert.equal(params.metadata.consent_ip, "192.0.2.50"); assert.equal(params.metadata.consent_version, "consent-v1-2026-10-25");
+    assert.equal(params.metadata.age_21_confirmed, "true"); assert.ok(params.metadata.price_shown.startsWith("$9"));
+    assert.equal(params.metadata.ip_country, "US");
   } finally { s.close(); }
 });
 
@@ -118,5 +123,8 @@ test("counter: hashed ids only, admin stats behind token", async () => {
     const txt = JSON.stringify(st);
     assert.ok(!txt.includes("192.0.2"));
     assert.match(txt, /2/); // two unique visitors
+    // member predictions are never public and the gated API is closed without a subscription
+    assert.equal((await fetch(s.url + "/data/secret.json")).status, 404);
+    assert.deepEqual((await (await fetch(s.url + "/api/predictions")).json()).predictions, {});
   } finally { s.close(); }
 });

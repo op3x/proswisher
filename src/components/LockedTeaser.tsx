@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { site } from "../config/site";
-import { Game } from "../lib/data";
+import { Game, gamePath } from "../lib/data";
 import { usePaymentsEnabled } from "../lib/runtime";
 
 const ctTime = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" });
@@ -21,7 +21,7 @@ export default function LockedTeaser({ g, featured, compact = false }: { g: Game
         {selling
           ? <a href="/go/subscribe" className="inline-block rounded-lg bg-accent text-ink font-semibold px-3 py-1.5 text-xs">{m.cta}</a>
           : <span role="button" aria-disabled="true" className="inline-block rounded-lg bg-line px-3 py-1.5 text-xs text-slate-400 cursor-not-allowed">{m.cta}</span>}
-        {featured && !compact && <Link to={`/game/${featured.id}`} className="text-xs text-accent">{m.ctaSecondary}</Link>}
+        {featured && !compact && <Link to={gamePath(featured)} className="text-xs text-accent">{m.ctaSecondary}</Link>}
       </div>
       <p className="text-[11px] text-slate-500">{selling ? m.priceNote : site.gamePage.paymentsOff} {site.predictionCard.lockedLogNote}</p>
     </div>

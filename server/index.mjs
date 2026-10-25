@@ -30,11 +30,15 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
 
   // featured game per CT day = earliest tip-off, ties by id (same rule as src/lib/access.ts)
   let featured = new Set(), games = {}, gamesAt = 0;
+  // Canonical shareable game URL: /games/{yyyy-mm-dd CT}/{away-slug}-vs-{home-slug} (same rule as src/lib/data.ts gamePath)
+  const kebab = (x) => String(x || "").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const gamePathOf = (g) => `/games/${new Date(g.date).toLocaleDateString("en-CA", { timeZone: "America/Chicago" })}/${kebab(g.away.short)}-vs-${kebab(g.home.short)}`;
+  const bySlug = (p) => { loadGames(); const k = String(p).replace(/\/+$/, "").toLowerCase(); return Object.values(games).find((g) => gamePathOf(g) === k)?.id || null; };
   const loadGames = () => {
     if (Date.now() - gamesAt < 120000) return;
     gamesAt = Date.now();
     try {
-      games = JSON.parse(fs.readFileSync(path.join(dist, "data/games.json"), "utf8")).games || {};
+      games = JSON.parse(fs.readFileSync(path.join(publicDataDir || path.join(dist, "data"), "games.json"), "utf8")).games || {};
       const best = new Map();
       for (const g of Object.values(games)) {
         const d = new Date(g.date).toLocaleDateString("en-CA", { timeZone: "America/Chicago" }), c = best.get(d);
@@ -43,6 +47,16 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
       featured = new Set([...best.values()].map((g) => g.id));
     } catch { /* no data yet */ }
   };
+
+  // Larry P6: member predictions live only in the private dir (never in /data/*.json or the repo before tip-off).
+  const privateDir = env.PREDICTIONS_PRIVATE_DIR || "";
+  const publicDataDir = env.PUBLIC_DATA_DIR || "";
+  const readPrivateGames = () => {
+    if (!privateDir) return {};
+    try { return JSON.parse(fs.readFileSync(path.join(privateDir, "games-full.json"), "utf8")).games || {}; } catch { return {}; }
+  };
+  const supportOn = commerce.supportEmailActive === true;
+  const help = supportOn ? commerce.geoBlockCopy.help : commerce.geoBlockCopy.help.replace(/Questions\? Email \S+@\S+\.\s*/, "");
 
   const geoGate = (req) => {
     const d = geoipDecision(state.geo, clientIp(req));
@@ -53,7 +67,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     const c = commerce.geoBlockCopy;
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${c.title} | ProSwisher</title>
 <style>body{margin:0;background:#0b0f17;color:#e2e8f0;font:16px/1.5 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}main{max-width:32rem;padding:2rem}a{color:#22d3ee}small{color:#94a3b8}</style></head>
-<body><main><h1>${c.title}</h1><p>${c.body}</p><p><a href="/">Browse predictions</a> · <a href="/track-record">Track record</a></p><small>${c.help}</small></main></body></html>`;
+<body><main><h1>${c.title}</h1><p>${c.body}</p><p><a href="/">Browse predictions</a> · <a href="/track-record">Track record</a></p><small>${help}</small></main></body></html>`;
   };
 
   // ---- never geo-checked ----
@@ -79,10 +93,12 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     loadGames();
     const p = String(req.body?.p || "");
     const m = p.match(/^\/game\/([\w-]+)$/);
-    counter.visit(clientIp(req), req.headers["user-agent"], { featuredView: !!(m && featured.has(m[1])) });
+    const gid = m ? m[1] : bySlug(p);
+    const utm = req.body && typeof req.body.utm === "object" ? req.body.utm : null;
+    counter.visit(clientIp(req), req.headers["user-agent"], { featuredView: !!(gid && featured.has(gid)), utm });
     res.status(204).end();
   });
-  app.get("/go/subscribe", (_req, res) => { counter.click(); res.redirect(302, "/subscribe"); });
+  app.get("/go/subscribe", (req, res) => { counter.click(clientIp(req), req.headers["user-agent"]); res.redirect(302, "/subscribe"); });
   app.get("/admin/stats", (req, res) => {
     const tok = env.ADMIN_TOKEN || "";
     if (!tok) return res.status(404).end(); // disabled when unset
@@ -106,10 +122,15 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
       return res.status(451).json({ error: "geoblocked", ...commerce.geoBlockCopy });
     }
     const g = geoipDecision(state.geo, clientIp(req));
-    const meta = {
-      consent_at: new Date().toISOString(), consent_version: commerce.consentVersion,
-      declared_country: country, declared_state: st, ip_country: g.country || "", ip_region: g.region || "",
+    if (b.age21 !== true) return res.status(400).json({ error: "age_confirmation_required" });
+    // Larry P10: legal consent record (time, IP, consent-text version, price shown, 21+ confirmation).
+    // The ONE place a raw IP is kept; separate from analytics (counter never sees it). Stored in Stripe
+    // metadata (durable) and, if CONSENT_DIR is set, an append-only JSONL file.
+    const consent = {
+      consent_at: new Date().toISOString(), consent_ip: clientIp(req), consent_version: commerce.consentVersion,
+      price_shown: commerce.priceShown, age_21_confirmed: "true",
     };
+    const meta = { ...consent, declared_country: country, declared_state: st, ip_country: g.country || "", ip_region: g.region || "" };
     try {
       const s = await stripe.checkout.sessions.create({
         mode: "subscription",
@@ -121,6 +142,10 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
         automatic_tax: { enabled: env.STRIPE_AUTOMATIC_TAX === "true" },
         metadata: meta, subscription_data: { metadata: meta },
       });
+      if (env.CONSENT_DIR) {
+        try { fs.mkdirSync(env.CONSENT_DIR, { recursive: true }); fs.appendFileSync(path.join(env.CONSENT_DIR, "consent.jsonl"), JSON.stringify({ ...consent, checkout_session: s.id || null }) + "\n"); }
+        catch (e) { log(`[consent] local write failed (${e.code || e.name}); Stripe metadata still holds the record`); }
+      }
       res.json({ url: s.url });
     } catch (e) { log(`[pay] checkout create failed (${e.type || e.name})`); res.status(502).json({ error: "checkout_failed" }); }
   });
@@ -129,14 +154,30 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     const s = await stripe.checkout.sessions.retrieve(sid, { expand: ["subscription"] });
     return s;
   };
+  const subscriberOf = async (sid) => {
+    const s = await sessionSub(String(sid || ""));
+    const sub = s?.subscription;
+    const ok = !!(s && s.status === "complete" && sub && ["active", "trialing"].includes(sub.status) && !state.revoked.has(sub.id) && !state.revoked.has(s.id));
+    return { ok, sub };
+  };
   app.get("/api/me", async (req, res) => {
     if (!mode.enabled) return res.json({ subscriber: false, payments: false });
     try {
-      const s = await sessionSub(String(req.query.session_id || ""));
-      const sub = s?.subscription;
-      const ok = !!(s && s.status === "complete" && sub && ["active", "trialing"].includes(sub.status) && !state.revoked.has(sub.id) && !state.revoked.has(s.id));
+      const { ok, sub } = await subscriberOf(req.query.session_id);
       res.set("Cache-Control", "no-store").json({ subscriber: ok, status: sub?.status || null, cancelAt: sub?.cancel_at || null });
     } catch { res.json({ subscriber: false }); }
+  });
+  // Gated member predictions (pre-tip-off, non-featured). Featured + tipped-off ones are already public.
+  app.get("/api/predictions", async (req, res) => {
+    res.set("Cache-Control", "no-store");
+    if (!mode.enabled) return res.json({ predictions: {} });
+    try {
+      const { ok } = await subscriberOf(req.query.session_id);
+      if (!ok) return res.status(403).json({ predictions: {} });
+      const out = {};
+      for (const [id, g] of Object.entries(readPrivateGames())) if (g.state === "pre" && g.prediction) out[id] = g.prediction;
+      res.json({ predictions: out });
+    } catch { res.status(502).json({ predictions: {} }); }
   });
   app.post("/api/portal", async (req, res) => {
     if (!mode.enabled) return res.status(503).json({ error: "payments_disabled" });
@@ -156,9 +197,9 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   // paid sign-up page: the ONLY page that is geo-gated
   app.get("/subscribe", (req, res) => (geoGate(req).blocked ? sendPage(res, blockPage(), 451) : sendPage(res, indexHtml())));
   // per-game SEO title server-side (Larry format), so crawlers see it without JS
-  app.get("/game/:id", (req, res) => {
+  const gamePage = (req, res) => {
     loadGames();
-    const g = games[req.params.id];
+    const g = games[req.params.id || bySlug(req.path)];
     let html = indexHtml();
     if (g) {
       const date = new Date(g.date).toLocaleDateString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric" });
@@ -167,7 +208,11 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
       html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(t)}</title>`).replace(/(<meta name="description" content=")[^"]*/, `$1${esc(d)}`);
     }
     sendPage(res, html);
-  });
+  };
+  app.get("/game/:id", gamePage);
+  app.get("/games/:date/:slug", gamePage);
+  if (publicDataDir) app.use("/data", express.static(publicDataDir, { maxAge: "1m" }));
+  app.use("/data", (req, res, next) => (/^\/(games|predictions|stats|prior)\.json$/.test(req.path) ? next() : res.status(404).end()));
   app.use(express.static(dist, { index: false, maxAge: "5m", setHeaders: (r, p) => { if (p.includes("/assets/")) r.setHeader("Cache-Control", "public, max-age=31536000, immutable"); } }));
   app.get(/.*/, (_req, res) => sendPage(res, indexHtml()));
   Object.assign(app.locals, { counter, state, mode: () => mode });
@@ -180,6 +225,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const app = await createApp({ counter });
   setInterval(() => { try { counter.flush(); } catch (e) { console.warn("[stats] flush failed", e.message); } }, 5 * 60 * 1000).unref();
   setInterval(async () => { if (await fetchGeoip()) { app.locals.state.geo = await openGeoip(); } }, 7 * 864e5).unref();
+  // Optional server-side pipeline (P6): keeps the full log in PREDICTIONS_PRIVATE_DIR (needs a volume).
+  // Off unless PIPELINE_INTERVAL_MIN is set; the pipeline itself also needs a licensed source (memo 20).
+  const every = Number(process.env.PIPELINE_INTERVAL_MIN || 0);
+  if (every > 0 && process.env.PREDICTIONS_PRIVATE_DIR && process.env.PUBLIC_DATA_DIR) {
+    const { spawn } = await import("node:child_process");
+    const run = () => spawn("python3", [path.join(ROOT, "scripts/update_data.py")], { stdio: "inherit" }).on("error", (e) => console.warn("[pipeline] not run:", e.code));
+    run(); setInterval(run, every * 60000).unref();
+  }
   const port = Number(process.env.PORT || 3000);
   app.listen(port, "0.0.0.0", () => console.log(`[server] listening on :${port}`));
   for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { try { counter.flush(); } catch {} process.exit(0); });

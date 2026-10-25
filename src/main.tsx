@@ -22,6 +22,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="game/:id" element={<GameDetail />} />
+          <Route path="games/:date/:slug" element={<GameDetail />} />
           <Route path="track-record" element={<TrackRecord />} />
           <Route path="how-it-works" element={<HowItWorks />} />
           <Route path="responsible-gaming" element={<Responsible />} />

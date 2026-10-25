@@ -26,6 +26,12 @@ export function useSubscriber(): boolean {
 }
 
 // Cookieless first-party page counter (server hashes IP+UA with a daily salt; nothing raw stored).
-export function countView(path: string) {
-  try { fetch("/api/v", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ p: path }), keepalive: true }); } catch { /* ignore */ }
+// UTM params (utm_source/medium/campaign/content) are sent only with the landing view that carries them;
+// the server ties them to the hashed visitor id for same-visit CTA attribution. Nothing stored client-side.
+const UTM = ["utm_source", "utm_medium", "utm_campaign", "utm_content"];
+export function countView(path: string, search = "") {
+  const q = new URLSearchParams(search), utm: Record<string, string> = {};
+  for (const k of UTM) { const v = q.get(k); if (v) utm[k] = v.slice(0, 64); }
+  const body = Object.keys(utm).length ? { p: path, utm } : { p: path };
+  try { fetch("/api/v", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), keepalive: true }); } catch { /* ignore */ }
 }

@@ -1,15 +1,43 @@
 import { legal, site, LEGAL_DRAFT } from "../config/site";
+import { usePaymentsEnabled } from "../lib/runtime";
+import { Markdown } from "../components/Markdown";
+import privacyA from "../content/privacy-a.md?raw";
+import privacyB from "../content/privacy-b.md?raw";
+import termsV1 from "../content/terms-v1.md?raw";
 
-function Page({ title, paras }: { title: string; paras: readonly string[] }) {
+const SUPPORT = site.supportEmailActive ? site.supportEmail : "[support contact: not yet active]";
+const fill = (t: string) => t
+  .replace(/\{CONTACT\}/g, site.supportEmailActive ? `Questions about privacy? Email ${site.supportEmail}.` : `${site.company} · ${site.mailingAddress}`)
+  .replace(/\{SUPPORT\}/g, SUPPORT)
+  .replace(/\{COUNTING\}/g, legal.privacyCounting)
+  .replace(/support@proswisher\.com/g, SUPPORT); // Larry P11: never show the alias while it's inactive
+
+function Shell({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <div className="max-w-3xl space-y-4 prose-legal">
       {LEGAL_DRAFT && <span className="inline-block rounded bg-amber-500/15 text-amber-300 text-xs font-bold px-2 py-0.5">DRAFT</span>}
-      <h1 className="text-2xl sm:text-3xl font-extrabold">{title}</h1>
-      {paras.map((p, i) => <p key={i}>{p}</p>)}
+      {title && <h1 className="text-2xl sm:text-3xl font-extrabold">{title}</h1>}
+      {children}
       <p className="text-xs text-slate-500">Operated by {site.company}.</p>
     </div>
   );
 }
-export const Responsible = () => <Page title="Responsible gaming" paras={legal.responsible} />;
-export const Terms = () => <Page title="Terms of use" paras={legal.terms} />;
-export const Privacy = () => <Page title="Privacy" paras={legal.privacy} />;
+const Paras = ({ title, paras }: { title: string; paras: readonly string[] }) =>
+  <Shell title={title}>{paras.map((p, i) => <p key={i}>{p}</p>)}</Shell>;
+
+export const Responsible = () => <Paras title="Responsible gaming" paras={legal.responsible} />;
+// Larry P2: full Terms v1 only once the support inbox works (its refund/contact terms depend on it); otherwise the short stub.
+export const Terms = () => site.supportEmailActive
+  ? <Shell><Markdown text={fill(termsV1)} /></Shell>
+  : <Paras title="Terms of use" paras={legal.terms} />;
+// Larry P4: §A always; §B (accounts + payments) only when payments are enabled.
+export function Privacy() {
+  const selling = usePaymentsEnabled();
+  return (
+    <Shell>
+      <Markdown text={fill(privacyA)} />
+      {selling && <><hr className="border-line my-6" /><Markdown text={fill(privacyB)} /></>}
+      <p className="text-xs text-slate-500">{site.geoCredit}</p>
+    </Shell>
+  );
+}

@@ -16,7 +16,7 @@ export default function Faq() {
           <p className="mt-2 text-sm text-slate-300">{a === "{refunds}" ? legal.refunds : a}</p>
         </details>
       ))}
-      <p className="text-sm text-slate-400">Contact: {site.supportEmail}{site.supportEmailActive ? "" : " (not yet active)"}</p>
+      {site.supportEmailActive && <p className="text-sm text-slate-400">Contact: {site.supportEmail}</p>}
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { geoblock as defaults } from "../config/site";
 
 // Geoblock STUB (memo 17 §3, Larry's rulings): WA, HI, UT and Japan. ON by default, configurable.
-// Scope (Larry round 2): ONLY account creation (free and paid) and checkout. Public pages, game pages
-// and the track record are viewable everywhere; nothing in this app blocks a page by location.
+// Scope (Larry P1): ONLY paid account creation and checkout.
+// Public pages, the free featured game and the track record are viewable everywhere.
 // Two independent signals must BOTH pass: IP geolocation (country + region) and billing country + ZIP.
 // When checkout is built this MUST run server-side before a checkout session is created; client-side is advisory.
 // Nothing calls a payment API in this build.

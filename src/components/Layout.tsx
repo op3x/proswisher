@@ -4,8 +4,15 @@ import { site, legal, LEGAL_DRAFT } from "../config/site";
 import { countView } from "../lib/runtime";
 
 export default function Layout() {
-  const { pathname } = useLocation();
-  useEffect(() => { window.scrollTo(0, 0); countView(pathname); }, [pathname]);
+  const { pathname, search, hash } = useLocation();
+  useEffect(() => {
+    countView(pathname, search);
+    if (!hash) { window.scrollTo(0, 0); return; }
+    // shared links land on #prediction / #log / #pricing after async data renders: retry briefly
+    let n = 0; const id = hash.slice(1);
+    const t = setInterval(() => { const el = document.getElementById(id); if (el || ++n > 30) { clearInterval(t); el?.scrollIntoView(); } }, 100);
+    return () => clearInterval(t);
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="min-h-screen flex flex-col">
       {__APP_ENV__ !== "production" && (
@@ -38,7 +45,9 @@ export default function Layout() {
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             {site.footerLinks.map((l) => <Link key={l.to} to={l.to} className="hover:text-white underline-offset-4 hover:underline">{l.label}</Link>)}
           </div>
-          <p className="text-xs">Support: {site.supportEmail}{site.supportEmailActive ? "" : " (not yet active)"} · {site.mailingAddress}</p>
+          {/* Larry P11: support alias hidden until it works. P14: mailing address stays a marked placeholder. */}
+          <p className="text-xs">{site.supportEmailActive ? <>Support: {site.supportEmail} · </> : null}{site.mailingAddress}</p>
+          <p className="text-[11px] text-slate-500">{site.geoCredit}</p>
           <p className="text-xs">© {site.year} {site.company}</p>
         </div>
       </footer>

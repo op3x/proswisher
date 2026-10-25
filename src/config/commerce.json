@@ -3,7 +3,7 @@
   "price": "$9",
   "unitAmount": 900,
   "currency": "usd",
-  "consentVersion": "larry-2026-10-25-0936",
+  "consentVersion": "consent-v1-2026-10-25",
   "renewalDisclosure": "You'll be charged $9 today and $9 every month after that until you cancel. Cancel online any time in Account settings. Cancellation takes effect at the end of your current billing period.",
   "gamePageTitle": "{Away} vs. {Home} Prediction, {date} | NBA | ProSwisher",
   "gamePageDescription": "Projected score, projected spread and our model's lean for {Away} vs {Home}, posted before tip-off. Entertainment only. 21+. 1-800-GAMBLER.",
@@ -12,5 +12,8 @@
     "body": "Sorry, ProSwisher subscriptions aren't available in Washington, Hawaii, Utah or Japan. You're still welcome to browse our public pages, today's featured game and the track record.",
     "checkoutBilling": "Sorry, we can't accept subscriptions with a billing address in Washington, Hawaii, Utah or Japan. You haven't been charged.",
     "help": "Questions? Email support@proswisher.com. Gambling problem? Call 1-800-GAMBLER."
-  }
+  },
+  "priceShown": "$9/month plus applicable tax",
+  "supportEmailActive": false,
+  "_supportNote": "Larry P11: support@proswisher.com is hidden everywhere (site, 451 page, legal pages) until the alias works. Flip to true only after Ingus sets it up, Ryan OKs DNS and a test email arrives."
 }

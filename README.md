@@ -4,12 +4,21 @@ Transparent pro basketball game predictions with a public, append-only track rec
 Web-only (no app-store packaging). Vite + React + TypeScript + Tailwind, served as static files.
 
 ## How it works
-- `scripts/update_data.py` (stdlib Python, run by the workflow staged at `ops/update-stats.yml`; it must be copied to `.github/workflows/` by someone with `workflow` scope, and scheduled runs only happen from `main`) pulls the current
-  season's schedule and final scores, builds team ratings (point differential blended with last season),
-  projects every game in the next 7 days, **appends new predictions to `public/data/predictions.json` before
-  tip-off** (never edited afterwards) and grades them once games are final. It fails loudly instead of writing fallback data.
-- The site reads `public/data/*.json`. No backend, database, cookies, analytics or AI keys.
-- All copy is in `src/config/site.ts` (`FRAMING` switches the positioning). Copy follows Laye's landing-page-copy.md (9:28 AM CT) with Larry's final rulings (canonical footer, flat 21+, checkout consent, track-record rules, geoblock WA/HI/UT/JP).
+- Data sources sit behind a small interface in `scripts/providers.py` (Kiko, Larry memo 20): `ScheduleProvider`
+  (`balldontlie-free`: balldontlie Free tier games endpoint, `BALLDONTLIE_API_KEY`) and `OddsProvider`
+  (`odds-api-free`: The Odds API free tier, `ODDS_API_KEY`; only derived fields leave the provider: median home line,
+  number of books, time recorded). Free tiers only; swap vendors/tiers there without touching callers. No ESPN or other
+  unlicensed feeds. A 401/403 (or repeated 429) raises `SourceBlocked`: the run stops with exit 3 and is reported, never routed around.
+- `scripts/update_data.py` builds team ratings (point differential blended with last season), projects every game in the
+  next 7 days, **appends new predictions to the private full log before tip-off** (never edited afterwards) and grades them
+  once games are final. Without `BALLDONTLIE_API_KEY` it fetches and writes nothing.
+- Larry P6: the full log (`PREDICTIONS_PRIVATE_DIR/predictions-full.json`) is never public or committed. The public
+  `predictions.json` holds the featured game, every game that has tipped off, and a `sealed` hash commitment
+  (sha256 of nonce + pick fields) for every other logged pick, revealed with its nonce at tip-off. Members get
+  upcoming picks from the gated `GET /api/predictions`. The pipeline therefore runs on the server
+  (`PIPELINE_INTERVAL_MIN`, needs a volume), not in GitHub Actions; `ops/update-stats.yml` now only runs tests.
+- `public/data/*.json` in the repo are empty skeletons (reset 2026-10-25; earlier preview data came from an unlicensed feed).
+- All copy is in `src/config/site.ts`, `src/config/commerce.json` and `src/content/*.md` (Larry's legal drafts).
 
 ## Run
 ```
@@ -17,26 +26,15 @@ npm ci && npm run data && npm run dev      # local
 npm run build && PORT=3000 npm start       # production-style static serve (honors PORT)
 ```
 
-## Environment (names only; see `.env.example`)
-| Var | Purpose | Default |
-|---|---|---|
-| `APP_ENV` | `preview` or `production`; guard refuses build/start on live Stripe keys outside production | `preview` |
-| `STRIPE_LIVE_ENABLED` | must be `false`; only honored when `APP_ENV=production` | `false` |
-| `VITE_SUBSCRIBE_ENABLED` | shows an inert "subscription not available yet" placeholder | `false` |
-| `PORT` | set by Railway | n/a |
-
-Payments are **not wired**: no Stripe SDK, no checkout, no payment links, no Stripe API calls.
-The future plan is standard Stripe Billing + Stripe Tax with a dedicated restricted key (not Managed Payments), with
-server-side checkout geoblocked for WA, HI, UT and Japan (`src/lib/geoblock.ts` stub).
-`scripts/guard.mjs` runs before every build/start and refuses if a live key appears while `APP_ENV=preview`,
-if `STRIPE_LIVE_ENABLED=true` outside production, or if any `VITE_*` var holds a secret.
+## Environment (names only)
+See `.env.example` for every variable and its purpose. No values are committed anywhere.
 
 ## Pick log guarantees
 
-- `public/data/predictions.json` is append-only: a game is logged only while its state is `pre` and tip-off is in the future;
-  locked fields (pick, probability, spread, total, timestamps) are never rewritten and no entry is ever removed. The script refuses to write if that would change.
-- Entries are graded automatically once the game is final. The commit history of that file is the public proof of pre-tip-off timestamps.
-- `python3 tests/test_pipeline.py` runs an offline end-to-end check (log before tip → grade after final → nothing changed or removed); the workflow runs it before every data update.
+- The full log is append-only: a game is logged only while its state is `pre` and tip-off is in the future;
+  locked fields (pick, probability, spread, total, timestamps, nonce, commitment) are never rewritten and no entry is ever removed. The script refuses to write if that would change.
+- Entries are graded automatically once the game is final. Sealed commitments published before tip-off prove the pick wasn't changed.
+- `python3 -m unittest discover -s tests` runs offline checks with fake providers (log before tip, seal/reveal, derived-only odds, grade after final, immutability, no-key = no writes, blocked source stops).
 - The W-L summary appears only on the Track record page, always covering the full log since launch, with the date range, a link to the full log and "Past results do not guarantee future results".
 
 ## Pricing / free tier (stub)
@@ -46,7 +44,7 @@ Geoblock (`src/lib/geoblock.ts`): WA, HI, UT, Japan, by IP and billing ZIP/count
 
 ## Grading (Larry, round 2)
 - At post time (before tip-off) each log entry stores our pick, projected score/spread/total, and — when
-  `ODDS_API_KEY` is set as a GitHub Actions secret — the **market** point spread (median home line across US
+  `ODDS_API_KEY` is set — the **market** point spread (median home line across US
   books from The Odds API, a licensed aggregator; no sportsbook scraping) with its source and the time recorded,
   plus our ATS lean vs that line.
 - When final: **Winner** (did our favored team win) and **ATS** (did our lean cover the market spread). Never

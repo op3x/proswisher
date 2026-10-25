@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect } from "react";
-import { featuredIds, useCanSee, gatingActive } from "../lib/access";
+import { featuredIds, useCanSee, gatingActive, useGames } from "../lib/access";
 import LockedTeaser from "../components/LockedTeaser";
 import { usePaymentsEnabled } from "../lib/runtime";
 
@@ -9,12 +9,13 @@ function FeaturedCta() {
   if (!selling) return null;
   return <a href="/go/subscribe" className="mt-4 inline-block rounded-lg bg-accent text-ink font-semibold px-3 py-2 text-sm">{site.gamePage.featured.cta}</a>;
 }
-import { useData, GamesFile, StatsFile, LogFile, pct, fmtLine, signed, tipTime } from "../lib/data";
+import { useData, GamesFile, StatsFile, LogFile, pct, fmtLine, signed, tipTime, gamePath } from "../lib/data";
 import { site } from "../config/site";
 
 export default function GameDetail() {
-  const { id = "" } = useParams();
-  const games = useData<GamesFile>("games");
+  const params = useParams();
+  const games = useGames();
+  const id = params.id || (games.data && Object.values(games.data.games).find((x) => gamePath(x) === `/games/${params.date}/${params.slug}`.toLowerCase())?.id) || "";
   const stats = useData<StatsFile>("stats");
   const log = useData<LogFile>("predictions");
   const canSee = useCanSee();
@@ -61,12 +62,12 @@ export default function GameDetail() {
         <p className="text-xs text-slate-400">{tipTime(g.date)} · {g.neutral ? "Neutral site" : `at ${g.home.name}`} · {g.status}</p>
         <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold">{g.away.name} <span className="text-slate-500">at</span> {g.home.name}</h1>
         {isFeatured && <p className="mt-2 text-xs"><span className="rounded bg-accent/15 text-accent px-2 py-0.5 font-semibold">{site.gamePage.featured.badge}</span> <span className="text-slate-400">{site.gamePage.featured.note}</span></p>}
-        {locked && <div className="mt-5"><LockedTeaser g={g} featured={featuredToday} /></div>}
+        {locked && <div id="prediction" className="mt-5 scroll-mt-20"><LockedTeaser g={g} featured={featuredToday} /></div>}
         {(g.final || g.state === "in") && (
           <p className="mt-3 text-xl tabular-nums">{g.away.abbr} {g.away.score} – {g.home.score} {g.home.abbr}</p>
         )}
         {p && (
-          <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div id="prediction" className="mt-5 scroll-mt-20 grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               ["Predicted winner", `${p.pick}`],
               ["Win probability", pct(p.pickProb)],

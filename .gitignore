@@ -10,3 +10,4 @@ geoip/
 *.mmdb
 *.mmdb.new
 stats-data/
+private-data/

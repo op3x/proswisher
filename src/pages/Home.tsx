@@ -1,19 +1,19 @@
-import { useData, GamesFile, Game, dayLabel } from "../lib/data";
+import { useData, GamesFile, Game, dayLabel, gamePath } from "../lib/data";
 import GameCard from "../components/GameCard";
 import Subscribe from "../components/Subscribe";
 import { site } from "../config/site";
 import { Link } from "react-router-dom";
-import { featuredIds, useCanSee } from "../lib/access";
+import { featuredIds, useCanSee, useGames } from "../lib/access";
 import { usePaymentsEnabled } from "../lib/runtime";
 
 export default function Home() {
-  const { data, error } = useData<GamesFile>("games");
+  const { data, error } = useGames();
   const selling = usePaymentsEnabled();
   const canSee = useCanSee();
   const now = Date.now();
   const games = data ? Object.values(data.games).sort((a, b) => a.date.localeCompare(b.date)) : [];
   const live = games.filter((g) => g.state === "in");
-  const upcoming = games.filter((g) => g.state === "pre" && new Date(g.date).getTime() > now && g.prediction);
+  const upcoming = games.filter((g) => g.state === "pre" && new Date(g.date).getTime() > now);
   const recent = games.filter((g) => g.final).slice(-8).reverse();
   const featured = featuredIds(games);
   const todayFeatured = upcoming.find((g) => featured.has(g.id)) || games.find((g) => featured.has(g.id) && g.state !== "post");
@@ -30,14 +30,14 @@ export default function Home() {
         <p className="mt-3 text-slate-400 max-w-2xl">{site.heroBody}</p>
         <p className="mt-3 text-sm font-semibold text-slate-200">{site.proofLine}</p>
         <div className="mt-4 flex flex-wrap gap-3 text-sm">
-          <Link to={todayFeatured ? `/game/${todayFeatured.id}` : "/#slate"} className="rounded-lg bg-accent text-ink font-semibold px-3 py-2">{site.heroCta}</Link>
+          <Link to={todayFeatured ? gamePath(todayFeatured) : "/#slate"} className="rounded-lg bg-accent text-ink font-semibold px-3 py-2">{site.heroCta}</Link>
           {selling && <a href="/go/subscribe" className="rounded-lg border border-accent/60 text-accent px-3 py-2">{site.heroCtaPaid}</a>}
           <Link to="/how-it-works" className="rounded-lg border border-line px-3 py-2 text-slate-200">{site.heroCtaSecondary}</Link>
           <Link to="/track-record" className="rounded-lg border border-line px-3 py-2 text-slate-200">See the track record</Link>
         </div>
         {selling && <p className="mt-2 text-xs text-slate-400">{site.heroPriceNote}</p>}
         <p className="mt-3 text-xs text-slate-500">{site.pickDisclaimer}</p>
-        {data && <p className="mt-4 text-xs text-slate-500">Season {data.seasonLabel} · data updated {new Date(data.updatedAt).toLocaleString()}</p>}
+        {data?.updatedAt && <p className="mt-4 text-xs text-slate-500">Season {data.seasonLabel} · data updated {new Date(data.updatedAt).toLocaleString()}</p>}
       </section>
       <section className="grid gap-3 sm:grid-cols-3">
         {site.howItWorksSteps.map((st, i) => (

@@ -21,12 +21,11 @@ export default function TrackRecord() {
     return { W: g.filter((x) => x === "W").length, L: g.filter((x) => x === "L").length, P: g.filter((x) => x === "P").length, n: g.length };
   };
   const win = count("winnerGrade"), ats = count("atsGrade");
-  const REPO_LOG = `https://github.com/${site.repo}/blob/${site.logBranch}/public/data/predictions.json`;
-  const REPO_HISTORY = `https://github.com/${site.repo}/commits/${site.logBranch}/public/data/predictions.json`;
+  const REPO_LOG = "/data/predictions.json"; // served by our server; member picks appear at tip-off (P6)
   const day = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", year: "numeric" });
   const lastFinal = finals.map((e) => e.date).sort().pop();
   const label = (c: { W: number; L: number; P: number }) =>
-    T.summaryLabel.replace("{startDate}", data ? day(data.startedAt) : "").replace("{endDate}", lastFinal ? day(lastFinal) : "")
+    T.summaryLabel.replace("{startDate}", data?.startedAt ? day(data.startedAt) : "launch").replace("{endDate}", lastFinal ? day(lastFinal) : "")
       .replace("{W}", String(c.W)).replace("{L}", String(c.L)).replace("{P}", c.P ? `–${c.P}` : "");
   const grade = (g: string | null | undefined) =>
     g === "W" ? <span className="text-win font-semibold">W</span> : g === "L" ? <span className="text-loss font-semibold">L</span>
@@ -47,19 +46,18 @@ export default function TrackRecord() {
               <div className="text-sm text-amber-300">{T.summaryDisclaimer}</div>
               <div className="text-xs text-slate-400">
                 {finals.length} final of {all.length} logged{postponed ? ` · ${postponed} postponed (not counted)` : ""} ·{" "}
-                <a className="text-accent" href="#full-log">{T.fullLogLink}</a>
+                <a className="text-accent" href="#log">{T.fullLogLink}</a>
               </div>
             </div>
           )}
           {win.n === 0 && <p className="rounded-xl border border-line bg-panel p-4 text-sm text-slate-300">{site.trackRecord.noRecord}</p>}
           {!data.marketSource && <p className="text-xs text-slate-500">{T.atsUnavailable}</p>}
           <p className="text-xs text-slate-500">
-            Log started {day(data.startedAt)} · model {data.modelVersion} · last updated {ct(data.updatedAt)} CT ·{" "}
-            <a className="text-accent" href={REPO_LOG} target="_blank" rel="noreferrer">full log (JSON)</a> ·{" "}
-            <a className="text-accent" href={REPO_HISTORY} target="_blank" rel="noreferrer">commit history (proves pre-tip-off timestamps)</a>
+            {data.startedAt ? <>Log started {day(data.startedAt)} · </> : <>Log starts at launch · </>}model {data.modelVersion}{data.updatedAt ? <> · last updated {ct(data.updatedAt)} CT</> : null} ·{" "}
+            <a className="text-accent" href={REPO_LOG} target="_blank" rel="noreferrer">full log (JSON, with sealed-pick hashes)</a>
             {hiddenPending > 0 && <> · {hiddenPending} more posted predictions appear here at tip-off</>}
           </p>
-          <div id="full-log" className="overflow-x-auto rounded-xl border border-line scroll-mt-20">
+          <div id="log" className="overflow-x-auto rounded-xl border border-line scroll-mt-20">
             <table className="w-full text-sm text-left">
               <thead className="bg-panel text-xs text-slate-500">
                 <tr>{T.columns.map((c) => <th key={c} className="p-2 whitespace-nowrap">{c}</th>)}</tr>

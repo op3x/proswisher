@@ -77,12 +77,24 @@ A small Express server serves the static build plus a few endpoints. It runs wit
 ## Payments (Stripe Billing, TEST mode in preview)
 - Enabled only when `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and `STRIPE_PRICE_ID` are all set. `APP_ENV=preview` accepts only `sk_test_`/`rk_test_`; a live key anywhere stops the build/server (`scripts/guard.mjs`). Production needs a live key **and** `STRIPE_LIVE_ENABLED=true`.
 - The code never creates products or prices. At startup it checks the configured price is active, monthly, and matches `src/config/commerce.json` (900 usd); otherwise payments stay off.
-- Membership = a completed Checkout Session whose subscription is active. The session id is kept in the browser's localStorage (no cookies). Revocations are in memory plus the canceled Stripe subscription (no database).
+- Membership = a completed Checkout Session whose subscription is active **and** whose subscription metadata says `billing_check=passed` (set only by the webhook, below). The session id is kept in the browser's localStorage (no cookies). Revocations are in memory plus the canceled Stripe subscription (no database).
 
 ## Geoblock (server/geo.mjs, src/config/geo.json)
-- Blocked: JP; US-WA, US-HI, US-UT. Only on paid sign-up (`/subscribe`) and checkout creation, HTTP 451.
-- GeoIP: MaxMind GeoLite2 City, downloaded at start and weekly with `MAXMIND_LICENSE_KEY` (never committed; `geoip/` is gitignored). No key/DB => GeoIP gate skipped with a warning (fail open). IP not in DB => allowed. Client IP = rightmost `X-Forwarded-For` hop (Railway edge). Logs record country/region only.
-- Second gates: the buyer declares billing country/state before checkout; the webhook checks Stripe's collected billing address and, if blocked, refunds the first payment, cancels the subscription and revokes access.
+Blocked: JP; US-WA, US-HI, US-UT. Larry's ruling (Oct 25, 10:24 CT) splits it by surface:
+- **Public pages are always open**, whatever the IP or the GeoIP database state. GeoIP is never consulted for them.
+- **Paid sign-up (`/subscribe`) and checkout fail closed:**
+  - GeoIP = MaxMind GeoLite2 City, downloaded at start and weekly with `MAXMIND_LICENSE_KEY` (never committed; `geoip/` is gitignored).
+  - **DB missing, or older than 45 days** (`GEO_MAX_AGE_DAYS`, from the DB's build date; MaxMind rebuilds twice a week and we refresh weekly, so 45 days means the refresh has been broken for over a month) => checkout disabled. `/api/config` reports `checkout.available=false`, `/subscribe` shows "temporarily unavailable", `POST /api/checkout` answers 503. Public pages keep working.
+  - **IP unknown or unresolvable** (not in the DB, no country, or a US IP with no state) => HTTP 451 with exactly "We couldn't confirm your location. Please turn off any VPN or proxy and try again." No Checkout Session.
+  - Blocked IP country/state => 451 with Laye's copy (`geoBlockCopy`).
+- **Pre-charge check** (`POST /api/checkout`): a required country/state picker with no default. The server refuses a blocked choice (`checkoutBilling` text) and a choice that doesn't match the IP's country/state (VPN text). Only then is a Checkout Session created, with `billing_address_collection: "required"`.
+- **Webhook** (`checkout.session.completed`): checks Stripe's collected billing address. Passed => sets subscription metadata `billing_check=passed`, the only path to paid access. Blocked => refunds the first payment, cancels the subscription immediately, revokes access and logs it.
+- Client IP: we trust exactly `TRUSTED_PROXY_HOPS` X-Forwarded-For entries from the right (default 1 = Railway's edge). With fewer entries than that (app reached without the proxy), a non-IP entry, or `TRUSTED_PROXY_HOPS=0`, the socket address is used. Logs record country/region only.
+- Refusal JSON is `{ error, message }` and never includes the support address while P11 holds.
+- **`GEO_PREVIEW_BYPASS=true`** (preview only) skips the IP checks so test checkouts work from anywhere. The declared-location blocklist and the webhook billing check still apply. With `APP_ENV=production` it is never honored: `scripts/guard.mjs` and `createApp` refuse to start.
+
+### Pre-charge location check: post-launch TODO
+Today a buyer whose collected billing address is blocked is charged and then refunded automatically. **TODO (post-launch):** switch to Checkout `mode: "setup"`, check the collected billing address server-side, and only then create the subscription server-side, so a blocked buyer is never charged. No Stripe Radar purchase is planned for this. See the TODO in `server/payments.mjs`.
 
 ## Counting (server/counter.mjs): OFF by default
 First-party and cookieless, with no third-party analytics, trackers or pixels. It counts **only if `COUNTING_ENABLED=true`**; otherwise `/api/v` and `/go/subscribe` count nothing and `/api/config` tells the client `counting: false`, so no beacon is sent. Hardened per Larry memo 21 (R1–R9):
@@ -145,7 +157,8 @@ Do **not** set `PIPELINE_DRY_RUN` on Railway. Saving the variables redeploys the
 
 ## Tests
 `npm test` runs `tests/server/*.test.mjs` and the Python pipeline tests. The node:test suite covers:
-- geo samples for JP, WA, HI, UT and TX; fail-open; rightmost XFF; 451 scope;
+- geo samples for JP, WA, HI, UT and TX; fail-closed checkout (missing/stale DB, unknown IP, declared/IP mismatch); preview bypass refused in production; hardened XFF; 451 scope; public pages always open;
+- webhook grants access only after the billing check passes; real 404s, robots.txt and sitemap.xml;
 - webhook refund, cancel and revoke; payments guards; no cookies;
 - counter off by default; daily and UTM totals with '<5' suppression and same-visit CTA attribution;
 - IP truncation; salt rotation with nothing persisted; aggregates only; 30-day and 25-month retention;

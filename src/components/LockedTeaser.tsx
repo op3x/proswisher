@@ -21,9 +21,9 @@ export default function LockedTeaser({ g, featured, compact = false }: { g: Game
         {selling
           ? <a href="/go/subscribe" className="inline-block rounded-lg bg-accent text-ink font-semibold px-3 py-1.5 text-xs">{m.cta}</a>
           : <span role="button" aria-disabled="true" className="inline-block rounded-lg bg-line px-3 py-1.5 text-xs text-slate-400 cursor-not-allowed">{m.cta}</span>}
-        {featured && !compact && <Link to={gamePath(featured)} className="text-xs text-accent">{m.ctaSecondary}</Link>}
+        {featured && !compact && <Link to={gamePath(featured)} className="text-xs text-accent underline underline-offset-4">{m.ctaSecondary}</Link>}
       </div>
-      <p className="text-[11px] text-slate-500">{selling ? m.priceNote : site.gamePage.paymentsOff} {site.predictionCard.lockedLogNote}</p>
+      <p className="text-[11px] text-slate-400">{selling ? m.priceNote : site.gamePage.paymentsOff} {site.predictionCard.lockedLogNote}</p>
     </div>
   );
 }

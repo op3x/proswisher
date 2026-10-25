@@ -22,7 +22,8 @@ test("ruling 3: IP goes to Subscription metadata + consent.jsonl, never to Check
   const stripe = { webhooks: new Stripe(TEST_KEY).webhooks,
     checkout: { sessions: { create: async (p) => { calls.push(p); return { id: "cs_test_new", url: "https://checkout.stripe.test/x" }; } } } };
   const env = { APP_ENV: "preview", STRIPE_SECRET_KEY: TEST_KEY, STRIPE_WEBHOOK_SECRET: "fixture-signing-secret", STRIPE_PRICE_ID: "price_fixture", CONSENT_DIR: dir };
-  const app = await createApp({ env, stripe, geoLookup: null, log: () => {} });
+  const geo = (ip) => (ip === "192.0.2.77" ? { country: "US", region: "TX" } : null); // fail-closed checkout needs a resolvable IP
+  const app = await createApp({ env, stripe, geoLookup: geo, log: () => {} });
   const s = await serve(app);
   try {
     const r = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "192.0.2.77" },

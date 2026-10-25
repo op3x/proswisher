@@ -3,12 +3,19 @@ import { useEffect, useState } from "react";
 // Runtime state from our own server (no cookies). Payments are enabled only when the server has a valid
 // TEST key + webhook secret + price (preview) — otherwise everything renders in "payments off" mode.
 type Legal = { effective: Record<string, string>; versions: Record<string, string> };
-type Cfg = { payments: { enabled: boolean }; counting?: boolean; legal?: Legal };
+type Cfg = { payments: { enabled: boolean }; checkout?: { available: boolean }; counting?: boolean; legal?: Legal };
 let cfgP: Promise<Cfg> | null = null;
 const getCfg = () => (cfgP ||= fetch("/api/config").then((r) => (r.ok ? r.json() : { payments: { enabled: false } })).catch(() => ({ payments: { enabled: false } })));
 export function usePaymentsEnabled(): boolean {
   const [on, setOn] = useState(false);
   useEffect(() => { getCfg().then((c) => setOn(!!c.payments?.enabled)); }, []);
+  return on;
+}
+
+// Larry 10:24: checkout is disabled (fail closed) when the GeoIP DB is missing or stale. null = still loading.
+export function useCheckoutAvailable(): boolean | null {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => { getCfg().then((c) => setOn(!!c.checkout?.available)); }, []);
   return on;
 }
 

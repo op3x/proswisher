@@ -11,7 +11,10 @@
     "title": "Subscriptions aren't available in your location",
     "body": "Sorry, ProSwisher subscriptions aren't available in Washington, Hawaii, Utah or Japan. You're still welcome to browse our public pages, today's featured game and the track record.",
     "checkoutBilling": "Sorry, we can't accept subscriptions with a billing address in Washington, Hawaii, Utah or Japan. You haven't been charged.",
-    "help": "Questions? Email support@proswisher.com. Gambling problem? Call 1-800-GAMBLER."
+    "help": "Questions? Email support@proswisher.com. Gambling problem? Call 1-800-GAMBLER.",
+    "unconfirmed": "We couldn't confirm your location. Please turn off any VPN or proxy and try again.",
+    "unconfirmedTitle": "We couldn't confirm your location",
+    "unavailable": "Subscriptions are temporarily unavailable. Public pages and today's free game are still open."
   },
   "priceShown": "$9/month plus applicable tax",
   "supportEmailActive": false,
@@ -34,5 +37,10 @@
       "x|organic_social|psw_launch_2026|x_recap_d6_v1",
       "x|organic_social|psw_launch_2026|x_recap_d7_v1"
     ]
+  },
+  "disclaimers": {
+    "_note": "Larry's verbatim texts (disclaimer-footer.md §1-2). Shared by the SPA (site.ts) and the server block page. Don't edit without Larry.",
+    "footer": "ProSwisher provides sports predictions for entertainment and informational purposes only. It is not betting, financial or legal advice, and no outcome is guaranteed. Past results do not guarantee future results. Op3x LLC is not a sportsbook and does not accept wagers. Op3x LLC does not hold your money or pay out winnings. You must be 21+ and located where sports betting is legal to place bets; check your local laws. If you or someone you know has a gambling problem, call 1-800-GAMBLER. ProSwisher is not affiliated with or endorsed by the NBA, its teams or players.",
+    "short": "Entertainment only. Not betting advice. 21+. 1-800-GAMBLER."
   }
 }

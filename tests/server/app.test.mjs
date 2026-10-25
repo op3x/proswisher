@@ -27,7 +27,8 @@ function mockStripe() {
     checkout: { sessions: { create: async (p) => { calls.push(["checkout.sessions.create", p]); return { url: "https://checkout.stripe.test/x" }; } } },
     invoicePayments: { list: async (p) => { calls.push(["invoicePayments.list", p]); return { data: [{ status: "paid", payment: { payment_intent: "pi_1" } }] }; } },
     refunds: { create: async (p, o) => { calls.push(["refunds.create", p, o]); return {}; } },
-    subscriptions: { cancel: async (id) => { calls.push(["subscriptions.cancel", id]); return {}; } },
+    subscriptions: { cancel: async (id) => { calls.push(["subscriptions.cancel", id]); return {}; },
+      update: async (id, p) => { calls.push(["subscriptions.update", id, p]); return {}; } },
   };
 }
 const payEnv = { APP_ENV: "preview", STRIPE_SECRET_KEY: TEST_KEY, STRIPE_WEBHOOK_SECRET: SIGNING, STRIPE_PRICE_ID: "price_fixture" };
@@ -66,6 +67,8 @@ test("451 only on sign-up page and checkout creation; health and webhook never g
       assert.ok(!(await bp.text()).includes("support@")); // P11: hidden until the alias works
       const r = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", ...xff(ip) }, body: JSON.stringify({ consent: true, age21: true, country: "US", state: "TX" }) });
       assert.equal(r.status, 451);
+      const rj = await r.json(); assert.equal(rj.error, "geoblocked"); assert.equal(rj.help, undefined);
+      assert.ok(!JSON.stringify(rj).includes("support@")); // Sal #3 / P11
       assert.equal((await fetch(s.url + "/", { headers: xff(ip) })).status, 200);
       assert.equal((await fetch(s.url + "/track-record", { headers: xff(ip) })).status, 200);
       assert.equal((await fetch(s.url + "/health", { headers: xff(ip) })).status, 200);
@@ -75,6 +78,7 @@ test("451 only on sign-up page and checkout creation; health and webhook never g
     // declared billing state is the second gate
     const d = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", ...xff("192.0.2.50") }, body: JSON.stringify({ consent: true, age21: true, country: "US", state: "HI" }) });
     assert.equal(d.status, 451);
+    assert.equal((await d.json()).message, "Sorry, we can't accept subscriptions with a billing address in Washington, Hawaii, Utah or Japan. You haven't been charged.");
     // consent required (unchecked by default)
     const nc = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", ...xff("192.0.2.50") }, body: JSON.stringify({ country: "US", state: "TX" }) });
     assert.equal(nc.status, 400);
@@ -107,7 +111,10 @@ test("webhook: blocked billing state -> refund, cancel, revoke", async () => {
     // allowed state: nothing happens
     const body2 = body.replace('"UT"', '"TX"').replace('"84101"', '"75001"');
     const r2 = await fetch(s.url + "/api/stripe/webhook", { method: "POST", headers: { "content-type": "application/json", "stripe-signature": stripe.webhooks.generateTestHeaderString({ payload: body2, secret: SIGNING }) }, body: body2 });
-    assert.equal((await r2.json()).action, "none");
+    assert.equal((await r2.json()).action, "granted");
+    const upd = stripe.calls.find(([n]) => n === "subscriptions.update");
+    assert.deepEqual(upd.slice(1), ["sub_1", { metadata: { billing_check: "passed" } }]);
+    assert.equal(stripe.calls.filter(([n]) => n === "refunds.create").length, 1); // no refund for the allowed one
   } finally { s.close(); }
 });
 
@@ -147,7 +154,7 @@ test("counter: off by default; hashed ids only, admin stats behind token; GPC/DN
 
 test("R9: membership reference is read from the X-PS-Session header, never from the URL", async () => {
   const stripe = mockStripe(); const seen = [];
-  stripe.checkout.sessions.retrieve = async (id) => { seen.push(id); return { id, status: "complete", subscription: { id: "sub_1", status: "active" } }; };
+  stripe.checkout.sessions.retrieve = async (id) => { seen.push(id); return { id, status: "complete", subscription: { id: "sub_1", status: "active", metadata: { billing_check: "passed" } } }; };
   const app = await createApp({ env: payEnv, stripe, geoLookup: null, log: quiet });
   const s = await serve(app);
   try {

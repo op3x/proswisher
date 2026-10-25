@@ -18,6 +18,9 @@ for (const [name, value] of Object.entries(env)) {
 }
 if (LIVE_ENABLED && APP_ENV !== "production") problems.push(`STRIPE_LIVE_ENABLED=true is only allowed when APP_ENV=production`);
 
+// Larry 10:24: the geo bypass is preview-only; with APP_ENV=production it must stop the start, not be silently ignored.
+if (/^(1|true|yes|on)$/i.test(String(env.GEO_PREVIEW_BYPASS || "").trim()) && APP_ENV === "production") problems.push("GEO_PREVIEW_BYPASS is set while APP_ENV=production (preview-only flag)");
+
 if (problems.length) {
   console.error("[guard] REFUSING to build/start:\n - " + problems.join("\n - "));
   process.exit(1);

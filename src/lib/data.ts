@@ -78,7 +78,8 @@ export function loadMemberPredictions(sid: string | null) {
 export const pct = (p: number) => `${Math.round(p * 100)}%`;
 export const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 export const fmtLine = (n: number) => (n === 0 ? "PK" : n > 0 ? `+${n}` : `${n}`);
+// Sal #14: tip-off times are always Central Time, labeled (the slate and grading day are CT).
 export const tipTime = (iso: string) =>
-  new Date(iso).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  new Date(iso).toLocaleString("en-US", { timeZone: "America/Chicago", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " CT";
 export const dayLabel = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });

@@ -34,12 +34,21 @@ export async function verifyPrice(stripe, mode, expect) {
 export function makeStripe(mode) { return new Stripe(mode.key, { maxNetworkRetries: 1, appInfo: { name: "proswisher" } }); }
 
 // checkout.session.completed: second billing gate on the address Stripe collected (billing_address_collection=required).
-// Blocked -> refund the first payment, cancel the subscription, mark access revoked.
+// Passed -> mark billing_check=passed (the only path to paid access). Blocked -> refund the first payment, cancel the
+// subscription immediately, mark access revoked, log it.
+// TODO(post-launch, Larry 10:24): move to Checkout mode=setup and create the subscription server-side only after the
+// billing address passes, so a blocked buyer is never charged at all (see README "Pre-charge location check"). No Radar.
 // Stripe calls: invoicePayments.list (Invoices: Read), refunds.create (Refunds: Write), subscriptions.cancel (Subscriptions: Write).
 export async function handleCheckoutCompleted(stripe, session, revoked, log = console.log) {
   const addr = session.customer_details?.address;
-  if (!billingBlocked(addr)) return { action: "none" };
   const subId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+  if (!billingBlocked(addr)) {
+    // Larry 10:24: paid access is granted ONLY here, once Stripe's collected billing address passes.
+    // Subscription metadata is merged, so the consent record (and its purge) is untouched. (Subscriptions: Write)
+    if (subId) await stripe.subscriptions.update(subId, { metadata: { billing_check: "passed" } }, { idempotencyKey: `billing-pass-${subId}` });
+    log(`[pay] billing check passed (country=${addr?.country || "?"}); access granted`);
+    return { action: "granted", subscription: subId || null };
+  }
   const invId = typeof session.invoice === "string" ? session.invoice : session.invoice?.id;
   log(`[pay] billing geoblock hit (country=${addr?.country || "?"} state=${addr?.state || "?"}); refunding + canceling`);
   let refunded = 0;
@@ -58,5 +67,6 @@ export async function handleCheckoutCompleted(stripe, session, revoked, log = co
   if (subId) await stripe.subscriptions.cancel(subId, {}, { idempotencyKey: `geoblock-cancel-${subId}` });
   if (subId) revoked.add(subId);
   if (session.id) revoked.add(session.id);
+  log(`[pay] billing geoblock: refunded ${refunded} payment(s), subscription ${subId ? "canceled" : "missing"}; no access granted`);
   return { action: "revoked", refunded, subscription: subId || null };
 }

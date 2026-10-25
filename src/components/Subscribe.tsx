@@ -23,7 +23,7 @@ export default function Subscribe() {
           <a href="/go/subscribe" className="inline-block rounded-lg bg-accent text-ink font-semibold px-3 py-2 text-sm">{site.gamePage.membersOnly.cta}</a>
         </div>
       </div>
-      <p className="text-xs text-slate-500">{site.pickDisclaimer}</p>
+      <p className="text-xs text-slate-400">{site.pickDisclaimer}</p>
     </section>
   );
 }

@@ -1,4 +1,4 @@
-// Ingus 9:45: sample IPs for JP, WA, HI, UT plus an allowed state; fail-open; rightmost XFF.
+// Ingus 9:45: sample IPs for JP, WA, HI, UT plus an allowed state; rightmost XFF. (Checkout fail-closed: geo-gate.test.mjs)
 import test from "node:test";
 import assert from "node:assert/strict";
 import { clientIp, geoipDecision, isBlocked, billingBlocked, stateFromZip } from "../../server/geo.mjs";
@@ -27,7 +27,7 @@ test("IP not found in DB is allowed", () => {
   const d = geoipDecision(lookup, "192.0.2.99");
   assert.equal(d.blocked, false); assert.equal(d.found, false);
 });
-test("missing DB/key fails open", () => {
+test("geoipDecision helper: missing DB is reported as unchecked (checkout gate is signupIpDecision, fail closed)", () => {
   const d = geoipDecision(null, "203.0.113.10");
   assert.equal(d.blocked, false); assert.equal(d.checked, false);
 });

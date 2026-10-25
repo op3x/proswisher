@@ -13,7 +13,8 @@ function inline(t: string): ReactNode[] {
   });
 }
 
-export function Markdown({ text }: { text: string }) {
+// docTitle: the document's first heading is the page's single h1 (Sal #12); later headings are h2.
+export function Markdown({ text, docTitle = false }: { text: string; docTitle?: boolean }) {
   const blocks = text.replace(/\r/g, "").split(/\n{2,}/);
   return (
     <>
@@ -23,6 +24,7 @@ export function Markdown({ text }: { text: string }) {
         if (lines.every((l) => BULLET.test(l)))
           return <ul key={i} className="list-disc pl-5 space-y-2">{lines.map((l, j) => <li key={j} className={isNested(l) ? "ml-5 list-[circle]" : undefined}>{inline(l.replace(BULLET, ""))}</li>)}</ul>;
         const h = /^#{1,4} (.*)$/.exec(lines[0]) || /^\*\*([^*]+)\*\*$/.exec(lines[0]);
+        if (h && docTitle && i === 0) return <Fragment key={i}><h1 className="text-2xl sm:text-3xl font-extrabold">{inline(h[1])}</h1>{lines.length > 1 && <Markdown text={lines.slice(1).join("\n")} />}</Fragment>;
         if (h) return <Fragment key={i}><h2 className="text-lg font-bold pt-2">{inline(h[1])}</h2>{lines.length > 1 && <Markdown text={lines.slice(1).join("\n")} />}</Fragment>;
         if (lines.some((l) => /^[-*] /.test(l)))
           return <Fragment key={i}>{lines.map((l, j) => /^[-*] /.test(l) ? <ul key={j} className="list-disc pl-5"><li>{inline(l.slice(2))}</li></ul> : <p key={j}>{inline(l)}</p>)}</Fragment>;

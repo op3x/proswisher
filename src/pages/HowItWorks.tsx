@@ -35,11 +35,11 @@ export default function HowItWorks() {
         <section className="rounded-2xl bg-panel border border-line p-4 overflow-x-auto">
           <h2 className="font-bold mb-2">Current ratings ({data!.season}, updated {data!.updated})</h2>
           <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-500"><tr><th className="py-1">#</th><th>Team</th><th>Team record</th><th>Margin</th><th>{data!.priorSeason}</th><th>Rating</th></tr></thead>
+            <thead className="text-xs text-slate-400"><tr><th className="py-1">#</th><th>Team</th><th>Team record</th><th>Margin</th><th>{data!.priorSeason}</th><th>Rating</th></tr></thead>
             <tbody>
               {teams.map(([ab, t], i) => (
                 <tr key={ab} className="border-t border-line">
-                  <td className="py-1.5 text-slate-500">{i + 1}</td><td>{t.name}</td><td className="tabular-nums">{t.w}-{t.l}</td>
+                  <td className="py-1.5 text-slate-400">{i + 1}</td><td>{t.name}</td><td className="tabular-nums">{t.w}-{t.l}</td>
                   <td className="tabular-nums">{t.margin === null ? "–" : signed(t.margin)}</td>
                   <td className="tabular-nums text-slate-400">{t.priorMargin === null ? "–" : signed(t.priorMargin)}</td>
                   <td className="tabular-nums font-semibold text-accent">{signed(t.rating)}</td>

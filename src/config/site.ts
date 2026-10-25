@@ -183,15 +183,19 @@ export const site = {
   // Footer, every page. Larry's canonical text (landing-page-copy.md `disclaimers.footer`), flat 21+,
   // plus Larry's ruling: "Op3x LLC does not hold your money or pay out winnings." after the wagers sentence.
   // Includes the NBA non-affiliation line and "Op3x LLC is not a sportsbook". Do not edit without counsel.
-  footerDisclaimer:
-    "ProSwisher provides sports predictions for entertainment and informational purposes only. It is not betting, financial or legal advice, and no outcome is guaranteed. Past results do not guarantee future results. Op3x LLC is not a sportsbook and does not accept wagers. Op3x LLC does not hold your money or pay out winnings. You must be 21+ and located where sports betting is legal to place bets; check your local laws. If you or someone you know has a gambling problem, call 1-800-GAMBLER. ProSwisher is not affiliated with or endorsed by the NBA, its teams or players.",
+  footerDisclaimer: commerce.disclaimers.footer, // single source: src/config/commerce.json (server block page uses it too)
   // Next to every prediction and on checkout (`disclaimers.short`).
-  pickDisclaimer: "Entertainment only. Not betting advice. 21+. 1-800-GAMBLER.",
+  pickDisclaimer: commerce.disclaimers.short,
   pastResults: "Past results do not guarantee future results.",
+  // Larry's order (disclaimer-footer.md §5): Track record · Terms · Privacy · Refunds* · Cancel subscription ·
+  // Responsible gaming · Contact. *Refunds stays unshipped until support@ works (P11). FAQ kept at the end.
   footerLinks: [
-    { to: "/responsible-gaming", label: "Responsible gaming" },
+    { to: "/track-record", label: "Track record" },
     { to: "/terms", label: "Terms" },
     { to: "/privacy", label: "Privacy" },
+    { to: "/account", label: "Cancel subscription" },
+    { to: "/responsible-gaming", label: "Responsible gaming" },
+    { to: "/contact", label: "Contact" },
     { to: "/faq", label: "FAQ" },
   ],
   dataCredit: "Schedules and final scores come from a licensed sports-data provider.",

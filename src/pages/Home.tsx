@@ -36,8 +36,8 @@ export default function Home() {
           <Link to="/track-record" className="rounded-lg border border-line px-3 py-2 text-slate-200">See the track record</Link>
         </div>
         {selling && <p className="mt-2 text-xs text-slate-400">{site.heroPriceNote}</p>}
-        <p className="mt-3 text-xs text-slate-500">{site.pickDisclaimer}</p>
-        {data?.updatedAt && <p className="mt-4 text-xs text-slate-500">Season {data.seasonLabel} · data updated {new Date(data.updatedAt).toLocaleString()}</p>}
+        <p className="mt-3 text-xs text-slate-400">{site.pickDisclaimer}</p>
+        {data?.updatedAt && <p className="mt-4 text-xs text-slate-400">Season {data.seasonLabel} · data updated {new Date(data.updatedAt).toLocaleString()}</p>}
       </section>
       <section className="grid gap-3 sm:grid-cols-3">
         {site.howItWorksSteps.map((st, i) => (

@@ -15,7 +15,7 @@ export default function GameCard({ g, featured = false, locked = false }: { g: G
         <div className="flex items-center gap-2 min-w-0">
           <span className={`text-[11px] font-bold w-10 text-center rounded py-0.5 ${isPick ? "bg-accent/15 text-accent" : "bg-line text-slate-400"}`}>{t.abbr}</span>
           <span className={`truncate ${isPick ? "text-white font-semibold" : "text-slate-300"}`}>{t.name}</span>
-          {side === "home" && !g.neutral && <span className="text-[10px] text-slate-500">HOME</span>}
+          {side === "home" && !g.neutral && <span className="text-[10px] text-slate-400">HOME</span>}
         </div>
         {g.final || g.state === "in" ? (
           <span className="tabular-nums font-semibold">{t.score ?? "-"}</span>
@@ -40,11 +40,11 @@ export default function GameCard({ g, featured = false, locked = false }: { g: G
             <div className="bg-accent" style={{ width: pct(p.pHome) }} />
           </div>
           <div className="grid grid-cols-3 text-center text-xs">
-            <div><div className="text-slate-500">Lean</div><div className="font-semibold text-white">{p.pick} {pct(p.pickProb)}</div></div>
-            <div><div className="text-slate-500">{site.spreadLabel}</div><div className="font-semibold text-white">{p.spread.team} {fmtLine(p.spread.line)}</div></div>
-            <div><div className="text-slate-500">{site.totalLabel}</div><div className="font-semibold text-white">{p.total}</div></div>
+            <div><div className="text-slate-400">Lean</div><div className="font-semibold text-white">{p.pick} {pct(p.pickProb)}</div></div>
+            <div><div className="text-slate-400">{site.spreadLabel}</div><div className="font-semibold text-white">{p.spread.team} {fmtLine(p.spread.line)}</div></div>
+            <div><div className="text-slate-400">{site.totalLabel}</div><div className="font-semibold text-white">{p.total}</div></div>
           </div>
-          <p className="text-[10px] leading-snug text-slate-500">{site.pickDisclaimer}</p>
+          <p className="text-[10px] leading-snug text-slate-400">{site.pickDisclaimer}</p>
         </>
       )}
       {locked && <LockedTeaser g={g} compact />}

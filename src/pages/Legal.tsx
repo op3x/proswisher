@@ -18,7 +18,7 @@ function Shell({ title, children }: { title?: string; children: React.ReactNode 
       {LEGAL_DRAFT && <span className="inline-block rounded bg-amber-500/15 text-amber-300 text-xs font-bold px-2 py-0.5">DRAFT</span>}
       {title && <h1 className="text-2xl sm:text-3xl font-extrabold">{title}</h1>}
       {children}
-      <p className="text-xs text-slate-500">Operated by {site.company}.</p>
+      <p className="text-xs text-slate-400">Operated by {site.company}.</p>
     </div>
   );
 }
@@ -30,7 +30,7 @@ export const Responsible = () => <Paras title="Responsible gaming" paras={legal.
 export function Terms() {
   const eff = useLegalEffective();
   return site.supportEmailActive
-    ? <Shell><Markdown text={fill(termsV1, eff.terms)} /></Shell>
+    ? <Shell><Markdown docTitle text={fill(termsV1, eff.terms)} /></Shell>
     : <Paras title="Terms of use" paras={legal.terms} />;
 }
 // Larry P4: §A always; §B (accounts + payments) only when payments are enabled.
@@ -39,9 +39,9 @@ export function Privacy() {
   const eff = useLegalEffective();
   return (
     <Shell>
-      <Markdown text={fill(privacyA, eff.privacyA)} />
+      <Markdown docTitle text={fill(privacyA, eff.privacyA)} />
       {selling && <><hr className="border-line my-6" /><Markdown text={fill(privacyB, eff.privacyB)} /></>}
-      <p className="text-xs text-slate-500">{site.geoCredit}</p>
+      <p className="text-xs text-slate-400">{site.geoCredit}</p>
     </Shell>
   );
 }

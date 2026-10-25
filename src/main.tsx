@@ -13,6 +13,7 @@ import Faq from "./pages/Faq";
 import AgeGate from "./components/AgeGate";
 import SubscribePage from "./pages/Subscribe";
 import Account from "./pages/Account";
+import Contact from "./pages/Contact";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -31,6 +32,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="faq" element={<Faq />} />
           <Route path="subscribe" element={<SubscribePage />} />
           <Route path="account" element={<Account />} />
+          <Route path="contact" element={<Contact />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

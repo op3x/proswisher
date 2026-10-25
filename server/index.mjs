@@ -5,7 +5,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { clientIp, geoipDecision, openGeoip, isBlocked, geoConfig, GEOIP_PATH } from "./geo.mjs";
+import { clientIp, openGeoip, isBlocked, geoConfig, GEOIP_PATH, assertGeoEnv, previewBypass, geoStatus, signupIpDecision, declaredMatchesIp, GEO_MAX_AGE_DAYS } from "./geo.mjs";
 import { paymentsMode, makeStripe, verifyPrice, handleCheckoutCompleted } from "./payments.mjs";
 import { createCounter } from "./counter.mjs";
 import { purgeConsent } from "./consent-purge.mjs";
@@ -16,6 +16,9 @@ import { fetchGeoip } from "../scripts/fetch-geoip.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export async function createApp({ env = process.env, stripe: stripeOverride, geoLookup, counter = createCounter({ enabled: env.COUNTING_ENABLED === "true" }), dist = path.join(ROOT, "dist"), log = console.log } = {}) {
+  assertGeoEnv(env); // GEO_PREVIEW_BYPASS + APP_ENV=production -> refuse to start
+  const bypass = previewBypass(env);
+  if (bypass) log("[geo] GEO_PREVIEW_BYPASS on (preview only): GeoIP checks on sign-up/checkout are skipped; declared and webhook billing checks still apply");
   const app = express();
   app.disable("x-powered-by");
   const commerce = JSON.parse(fs.readFileSync(path.join(ROOT, "src/config/commerce.json"), "utf8"));
@@ -61,19 +64,22 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     try { return JSON.parse(fs.readFileSync(path.join(privateDir, "games-full.json"), "utf8")).games || {}; } catch { return {}; }
   };
   const supportOn = commerce.supportEmailActive === true;
+  // Larry P11: the support address is shown nowhere (pages, block page, JSON) until the alias works.
   const help = supportOn ? commerce.geoBlockCopy.help : commerce.geoBlockCopy.help.replace(/Questions\? Email \S+@\S+\.\s*/, "");
+  const geoCopy = { ...commerce.geoBlockCopy, help };
+  const disc = commerce.disclaimers;
 
-  const geoGate = (req) => {
-    const d = geoipDecision(state.geo, clientIp(req));
-    if (d.blocked) log(`[geo] 451 on ${req.path} (country=${d.country} region=${d.region || "-"})`);
+  // Paid sign-up + checkout only (Larry 10:24): fail closed. Public pages never call this.
+  const signupGate = (req) => {
+    const d = signupIpDecision(state.geo, clientIp(req), { bypass });
+    if (!d.ok) log(`[geo] sign-up refused on ${req.path}: ${d.error}${d.country ? ` (country=${d.country} region=${d.region || "-"})` : ""}${d.reason ? ` (db ${d.reason})` : ""}`);
     return d;
   };
-  const blockPage = () => {
-    const c = commerce.geoBlockCopy;
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${c.title} | ProSwisher</title>
-<style>body{margin:0;background:#0b0f17;color:#e2e8f0;font:16px/1.5 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}main{max-width:32rem;padding:2rem}a{color:#22d3ee}small{color:#94a3b8}</style></head>
-<body><main><h1>${c.title}</h1><p>${c.body}</p><p><a href="/">Browse predictions</a> · <a href="/track-record">Track record</a></p><small>${help}</small></main></body></html>`;
-  };
+  const checkoutAvailable = () => bypass || geoStatus(state.geo).ok;
+  const blockPage = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title} | ProSwisher</title>
+<style>body{margin:0;background:#0b0f17;color:#e2e8f0;font:16px/1.5 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}main{max-width:36rem;padding:2rem}a{color:#67e8f9;display:inline-block;padding:.6rem .25rem;text-decoration:underline}footer{max-width:36rem;padding:0 2rem 2rem;color:#cbd5e1;font-size:14px}footer p{margin:.5rem 0}</style></head>
+<body><main><h1>${title}</h1><p>${body}</p><p><a href="/">Browse predictions</a> · <a href="/track-record">Track record</a></p><p>${help}</p></main>
+<footer><p>${disc.footer}</p></footer></body></html>`;
 
   // ---- never geo-checked ----
   app.get("/health", (_req, res) => res.json({ ok: true }));
@@ -133,19 +139,38 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   });
 
   // ---- payments ----
-  app.get("/api/config", (_req, res) => res.json({ payments: { enabled: mode.enabled, reason: mode.enabled ? null : "disabled" }, counting: !!counter.enabled, geoblock: geoConfig, legal: { effective: legalEffective(env), versions: legalVersions() } }));
+  // Public config only (no internal notes). checkout.available=false -> Subscribe shows "temporarily unavailable".
+  app.get("/api/config", (_req, res) => res.json({
+    payments: { enabled: mode.enabled, reason: mode.enabled ? null : "disabled" },
+    checkout: { available: mode.enabled && checkoutAvailable() },
+    counting: !!counter.enabled,
+    geoblock: { enabled: geoConfig.enabled, usStates: geoConfig.usStates, countries: geoConfig.countries },
+    legal: { effective: legalEffective(env), versions: legalVersions() },
+  }));
+  // Refusal bodies: never the support address while P11 holds; text from geoblock-notice.md / Larry 10:24.
+  const refuse = (res, status, error, message) => res.status(status).json({ error, message });
   app.post("/api/checkout", async (req, res) => {
-    if (geoGate(req).blocked) return res.status(451).json({ error: "geoblocked", ...commerce.geoBlockCopy });
+    const ipd = signupGate(req);
+    if (!ipd.ok) {
+      if (ipd.status === 503) return refuse(res, 503, "checkout_unavailable", geoCopy.unavailable);
+      if (ipd.error === "location_unconfirmed") return refuse(res, 451, "location_unconfirmed", ipd.message);
+      return refuse(res, 451, "geoblocked", `${geoCopy.title}. ${geoCopy.body}`);
+    }
     if (!mode.enabled) return res.status(503).json({ error: "payments_disabled" });
     const b = req.body || {};
     if (b.consent !== true) return res.status(400).json({ error: "consent_required" });
+    // Required picker with no default: an explicit country (and US state) must be chosen.
     const country = String(b.country || "").toUpperCase(), st = String(b.state || "").toUpperCase();
     if (!/^[A-Z]{2}$/.test(country) || (country === "US" && !/^[A-Z]{2}$/.test(st))) return res.status(400).json({ error: "billing_location_required" });
     if (isBlocked(country, country === "US" ? st : null)) {
-      log(`[geo] 451 declared billing (country=${country} state=${st || "-"})`);
-      return res.status(451).json({ error: "geoblocked", ...commerce.geoBlockCopy });
+      log(`[geo] checkout refused: declared billing blocked (country=${country} state=${st || "-"})`);
+      return refuse(res, 451, "geoblocked", geoCopy.checkoutBilling);
     }
-    const g = geoipDecision(state.geo, clientIp(req));
+    if (!declaredMatchesIp(country, st, ipd)) {
+      log(`[geo] checkout refused: declared location does not match GeoIP (declared=${country}/${st || "-"} geo=${ipd.country}/${ipd.region || "-"})`);
+      return refuse(res, 451, "location_mismatch", geoCopy.unconfirmed);
+    }
+    const g = ipd;
     if (b.age21 !== true) return res.status(400).json({ error: "age_confirmation_required" });
     // Larry P10: legal consent record (time, IP, consent-text version, price shown, 21+ confirmation).
     // The ONE place a raw IP is kept; separate from visit counting (counter only sees a truncated, hashed form). Stored in Stripe
@@ -157,7 +182,8 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
       // Larry: must equal the on-page version strings (read from the same src/content files the pages render).
       text_version: (({ terms, privacyA, privacyB }) => `${terms},${privacyA},${privacyB}`)(legalVersions()),
     };
-    const meta = { ...consent, declared_country: country, declared_state: st, ip_country: g.country || "", ip_region: g.region || "" };
+    // billing_check: "pending" until the webhook checks Stripe's collected billing address; no paid access before "passed".
+    const meta = { ...consent, declared_country: country, declared_state: st, ip_country: g.country || "", ip_region: g.region || "", geo_bypass: g.bypass ? "preview" : "", billing_check: "pending" };
     const { consent_ip: _omitIp, ...sessionMeta } = meta;
     try {
       const s = await stripe.checkout.sessions.create({
@@ -185,7 +211,9 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   const subscriberOf = async (sid) => {
     const s = await sessionSub(String(sid || ""));
     const sub = s?.subscription;
-    const ok = !!(s && s.status === "complete" && sub && ["active", "trialing"].includes(sub.status) && !state.revoked.has(sub.id) && !state.revoked.has(s.id));
+    // Larry 10:24: NO paid access until the webhook billing check has passed (subscription metadata billing_check=passed).
+    const ok = !!(s && s.status === "complete" && sub && ["active", "trialing"].includes(sub.status) && sub.metadata?.billing_check === "passed"
+      && !state.revoked.has(sub.id) && !state.revoked.has(s.id));
     return { ok, sub };
   };
   // Larry memo 21 R9: the membership reference travels in the X-PS-Session header, never in a URL (URLs land in edge logs).
@@ -194,7 +222,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     if (!mode.enabled) return res.json({ subscriber: false, payments: false });
     try {
       const { ok, sub } = await subscriberOf(sidOf(req));
-      res.set("Cache-Control", "no-store").json({ subscriber: ok, status: sub?.status || null, cancelAt: sub?.cancel_at || null });
+      res.set("Cache-Control", "no-store").json({ subscriber: ok, status: sub?.status || null, billingCheck: sub?.metadata?.billing_check || null, cancelAt: sub?.cancel_at || null });
     } catch { res.json({ subscriber: false }); }
   });
   // Gated member predictions (pre-tip-off, non-featured). Featured + tipped-off ones are already public.
@@ -225,7 +253,15 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const sendPage = (res, html, status = 200) => res.status(status).set("Cache-Control", "no-cache").type("html").send(html);
   // paid sign-up page: the ONLY page that is geo-gated
-  app.get("/subscribe", (req, res) => (geoGate(req).blocked ? sendPage(res, blockPage(), 451) : sendPage(res, indexHtml())));
+  // Fail closed: blocked -> 451 block page; unknown IP -> 451 VPN/proxy page; DB missing/stale -> the page renders and
+  // shows "temporarily unavailable" (checkout.available=false), so no one can start a checkout.
+  app.get("/subscribe", (req, res) => {
+    if (!checkoutAvailable()) return sendPage(res, indexHtml());
+    const d = signupGate(req);
+    if (d.ok) return sendPage(res, indexHtml());
+    if (d.error === "location_unconfirmed") return sendPage(res, blockPage(geoCopy.unconfirmedTitle, d.message), 451);
+    return sendPage(res, blockPage(geoCopy.title, geoCopy.body), 451);
+  });
   // per-game SEO title server-side (Larry format), so crawlers see it without JS
   const gamePage = (req, res) => {
     loadGames();
@@ -237,14 +273,33 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
       const d = commerce.gamePageDescription.replace("{Away}", g.away.short).replace("{Home}", g.home.short);
       html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(t)}</title>`).replace(/(<meta name="description" content=")[^"]*/, `$1${esc(d)}`);
     }
-    sendPage(res, html);
+    // Sal #9: unknown/placeholder game URLs are real 404s (the SPA still renders its not-found view).
+    if (!g) html = html.replace(/<title>[^<]*<\/title>/, "<title>Page not found | ProSwisher</title>").replace("<head>", '<head><meta name="robots" content="noindex">');
+    sendPage(res, html, g ? 200 : 404);
   };
   app.get("/game/:id", gamePage);
   app.get("/games/:date/:slug", gamePage);
   app.use("/data", (req, res, next) => (/^\/(games|predictions|stats|prior)\.json$/.test(req.path) ? next() : res.status(404).end()));
   if (publicDataDir) app.use("/data", express.static(publicDataDir, { maxAge: "1m" }));
   app.use(express.static(dist, { index: false, maxAge: "5m", setHeaders: (r, p) => { if (p.includes("/assets/")) r.setHeader("Cache-Control", "public, max-age=31536000, immutable"); } }));
-  app.get(/.*/, (_req, res) => sendPage(res, indexHtml()));
+  // Sal #9: only real SPA routes get 200; everything else (incl. /refunds, held per P11) is a 404 with the SPA's not-found view.
+  const SPA_ROUTES = new Set(["/", "/track-record", "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/account", "/contact"]);
+  const INDEXABLE = ["/", "/track-record", "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/contact"];
+  const isProd = String(env.APP_ENV || "").toLowerCase() === "production";
+  app.get("/robots.txt", (_req, res) => res.type("text/plain").set("Cache-Control", "public, max-age=3600").send(isProd
+    ? `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin/\nDisallow: /account\nDisallow: /go/\n\nSitemap: ${base}/sitemap.xml\n`
+    : "# Preview build: not public\nUser-agent: *\nDisallow: /\n"));
+  app.get("/sitemap.xml", (_req, res) => {
+    loadGames();
+    const urls = [...INDEXABLE, ...Object.values(games).map(gamePathOf)];
+    const body = urls.map((u) => `  <url><loc>${esc(base + u)}</loc></url>`).join("\n");
+    res.type("application/xml").set("Cache-Control", "public, max-age=600").send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`);
+  });
+  app.get(/.*/, (req, res) => {
+    const p = req.path.length > 1 ? req.path.replace(/\/+$/, "") : req.path;
+    if (SPA_ROUTES.has(p)) return sendPage(res, indexHtml());
+    sendPage(res, indexHtml().replace(/<title>[^<]*<\/title>/, "<title>Page not found | ProSwisher</title>").replace("<head>", '<head><meta name="robots" content="noindex">'), 404);
+  });
   Object.assign(app.locals, { counter, state, mode: () => mode, stripe, reloadGames: () => { gamesAt = 0; } });
   return app;
 }

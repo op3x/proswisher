@@ -12,7 +12,7 @@ export default function Account() {
     if (sid && /^cs_(test|live)_\w+$/.test(sid)) { localStorage.setItem(SESSION_KEY, sid); window.history.replaceState(null, "", "/account"); }
     const s = localStorage.getItem(SESSION_KEY);
     if (!s) return setStatus("none");
-    fetch(`/api/me?session_id=${encodeURIComponent(s)}`).then((r) => r.json()).then((j) => setStatus(j.subscriber ? "active" : j.status || "inactive")).catch(() => setStatus("unknown"));
+    fetch("/api/me", { headers: { "X-PS-Session": s } }).then((r) => r.json()).then((j) => setStatus(j.subscriber ? "active" : j.status || "inactive")).catch(() => setStatus("unknown"));
   }, []);
   const portal = async () => {
     setErr("");

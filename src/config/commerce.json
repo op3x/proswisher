@@ -15,5 +15,24 @@
   },
   "priceShown": "$9/month plus applicable tax",
   "supportEmailActive": false,
-  "_supportNote": "Larry P11: support@proswisher.com is hidden everywhere (site, 451 page, legal pages) until the alias works. Flip to true only after Ingus sets it up, Ryan OKs DNS and a test email arrives."
+  "_supportNote": "Larry P11: support@proswisher.com is hidden everywhere (site, 451 page, legal pages) until the alias works. Flip to true only after Ingus sets it up, Ryan OKs DNS and a test email arrives.",
+  "utmAllowlist": {
+    "_note": "Larry memo 21 R6: only these combos are counted; anything else counts as 'other'. Laye week-1 calendar (psw_launch_2026). Rule: never put a person's name, handle or email in a UTM and never give one person a unique tag.",
+    "combos": [
+      "x|organic_social|psw_launch_2026|x_bio_v1",
+      "x|organic_social|psw_launch_2026|x_launch_v1",
+      "x|organic_social|psw_launch_2026|x_free_d2_v1",
+      "x|organic_social|psw_launch_2026|x_free_d3_v1",
+      "x|organic_social|psw_launch_2026|x_free_d4_v1",
+      "x|organic_social|psw_launch_2026|x_free_d5_v1",
+      "x|organic_social|psw_launch_2026|x_free_d7_v1",
+      "x|organic_social|psw_launch_2026|x_members_d6_v1",
+      "x|organic_social|psw_launch_2026|x_recap_d2_v1",
+      "x|organic_social|psw_launch_2026|x_recap_d3_v1",
+      "x|organic_social|psw_launch_2026|x_recap_d4_v1",
+      "x|organic_social|psw_launch_2026|x_recap_d5_v1",
+      "x|organic_social|psw_launch_2026|x_recap_d6_v1",
+      "x|organic_social|psw_launch_2026|x_recap_d7_v1"
+    ]
+  }
 }

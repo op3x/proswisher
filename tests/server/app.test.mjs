@@ -111,20 +111,52 @@ test("webhook: blocked billing state -> refund, cancel, revoke", async () => {
   } finally { s.close(); }
 });
 
-test("counter: hashed ids only, admin stats behind token", async () => {
-  const counter = createCounter({ dir: "" });
-  const app = await createApp({ env: { ADMIN_TOKEN: "fixture-admin" }, geoLookup: null, log: quiet, counter });
-  const s = await serve(app);
+test("counter: off by default; hashed ids only, admin stats behind token; GPC/DNT and EEA/UK/CH not counted", async () => {
+  // default (no COUNTING_ENABLED): nothing counted, client told counting is off
+  const off = await createApp({ env: { ADMIN_TOKEN: "fixture-admin" }, geoLookup: null, log: quiet });
+  const so = await serve(off);
   try {
-    for (const ip of ["192.0.2.50", "192.0.2.50", "192.0.2.51"]) await fetch(s.url + "/api/v", { method: "POST", headers: { "content-type": "application/json", ...xff(ip) }, body: JSON.stringify({ p: "/" }) });
+    assert.equal((await (await fetch(so.url + "/api/config")).json()).counting, false);
+    await fetch(so.url + "/api/v", { method: "POST", headers: { "content-type": "application/json", ...xff("192.0.2.50") }, body: "{}" });
+    const st = await (await fetch(so.url + "/admin/stats", { headers: { authorization: "Bearer fixture-admin" } })).json();
+    assert.equal(st.enabled, false);
+  } finally { so.close(); }
+
+  const geo = (ip) => ({ "192.0.2.50": { country: "US" }, "203.0.113.7": { country: "DE" }, "203.0.113.8": { country: "GB" }, "203.0.113.9": { country: "CH" } })[ip] || null;
+  const counter = createCounter({ dir: "" });
+  const app = await createApp({ env: { ADMIN_TOKEN: "fixture-admin" }, geoLookup: geo, log: quiet, counter });
+  const s = await serve(app);
+  const v = (ip, ua, extra = {}) => fetch(s.url + "/api/v", { method: "POST", headers: { "content-type": "application/json", "user-agent": ua, ...xff(ip), ...extra }, body: JSON.stringify({ p: "/" }) });
+  try {
+    assert.equal((await (await fetch(s.url + "/api/config")).json()).counting, true);
+    await v("192.0.2.50", "ua-a"); await v("192.0.2.50", "ua-a"); await v("192.0.2.51", "ua-b");
+    await v("198.51.100.9", "ua-c", { "sec-gpc": "1" }); await v("198.51.100.10", "ua-d", { dnt: "1" });   // R8
+    for (const ip of ["203.0.113.7", "203.0.113.8", "203.0.113.9"]) await v(ip, "ua-e");                  // R7
     await fetch(s.url + "/go/subscribe", { redirect: "manual" });
+    await fetch(s.url + "/go/subscribe", { redirect: "manual", headers: { "sec-gpc": "1" } });
     assert.equal((await fetch(s.url + "/admin/stats")).status, 401);
     const st = await (await fetch(s.url + "/admin/stats", { headers: { authorization: "Bearer fixture-admin" } })).json();
     const txt = JSON.stringify(st);
-    assert.ok(!txt.includes("192.0.2"));
-    assert.match(txt, /2/); // two unique visitors
-    // member predictions are never public and the gated API is closed without a subscription
+    assert.ok(!txt.includes("192.0.2") && !txt.includes("ua-a"));
+    assert.equal(st.uniqueVisitorsPerDay[st.today], 2);
+    assert.equal(st.ctaClicksPerDay[st.today], 1);
     assert.equal((await fetch(s.url + "/data/secret.json")).status, 404);
     assert.deepEqual((await (await fetch(s.url + "/api/predictions")).json()).predictions, {});
+  } finally { s.close(); counter.stop(); }
+});
+
+test("R9: membership reference is read from the X-PS-Session header, never from the URL", async () => {
+  const stripe = mockStripe(); const seen = [];
+  stripe.checkout.sessions.retrieve = async (id) => { seen.push(id); return { id, status: "complete", subscription: { id: "sub_1", status: "active" } }; };
+  const app = await createApp({ env: payEnv, stripe, geoLookup: null, log: quiet });
+  const s = await serve(app);
+  try {
+    const viaUrl = await (await fetch(s.url + "/api/me?session_id=cs_test_abc")).json();
+    assert.equal(viaUrl.subscriber, false);
+    const viaHeader = await (await fetch(s.url + "/api/me", { headers: { "X-PS-Session": "cs_test_abc" } })).json();
+    assert.equal(viaHeader.subscriber, true);
+    assert.equal((await fetch(s.url + "/api/predictions?session_id=cs_test_abc")).status, 403);
+    assert.equal((await fetch(s.url + "/api/predictions", { headers: { "X-PS-Session": "cs_test_abc" } })).status, 200);
+    assert.deepEqual(seen, ["cs_test_abc", "cs_test_abc"]);
   } finally { s.close(); }
 });

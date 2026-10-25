@@ -71,7 +71,7 @@ export const gamePath = (g: Game) =>
 let memberP: Promise<Record<string, Prediction>> | null = null;
 export function loadMemberPredictions(sid: string | null) {
   if (!sid) return Promise.resolve({});
-  return (memberP ||= fetch(`/api/predictions?session_id=${encodeURIComponent(sid)}`, { cache: "no-store" })
+  return (memberP ||= fetch("/api/predictions", { cache: "no-store", headers: { "X-PS-Session": sid } })
     .then((r) => (r.ok ? r.json() : { predictions: {} })).then((j) => j.predictions || {}).catch(() => ({})));
 }
 

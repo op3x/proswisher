@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 // Runtime state from our own server (no cookies). Payments are enabled only when the server has a valid
 // TEST key + webhook secret + price (preview) — otherwise everything renders in "payments off" mode.
-type Cfg = { payments: { enabled: boolean } };
+type Cfg = { payments: { enabled: boolean }; counting?: boolean };
 let cfgP: Promise<Cfg> | null = null;
 const getCfg = () => (cfgP ||= fetch("/api/config").then((r) => (r.ok ? r.json() : { payments: { enabled: false } })).catch(() => ({ payments: { enabled: false } })));
 export function usePaymentsEnabled(): boolean {
@@ -17,7 +17,7 @@ let subP: Promise<boolean> | null = null;
 const getSub = () => (subP ||= (async () => {
   const sid = localStorage.getItem(SESSION_KEY);
   if (!sid) return false;
-  try { const r = await fetch(`/api/me?session_id=${encodeURIComponent(sid)}`); return r.ok ? !!(await r.json()).subscriber : false; } catch { return false; }
+  try { const r = await fetch("/api/me", { headers: { "X-PS-Session": sid } }); return r.ok ? !!(await r.json()).subscriber : false; } catch { return false; }
 })());
 export function useSubscriber(): boolean {
   const [s, setS] = useState(false);
@@ -33,5 +33,8 @@ export function countView(path: string, search = "") {
   const q = new URLSearchParams(search), utm: Record<string, string> = {};
   for (const k of UTM) { const v = q.get(k); if (v) utm[k] = v.slice(0, 64); }
   const body = Object.keys(utm).length ? { p: path, utm } : { p: path };
-  try { fetch("/api/v", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), keepalive: true }); } catch { /* ignore */ }
+  // Off unless the server has COUNTING_ENABLED=true; never sent when the browser signals GPC or DNT (Larry memo 21 R8).
+  const nav = navigator as Navigator & { globalPrivacyControl?: boolean };
+  if (nav.globalPrivacyControl || navigator.doNotTrack === "1") return;
+  getCfg().then((c) => { if (!c.counting) return; try { fetch("/api/v", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), keepalive: true }); } catch { /* ignore */ } });
 }

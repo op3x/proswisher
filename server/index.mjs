@@ -8,11 +8,12 @@ import { fileURLToPath } from "node:url";
 import { clientIp, geoipDecision, openGeoip, isBlocked, geoConfig, GEOIP_PATH } from "./geo.mjs";
 import { paymentsMode, makeStripe, verifyPrice, handleCheckoutCompleted } from "./payments.mjs";
 import { createCounter } from "./counter.mjs";
+import { purgeConsent } from "./consent-purge.mjs";
 import { fetchGeoip } from "../scripts/fetch-geoip.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-export async function createApp({ env = process.env, stripe: stripeOverride, geoLookup, counter = createCounter(), dist = path.join(ROOT, "dist"), log = console.log } = {}) {
+export async function createApp({ env = process.env, stripe: stripeOverride, geoLookup, counter = createCounter({ enabled: env.COUNTING_ENABLED === "true" }), dist = path.join(ROOT, "dist"), log = console.log } = {}) {
   const app = express();
   app.disable("x-powered-by");
   const commerce = JSON.parse(fs.readFileSync(path.join(ROOT, "src/config/commerce.json"), "utf8"));
@@ -88,8 +89,19 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
 
   app.use(express.json({ limit: "16kb" }));
 
-  // ---- counting (no cookies; nothing raw stored) ----
+  // ---- counting (no cookies; nothing raw stored; off unless COUNTING_ENABLED=true) ----
+  // Larry memo 21 R7: never count visitors whose IP geolocates to the EEA, UK or Switzerland (local GeoLite2 lookup;
+  // result not stored; no DB -> counted as before). R8: never count when Sec-GPC: 1 or DNT: 1 is sent.
+  // R5: the IP and user agent below go ONLY into counter.visit/click (truncated + hashed); never into a log line.
+  const NO_COUNT = new Set("AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE IS LI NO GB CH".split(" "));
+  const mayCount = (req) => {
+    if (!counter.enabled) return false;
+    if (req.headers["sec-gpc"] === "1" || req.headers["dnt"] === "1") return false;
+    if (state.geo) { const g = state.geo(clientIp(req)); if (g && NO_COUNT.has(String(g.country || "").toUpperCase())) return false; }
+    return true;
+  };
   app.post("/api/v", (req, res) => {
+    if (!mayCount(req)) return res.status(204).end();
     loadGames();
     const p = String(req.body?.p || "");
     const m = p.match(/^\/game\/([\w-]+)$/);
@@ -98,7 +110,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     counter.visit(clientIp(req), req.headers["user-agent"], { featuredView: !!(gid && featured.has(gid)), utm });
     res.status(204).end();
   });
-  app.get("/go/subscribe", (req, res) => { counter.click(clientIp(req), req.headers["user-agent"]); res.redirect(302, "/subscribe"); });
+  app.get("/go/subscribe", (req, res) => { if (mayCount(req)) counter.click(clientIp(req), req.headers["user-agent"]); res.redirect(302, "/subscribe"); });
   app.get("/admin/stats", (req, res) => {
     const tok = env.ADMIN_TOKEN || "";
     if (!tok) return res.status(404).end(); // disabled when unset
@@ -109,7 +121,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   });
 
   // ---- payments ----
-  app.get("/api/config", (_req, res) => res.json({ payments: { enabled: mode.enabled, reason: mode.enabled ? null : "disabled" }, geoblock: geoConfig }));
+  app.get("/api/config", (_req, res) => res.json({ payments: { enabled: mode.enabled, reason: mode.enabled ? null : "disabled" }, counting: !!counter.enabled, geoblock: geoConfig }));
   app.post("/api/checkout", async (req, res) => {
     if (geoGate(req).blocked) return res.status(451).json({ error: "geoblocked", ...commerce.geoBlockCopy });
     if (!mode.enabled) return res.status(503).json({ error: "payments_disabled" });
@@ -124,7 +136,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     const g = geoipDecision(state.geo, clientIp(req));
     if (b.age21 !== true) return res.status(400).json({ error: "age_confirmation_required" });
     // Larry P10: legal consent record (time, IP, consent-text version, price shown, 21+ confirmation).
-    // The ONE place a raw IP is kept; separate from analytics (counter never sees it). Stored in Stripe
+    // The ONE place a raw IP is kept; separate from visit counting (counter only sees a truncated, hashed form). Stored in Stripe
     // metadata (durable) and, if CONSENT_DIR is set, an append-only JSONL file.
     const consent = {
       consent_at: new Date().toISOString(), consent_ip: clientIp(req), consent_version: commerce.consentVersion,
@@ -160,10 +172,12 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     const ok = !!(s && s.status === "complete" && sub && ["active", "trialing"].includes(sub.status) && !state.revoked.has(sub.id) && !state.revoked.has(s.id));
     return { ok, sub };
   };
+  // Larry memo 21 R9: the membership reference travels in the X-PS-Session header, never in a URL (URLs land in edge logs).
+  const sidOf = (req) => String(req.headers["x-ps-session"] || "");
   app.get("/api/me", async (req, res) => {
     if (!mode.enabled) return res.json({ subscriber: false, payments: false });
     try {
-      const { ok, sub } = await subscriberOf(req.query.session_id);
+      const { ok, sub } = await subscriberOf(sidOf(req));
       res.set("Cache-Control", "no-store").json({ subscriber: ok, status: sub?.status || null, cancelAt: sub?.cancel_at || null });
     } catch { res.json({ subscriber: false }); }
   });
@@ -172,7 +186,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     res.set("Cache-Control", "no-store");
     if (!mode.enabled) return res.json({ predictions: {} });
     try {
-      const { ok } = await subscriberOf(req.query.session_id);
+      const { ok } = await subscriberOf(sidOf(req));
       if (!ok) return res.status(403).json({ predictions: {} });
       const out = {};
       for (const [id, g] of Object.entries(readPrivateGames())) if (g.state === "pre" && g.prediction) out[id] = g.prediction;
@@ -215,14 +229,19 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   app.use("/data", (req, res, next) => (/^\/(games|predictions|stats|prior)\.json$/.test(req.path) ? next() : res.status(404).end()));
   app.use(express.static(dist, { index: false, maxAge: "5m", setHeaders: (r, p) => { if (p.includes("/assets/")) r.setHeader("Cache-Control", "public, max-age=31536000, immutable"); } }));
   app.get(/.*/, (_req, res) => sendPage(res, indexHtml()));
-  Object.assign(app.locals, { counter, state, mode: () => mode });
+  Object.assign(app.locals, { counter, state, mode: () => mode, stripe });
   return app;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   if (!fs.existsSync(GEOIP_PATH)) await fetchGeoip();
-  const counter = createCounter();
+  const counter = createCounter({ enabled: process.env.COUNTING_ENABLED === "true" });
   const app = await createApp({ counter });
+  // Larry memo 21 R4(d): daily consent-IP retention purge (sub life + 4 years). Needs CONSENT_DIR and payments on.
+  if (process.env.CONSENT_DIR && app.locals.mode().enabled) {
+    const purge = () => purgeConsent({ dir: process.env.CONSENT_DIR, stripe: app.locals.stripe }).catch((e) => console.warn("[consent] purge failed", e?.type || e?.name));
+    setTimeout(purge, 60000).unref(); setInterval(purge, 864e5).unref();
+  }
   setInterval(() => { try { counter.flush(); } catch (e) { console.warn("[stats] flush failed", e.message); } }, 5 * 60 * 1000).unref();
   setInterval(async () => { if (await fetchGeoip()) { app.locals.state.geo = await openGeoip(); } }, 7 * 864e5).unref();
   // Optional server-side pipeline (P6): keeps the full log in PREDICTIONS_PRIVATE_DIR (needs a volume).

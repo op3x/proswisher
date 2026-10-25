@@ -260,9 +260,7 @@ export const legal = {
     "We may update these Terms. Changes apply from your first renewal at least 14 days after we email you about them.",
   ],
   // Larry P4: privacy text now comes from src/content/privacy-a.md (always) and privacy-b.md (only when payments are on).
-  // Kiko's cookieless counting is not in Larry's §A; the bullet below fills {COUNTING} and is PENDING LARRY's review.
-  privacyCounting:
-    "Our own server counts daily unique visitors, viewers of the free featured game, visits from our own tagged links and clicks on the membership button. It does this with a one-way hash of your IP address and browser type mixed with a random value that is replaced every day and never stored, so the hash can't be linked across days. We keep only daily totals, never your IP address or browser details. This is first-party counting, not a third-party tracker.",
+  // Counting disclosure lives in privacy-a.md / privacy-b.md (Larry memo 21 §5.1/§5.2, versions privacy-a2/b2).
 
 
 };

@@ -9,7 +9,6 @@ const SUPPORT = site.supportEmailActive ? site.supportEmail : "[support contact:
 const fill = (t: string) => t
   .replace(/\{CONTACT\}/g, site.supportEmailActive ? `Questions about privacy? Email ${site.supportEmail}.` : `${site.company} · ${site.mailingAddress}`)
   .replace(/\{SUPPORT\}/g, SUPPORT)
-  .replace(/\{COUNTING\}/g, legal.privacyCounting)
   .replace(/support@proswisher\.com/g, SUPPORT); // Larry P11: never show the alias while it's inactive
 
 function Shell({ title, children }: { title?: string; children: React.ReactNode }) {

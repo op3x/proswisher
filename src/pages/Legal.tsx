@@ -18,7 +18,6 @@ function Shell({ title, children }: { title?: string; children: React.ReactNode 
       {LEGAL_DRAFT && <span className="inline-block rounded bg-amber-500/15 text-amber-300 text-xs font-bold px-2 py-0.5">DRAFT</span>}
       {title && <h1 className="text-2xl sm:text-3xl font-extrabold">{title}</h1>}
       {children}
-      <p className="text-xs text-slate-400">Operated by {site.company}.</p>
     </div>
   );
 }

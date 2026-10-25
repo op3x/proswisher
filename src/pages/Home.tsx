@@ -1,4 +1,4 @@
-import { useData, GamesFile, Game, dayLabel, gamePath } from "../lib/data";
+import { useData, GamesFile, Game, dayLabel, ctDayKey, gamePath } from "../lib/data";
 import GameCard from "../components/GameCard";
 import Subscribe from "../components/Subscribe";
 import { site } from "../config/site";
@@ -19,7 +19,7 @@ export default function Home() {
   const todayFeatured = upcoming.find((g) => featured.has(g.id)) || games.find((g) => featured.has(g.id) && g.state !== "post");
   const byDay = new Map<string, Game[]>();
   for (const g of upcoming) {
-    const k = new Date(g.date).toDateString();
+    const k = ctDayKey(g.date); // CT day, matching dayLabel and tipTime
     byDay.set(k, [...(byDay.get(k) || []), g]);
   }
   return (

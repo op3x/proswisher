@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Stripe from "stripe";
 import { createApp } from "../../server/index.mjs";
-import { clientIp, readerLookup, geoStatus, signupIpDecision, assertGeoEnv, previewBypass, MSG_UNCONFIRMED, GEO_MAX_AGE_DAYS } from "../../server/geo.mjs";
+import { clientIp, readerLookup, geoStatus, signupIpDecision, declaredMatchesIp, assertGeoEnv, previewBypass, MSG_UNCONFIRMED, GEO_MAX_AGE_DAYS } from "../../server/geo.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const TEST_KEY = ["rk", "test", "fixture000"].join("_");
@@ -171,5 +171,59 @@ test("451 block page carries the full footer disclaimer and never the support ad
     const h = await r.text();
     assert.ok(h.includes(commerce.disclaimers.footer)); assert.ok(!h.includes("support@"));
     assert.equal((h.match(/<h1/g) || []).length, 1);
+  } finally { s.close(); }
+});
+
+// Larry (10:49 follow-up): explicit confirmation of the three refusal rules.
+test("Larry: an IP country of JP is always refused, whatever is declared (and even with the preview bypass)", async () => {
+  const JP = "203.0.113.10";
+  for (const [env, label] of [[payEnv, "normal"], [{ ...payEnv, GEO_PREVIEW_BYPASS: "true" }, "bypass"]]) {
+    const stripe = mock();
+    const s = await serve(await createApp({ env, stripe, geoLookup: fresh(), log: quiet }));
+    try {
+      for (const body of [{ country: "JP" }, { country: "ZZ" }, { country: "US", state: "TX" }, { country: "CA" }, { country: "GB" }]) {
+        const r = await post(s.url, JP, body);
+        assert.equal(r.status, 451, `${label} ${JSON.stringify(body)}`);
+        assert.equal((await r.json()).error, "geoblocked");
+      }
+      const page = await fetch(s.url + "/subscribe", { headers: { "x-forwarded-for": JP } });
+      assert.equal(page.status, 451, label);
+      assert.equal(stripe.calls.length, 0, label);
+    } finally { s.close(); }
+  }
+  assert.equal(signupIpDecision(fresh(), JP).error, "geoblocked");
+  assert.equal(signupIpDecision(fresh(), JP, { bypass: true }).error, "geoblocked");
+});
+
+test("Larry: 'Other' combined with any blocked IP country or state is refused", async () => {
+  const stripe = mock();
+  const s = await serve(await createApp({ env: payEnv, stripe, geoLookup: fresh(), log: quiet }));
+  try {
+    for (const ip of ["203.0.113.10", "198.51.100.20"]) {                 // JP; US/WA
+      const r = await post(s.url, ip, { country: "ZZ" });
+      assert.equal(r.status, 451, ip); assert.equal((await r.json()).error, "geoblocked");
+    }
+    assert.equal(stripe.calls.length, 0);
+  } finally { s.close(); }
+  // and the declared-vs-IP matcher itself never accepts "Other" (or anything) for a blocked IP location
+  for (const ip of [{ country: "JP", region: "" }, { country: "US", region: "WA" }, { country: "US", region: "HI" }, { country: "US", region: "UT" }]) {
+    assert.equal(declaredMatchesIp("ZZ", "", ip), false, JSON.stringify(ip));
+    assert.equal(declaredMatchesIp(ip.country, ip.region, ip), false, JSON.stringify(ip));
+    assert.equal(declaredMatchesIp("ZZ", "", { ...ip, bypass: true }), false, "bypass " + JSON.stringify(ip));
+  }
+  assert.equal(declaredMatchesIp("ZZ", "", { country: "DE", region: "" }), true);
+});
+
+test("Larry: a US IP with no state is refused with exactly the VPN text", async () => {
+  assert.deepEqual(signupIpDecision(fresh(), "192.0.2.60"), { ok: false, status: 451, error: "location_unconfirmed", message: MSG_UNCONFIRMED });
+  const stripe = mock();
+  const s = await serve(await createApp({ env: payEnv, stripe, geoLookup: fresh(), log: quiet }));
+  try {
+    for (const body of [{ country: "US", state: "TX" }, { country: "ZZ" }]) {
+      const r = await post(s.url, "192.0.2.60", body);
+      assert.equal(r.status, 451);
+      assert.deepEqual(await r.json(), { error: "location_unconfirmed", message: "We couldn't confirm your location. Please turn off any VPN or proxy and try again." });
+    }
+    assert.equal(stripe.calls.length, 0);
   } finally { s.close(); }
 });

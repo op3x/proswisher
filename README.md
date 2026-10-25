@@ -1,6 +1,7 @@
 # ProSwisher
 
 Transparent pro basketball game predictions with a public, append-only track record.
+ProSwisher is operated by Op3x LLC.
 Web-only (no app-store packaging). Vite + React + TypeScript + Tailwind, served as static files.
 
 ## How it works

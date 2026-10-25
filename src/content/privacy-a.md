@@ -1,7 +1,7 @@
 **ProSwisher Privacy Policy**
 Effective: {EFFECTIVE} · Version: privacy-a2
 
-ProSwisher (proswisher.com) is operated by **Op3x LLC**, an Illinois limited liability company ("we").
+ProSwisher is operated by Op3x LLC. Op3x LLC ("we") is an Illinois limited liability company, and ProSwisher's website is proswisher.com.
 
 - **What we collect.** ProSwisher has no accounts and no sign-ups, and we don't ask for your name or email. We set no cookies and use no third-party analytics, advertising trackers or pixels.
 - **Visit counting (our own, first-party).** When you open a page, our own server counts it so we know how many people use the site. To recognize repeat visits **on the same day**, the server shortens your IP address and combines it with your browser's user-agent string and a random value. It then turns them into a one-way code (a hash). The random value is held only in our server's memory, is replaced every day, and is never saved. So the code can't be linked to you or across days, and it is discarded with the random value at the end of the day. We keep only totals: unique visitors per day, viewers of the featured free game, clicks on the membership button, and visits and clicks from our marketing links (for example, which campaign a link came from). We don't save your IP address or user agent for counting, we don't build a profile of you, and we don't try to re-identify anyone from these totals. We don't count visits from the European Economic Area, the UK or Switzerland. If your browser sends a Global Privacy Control or Do Not Track signal, we don't count your visit.

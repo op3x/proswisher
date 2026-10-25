@@ -60,7 +60,12 @@ export function geoStatus(lookup, now = Date.now(), maxAgeDays = GEO_MAX_AGE_DAY
 // Fail-closed decision for paid sign-up/checkout from the IP alone.
 // -> { ok:true, country, region } | { ok:false, status, error, message? }
 export function signupIpDecision(lookup, ip, { bypass = false, now = Date.now() } = {}) {
-  if (bypass) return { ok: true, bypass: true, country: null, region: null };
+  if (bypass) {
+    // Preview-only bypass skips the "unknown/stale" refusals, never a positive block (Larry: JP is always refused).
+    const g = lookup && ip ? lookup(ip) : null;
+    if (g && isBlocked(g.country, g.region)) return { ok: false, status: 451, error: "geoblocked", country: String(g.country).toUpperCase(), region: String(g.region || "").toUpperCase() };
+    return { ok: true, bypass: true, country: null, region: null };
+  }
   const st = geoStatus(lookup, now);
   if (!st.ok) return { ok: false, status: 503, error: "checkout_unavailable", reason: st.reason };
   const g = ip ? lookup(ip) : null;
@@ -73,6 +78,8 @@ export function signupIpDecision(lookup, ip, { bypass = false, now = Date.now() 
 // Declared billing country/state vs the IP's country/state. "ZZ" (Other) matches any country not offered by name.
 export const PICKER_COUNTRIES = ["US", "CA", "GB", "AU", "JP"];
 export function declaredMatchesIp(country, state, ip) {
+  // Defense in depth (Larry): a blocked IP country/state never matches anything, including "Other".
+  if (isBlocked(ip.country, ip.region)) return false;
   if (ip.bypass) return true;
   if (country === "ZZ") return !PICKER_COUNTRIES.includes(ip.country);
   if (country !== ip.country) return false;

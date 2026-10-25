@@ -1,7 +1,7 @@
 **ProSwisher Privacy Policy**
 Effective: {EFFECTIVE} · Version: privacy-b1
 
-This policy explains how **Op3x LLC** ("we," "us"), an Illinois limited liability company, collects and uses personal information through ProSwisher (proswisher.com).
+ProSwisher is operated by Op3x LLC. This policy explains how **Op3x LLC** ("we," "us"), an Illinois limited liability company, collects and uses personal information through ProSwisher (proswisher.com).
 
 **1. What we collect**
 - **Visitors (no account needed).**

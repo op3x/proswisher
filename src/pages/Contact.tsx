@@ -13,6 +13,7 @@ export default function Contact() {
       )}
       <p className="text-slate-300">To cancel a membership, go to <Link className="text-accent underline underline-offset-4" to="/account">Account settings</Link>.</p>
       <p className="text-slate-300">If you or someone you know has a gambling problem, call 1-800-GAMBLER. See <Link className="text-accent underline underline-offset-4" to="/responsible-gaming">Responsible gaming</Link>.</p>
+      <p className="text-sm text-slate-400">{site.operatedBy}</p>
       <p className="text-sm text-slate-400">{site.company} · {site.mailingAddress}</p>
     </div>
   );

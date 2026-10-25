@@ -1,7 +1,7 @@
 **ProSwisher Terms of Service**
 Effective: {EFFECTIVE} · Version: terms-v1
 
-These Terms are an agreement between you and **Op3x LLC**, an Illinois limited liability company ("Op3x," "we," "us"), which operates ProSwisher at proswisher.com (the "Service"). By using the Service you agree to these Terms and to our Privacy Policy. If you subscribe, you also confirm the checkout consent described in §5.
+ProSwisher is operated by Op3x LLC. These Terms are an agreement between you and **Op3x LLC** ("Op3x," "we," "us"), an Illinois limited liability company, and cover ProSwisher at proswisher.com (the "Service"). By using the Service you agree to these Terms and to our Privacy Policy. If you subscribe, you also confirm the checkout consent described in §5.
 
 ### 1. What ProSwisher is, and what it isn't
 ProSwisher publishes statistical predictions for pro basketball games: a projected score, a projected spread and our model's lean. **ProSwisher is a prediction service, not a sportsbook.** Op3x LLC does not accept wagers, hold your money, set odds for wagering or pay out winnings. We don't run contests, sweepstakes, pick'em games or prizes of any kind, and nothing you do on ProSwisher can win you money or anything else of value from us. You may choose to use our predictions when betting elsewhere. That choice, and any bet, is entirely yours.

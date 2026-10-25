@@ -54,7 +54,7 @@ export default function Layout() {
           {/* Larry P11: support alias hidden until it works. P14: mailing address stays a marked placeholder. */}
           <p className="text-xs">{site.supportEmailActive ? <>Support: {site.supportEmail} · </> : null}{site.mailingAddress}</p>
           <p className="text-xs text-slate-400">{site.geoCredit}</p>
-          <p className="text-xs">© {site.year} {site.company}</p>
+          <p className="text-xs">{site.operatedBy} © {site.year} {site.company}</p>
         </div>
       </footer>
     </div>

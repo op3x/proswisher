@@ -38,6 +38,8 @@ const framings = {
 export const site = {
   name: "ProSwisher",
   company: "Op3x LLC",
+  // Larry memo 23 §6: the ONLY relationship wording. Phrase form: "Op3x LLC, which operates ProSwisher".
+  operatedBy: "ProSwisher is operated by Op3x LLC.",
   year: 2026,
   // ── Placeholders: clearly marked, must be filled before launch ──
   supportEmail: "support@proswisher.com",
@@ -255,7 +257,7 @@ export const legal = {
     "If you or someone you know has a gambling problem, call 1-800-GAMBLER (1-800-426-2537), or visit ncpgambling.org for chat and text options.", // Larry P9
   ],
   terms: [
-    "These terms govern your use of ProSwisher, operated by Op3x LLC. By using the site you agree to them.",
+    "ProSwisher is operated by Op3x LLC. These terms govern your use of ProSwisher. By using the site you agree to them.",
     "Content is provided \"as is\" for entertainment and informational purposes only, without warranties of any kind. Projections can be and often are wrong.",
     "You are solely responsible for any decision you make, including any wager. Op3x LLC is not liable for losses arising from use of the site.",
     "You must be 21+ to use the site. Do not use the site where doing so would violate local law.",

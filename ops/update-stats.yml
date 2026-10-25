@@ -1,0 +1,40 @@
+# PENDING: copy to .github/workflows/update-stats.yml (the push token lacked GitHub "workflow" scope).
+name: Update NBA Stats Daily
+# Keeps the original workflow name/path. Now: pulls the 2026-27 schedule + finals, rebuilds ratings,
+# appends new predictions to the public log BEFORE tip-off, and grades finished games.
+# Fails loudly (red run, no commit) if the data source is unreachable; no silent fallback data.
+
+on:
+  schedule:
+    - cron: '0 13 * * *'   # 8am CT: logs the day's picks well before the earliest tip-off
+    - cron: '0 19 * * *'   # 2pm CT: catches late schedule additions
+    - cron: '0 10 * * *'   # 5am CT: grades last night's finals
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update-stats:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch data, project games, log + grade predictions
+        run: python3 scripts/update_data.py
+      - name: Commit data
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add stats.json public/data/
+          if git diff --cached --quiet; then echo "no changes"; exit 0; fi
+          git commit -m "data: update games, ratings and prediction log $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

@@ -266,6 +266,7 @@ def main():
                         "loggedAt": now.isoformat(timespec="seconds"), "modelVersion": MODEL_VERSION,
                         "pick": pr["pick"], "pickProb": pr["pickProb"], "spread": pr["spread"], "total": pr["total"],
                         "homeMargin": pr["homeMargin"], "result": None,
+                        "loggedBy": "github-actions" if os.environ.get("GITHUB_ACTIONS") == "true" else "manual-run",
                     }
         else:
             g.pop("prediction", None)

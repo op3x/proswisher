@@ -1,0 +1,1015 @@
+{
+ "modelVersion": "pd-v1",
+ "startedAt": "2026-10-25T14:26:00+00:00",
+ "entries": {
+  "401909861": {
+   "gameId": "401909861",
+   "date": "2026-10-25T21:00Z",
+   "home": "UTAH",
+   "away": "LAL",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "LAL",
+   "pickProb": 0.686,
+   "spread": {
+    "team": "LAL",
+    "line": -6.0
+   },
+   "total": 236.5,
+   "homeMargin": -5.8,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909862": {
+   "gameId": "401909862",
+   "date": "2026-10-25T22:00Z",
+   "home": "BKN",
+   "away": "IND",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "BKN",
+   "pickProb": 0.561,
+   "spread": {
+    "team": "BKN",
+    "line": -2.0
+   },
+   "total": 227.5,
+   "homeMargin": 1.8,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909863": {
+   "gameId": "401909863",
+   "date": "2026-10-25T23:00Z",
+   "home": "NY",
+   "away": "ORL",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "NY",
+   "pickProb": 0.705,
+   "spread": {
+    "team": "NY",
+    "line": -6.5
+   },
+   "total": 225.0,
+   "homeMargin": 6.5,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909864": {
+   "gameId": "401909864",
+   "date": "2026-10-25T23:00Z",
+   "home": "MIN",
+   "away": "TOR",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "MIN",
+   "pickProb": 0.573,
+   "spread": {
+    "team": "MIN",
+    "line": -2.0
+   },
+   "total": 226.0,
+   "homeMargin": 2.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909865": {
+   "gameId": "401909865",
+   "date": "2026-10-25T23:00Z",
+   "home": "OKC",
+   "away": "LAC",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "OKC",
+   "pickProb": 0.727,
+   "spread": {
+    "team": "OKC",
+    "line": -7.5
+   },
+   "total": 221.0,
+   "homeMargin": 7.3,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909866": {
+   "gameId": "401909866",
+   "date": "2026-10-25T23:30Z",
+   "home": "PHI",
+   "away": "DET",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "DET",
+   "pickProb": 0.538,
+   "spread": {
+    "team": "DET",
+    "line": -1.0
+   },
+   "total": 228.0,
+   "homeMargin": -1.1,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909867": {
+   "gameId": "401909867",
+   "date": "2026-10-26T01:00Z",
+   "home": "SAC",
+   "away": "MEM",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "MEM",
+   "pickProb": 0.625,
+   "spread": {
+    "team": "MEM",
+    "line": -4.0
+   },
+   "total": 231.5,
+   "homeMargin": -3.8,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909868": {
+   "gameId": "401909868",
+   "date": "2026-10-26T23:00Z",
+   "home": "CHA",
+   "away": "WSH",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "CHA",
+   "pickProb": 0.686,
+   "spread": {
+    "team": "CHA",
+    "line": -6.0
+   },
+   "total": 228.5,
+   "homeMargin": 5.8,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909869": {
+   "gameId": "401909869",
+   "date": "2026-10-26T23:00Z",
+   "home": "CLE",
+   "away": "MIN",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "MIN",
+   "pickProb": 0.547,
+   "spread": {
+    "team": "MIN",
+    "line": -1.5
+   },
+   "total": 231.5,
+   "homeMargin": -1.4,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909870": {
+   "gameId": "401909870",
+   "date": "2026-10-26T23:30Z",
+   "home": "BOS",
+   "away": "CHI",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "BOS",
+   "pickProb": 0.808,
+   "spread": {
+    "team": "BOS",
+    "line": -10.5
+   },
+   "total": 230.5,
+   "homeMargin": 10.5,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909871": {
+   "gameId": "401909871",
+   "date": "2026-10-26T23:30Z",
+   "home": "MIA",
+   "away": "DAL",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "MIA",
+   "pickProb": 0.608,
+   "spread": {
+    "team": "MIA",
+    "line": -3.5
+   },
+   "total": 235.0,
+   "homeMargin": 3.3,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909872": {
+   "gameId": "401909872",
+   "date": "2026-10-27T00:00Z",
+   "home": "MIL",
+   "away": "IND",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "MIL",
+   "pickProb": 0.573,
+   "spread": {
+    "team": "MIL",
+    "line": -2.0
+   },
+   "total": 234.0,
+   "homeMargin": 2.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909873": {
+   "gameId": "401909873",
+   "date": "2026-10-27T00:00Z",
+   "home": "OKC",
+   "away": "PHX",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "OKC",
+   "pickProb": 0.825,
+   "spread": {
+    "team": "OKC",
+    "line": -11.0
+   },
+   "total": 220.0,
+   "homeMargin": 11.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909874": {
+   "gameId": "401909874",
+   "date": "2026-10-27T00:30Z",
+   "home": "HOU",
+   "away": "ATL",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "HOU",
+   "pickProb": 0.573,
+   "spread": {
+    "team": "HOU",
+    "line": -2.0
+   },
+   "total": 230.5,
+   "homeMargin": 2.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909875": {
+   "gameId": "401909875",
+   "date": "2026-10-27T01:00Z",
+   "home": "UTAH",
+   "away": "MEM",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "MEM",
+   "pickProb": 0.567,
+   "spread": {
+    "team": "MEM",
+    "line": -2.0
+   },
+   "total": 236.0,
+   "homeMargin": -2.0,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909876": {
+   "gameId": "401909876",
+   "date": "2026-10-27T02:00Z",
+   "home": "DEN",
+   "away": "GS",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "DEN",
+   "pickProb": 0.72,
+   "spread": {
+    "team": "DEN",
+    "line": -7.0
+   },
+   "total": 233.5,
+   "homeMargin": 7.0,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909877": {
+   "gameId": "401909877",
+   "date": "2026-10-27T23:30Z",
+   "home": "BOS",
+   "away": "BKN",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "BOS",
+   "pickProb": 0.808,
+   "spread": {
+    "team": "BOS",
+    "line": -10.5
+   },
+   "total": 221.0,
+   "homeMargin": 10.5,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909878": {
+   "gameId": "401909878",
+   "date": "2026-10-28T00:00Z",
+   "home": "NY",
+   "away": "DET",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "DET",
+   "pickProb": 0.538,
+   "spread": {
+    "team": "DET",
+    "line": -1.0
+   },
+   "total": 224.0,
+   "homeMargin": -1.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909879": {
+   "gameId": "401909879",
+   "date": "2026-10-28T00:00Z",
+   "home": "SA",
+   "away": "SAC",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "SA",
+   "pickProb": 0.852,
+   "spread": {
+    "team": "SA",
+    "line": -12.5
+   },
+   "total": 229.5,
+   "homeMargin": 12.5,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909880": {
+   "gameId": "401909880",
+   "date": "2026-10-28T03:00Z",
+   "home": "LAL",
+   "away": "POR",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "LAL",
+   "pickProb": 0.559,
+   "spread": {
+    "team": "LAL",
+    "line": -2.0
+   },
+   "total": 231.0,
+   "homeMargin": 1.8,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909881": {
+   "gameId": "401909881",
+   "date": "2026-10-28T23:00Z",
+   "home": "ATL",
+   "away": "MIA",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "ATL",
+   "pickProb": 0.792,
+   "spread": {
+    "team": "ATL",
+    "line": -10.0
+   },
+   "total": 236.0,
+   "homeMargin": 9.8,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909882": {
+   "gameId": "401909882",
+   "date": "2026-10-28T23:00Z",
+   "home": "CLE",
+   "away": "WSH",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "CLE",
+   "pickProb": 0.748,
+   "spread": {
+    "team": "CLE",
+    "line": -8.0
+   },
+   "total": 235.5,
+   "homeMargin": 8.0,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909883": {
+   "gameId": "401909883",
+   "date": "2026-10-28T23:00Z",
+   "home": "DET",
+   "away": "CHA",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "DET",
+   "pickProb": 0.769,
+   "spread": {
+    "team": "DET",
+    "line": -9.0
+   },
+   "total": 224.5,
+   "homeMargin": 8.8,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909884": {
+   "gameId": "401909884",
+   "date": "2026-10-28T23:00Z",
+   "home": "IND",
+   "away": "PHI",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "PHI",
+   "pickProb": 0.623,
+   "spread": {
+    "team": "PHI",
+    "line": -4.0
+   },
+   "total": 230.0,
+   "homeMargin": -3.8,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909885": {
+   "gameId": "401909885",
+   "date": "2026-10-28T23:30Z",
+   "home": "TOR",
+   "away": "ORL",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "TOR",
+   "pickProb": 0.803,
+   "spread": {
+    "team": "TOR",
+    "line": -10.0
+   },
+   "total": 227.0,
+   "homeMargin": 10.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909886": {
+   "gameId": "401909886",
+   "date": "2026-10-29T00:00Z",
+   "home": "CHI",
+   "away": "NY",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "NY",
+   "pickProb": 0.643,
+   "spread": {
+    "team": "NY",
+    "line": -4.5
+   },
+   "total": 230.0,
+   "homeMargin": -4.4,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909887": {
+   "gameId": "401909887",
+   "date": "2026-10-29T00:00Z",
+   "home": "MIL",
+   "away": "HOU",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "HOU",
+   "pickProb": 0.704,
+   "spread": {
+    "team": "HOU",
+    "line": -6.5
+   },
+   "total": 231.0,
+   "homeMargin": -6.4,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909888": {
+   "gameId": "401909888",
+   "date": "2026-10-29T00:00Z",
+   "home": "MIN",
+   "away": "GS",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "MIN",
+   "pickProb": 0.812,
+   "spread": {
+    "team": "MIN",
+    "line": -10.5
+   },
+   "total": 230.0,
+   "homeMargin": 10.6,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909889": {
+   "gameId": "401909889",
+   "date": "2026-10-29T00:00Z",
+   "home": "NO",
+   "away": "DEN",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "DEN",
+   "pickProb": 0.555,
+   "spread": {
+    "team": "DEN",
+    "line": -1.5
+   },
+   "total": 240.0,
+   "homeMargin": -1.7,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909890": {
+   "gameId": "401909890",
+   "date": "2026-10-29T01:00Z",
+   "home": "UTAH",
+   "away": "SA",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "SA",
+   "pickProb": 0.683,
+   "spread": {
+    "team": "SA",
+    "line": -5.5
+   },
+   "total": 234.5,
+   "homeMargin": -5.7,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909891": {
+   "gameId": "401909891",
+   "date": "2026-10-29T01:30Z",
+   "home": "DAL",
+   "away": "OKC",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "OKC",
+   "pickProb": 0.738,
+   "spread": {
+    "team": "OKC",
+    "line": -7.5
+   },
+   "total": 224.5,
+   "homeMargin": -7.7,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909892": {
+   "gameId": "401909892",
+   "date": "2026-10-29T02:30Z",
+   "home": "LAC",
+   "away": "LAL",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "LAC",
+   "pickProb": 0.539,
+   "spread": {
+    "team": "LAC",
+    "line": -1.0
+   },
+   "total": 229.0,
+   "homeMargin": 1.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909893": {
+   "gameId": "401909893",
+   "date": "2026-10-29T23:00Z",
+   "home": "ATL",
+   "away": "CLE",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "ATL",
+   "pickProb": 0.681,
+   "spread": {
+    "team": "ATL",
+    "line": -5.5
+   },
+   "total": 234.5,
+   "homeMargin": 5.7,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909894": {
+   "gameId": "401909894",
+   "date": "2026-10-30T00:00Z",
+   "home": "NO",
+   "away": "SAC",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "NO",
+   "pickProb": 0.718,
+   "spread": {
+    "team": "NO",
+    "line": -7.0
+   },
+   "total": 237.5,
+   "homeMargin": 6.9,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909895": {
+   "gameId": "401909895",
+   "date": "2026-10-30T02:00Z",
+   "home": "POR",
+   "away": "MEM",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "POR",
+   "pickProb": 0.722,
+   "spread": {
+    "team": "POR",
+    "line": -7.0
+   },
+   "total": 230.0,
+   "homeMargin": 7.0,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909277": {
+   "gameId": "401909277",
+   "date": "2026-10-30T23:00Z",
+   "home": "WSH",
+   "away": "CHA",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "CHA",
+   "pickProb": 0.527,
+   "spread": {
+    "team": "CHA",
+    "line": -1.0
+   },
+   "total": 228.5,
+   "homeMargin": -0.8,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909278": {
+   "gameId": "401909278",
+   "date": "2026-10-30T23:30Z",
+   "home": "BOS",
+   "away": "CHI",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "BOS",
+   "pickProb": 0.808,
+   "spread": {
+    "team": "BOS",
+    "line": -10.5
+   },
+   "total": 230.5,
+   "homeMargin": 10.5,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909279": {
+   "gameId": "401909279",
+   "date": "2026-10-30T23:30Z",
+   "home": "BKN",
+   "away": "DET",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "DET",
+   "pickProb": 0.749,
+   "spread": {
+    "team": "DET",
+    "line": -8.0
+   },
+   "total": 225.5,
+   "homeMargin": -8.1,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909280": {
+   "gameId": "401909280",
+   "date": "2026-10-30T23:30Z",
+   "home": "PHI",
+   "away": "NY",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "PHI",
+   "pickProb": 0.583,
+   "spread": {
+    "team": "PHI",
+    "line": -2.5
+   },
+   "total": 223.0,
+   "homeMargin": 2.5,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909281": {
+   "gameId": "401909281",
+   "date": "2026-10-30T23:30Z",
+   "home": "TOR",
+   "away": "ORL",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "TOR",
+   "pickProb": 0.803,
+   "spread": {
+    "team": "TOR",
+    "line": -10.0
+   },
+   "total": 227.0,
+   "homeMargin": 10.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909282": {
+   "gameId": "401909282",
+   "date": "2026-10-31T00:00Z",
+   "home": "MIA",
+   "away": "IND",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "MIA",
+   "pickProb": 0.637,
+   "spread": {
+    "team": "MIA",
+    "line": -4.0
+   },
+   "total": 235.5,
+   "homeMargin": 4.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909283": {
+   "gameId": "401909283",
+   "date": "2026-10-31T00:00Z",
+   "home": "DAL",
+   "away": "HOU",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "HOU",
+   "pickProb": 0.669,
+   "spread": {
+    "team": "HOU",
+    "line": -5.0
+   },
+   "total": 229.5,
+   "homeMargin": -5.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909284": {
+   "gameId": "401909284",
+   "date": "2026-10-31T00:00Z",
+   "home": "MIN",
+   "away": "LAC",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "MIN",
+   "pickProb": 0.689,
+   "spread": {
+    "team": "MIN",
+    "line": -6.0
+   },
+   "total": 227.5,
+   "homeMargin": 5.9,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909285": {
+   "gameId": "401909285",
+   "date": "2026-10-31T02:00Z",
+   "home": "GS",
+   "away": "LAL",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "LAL",
+   "pickProb": 0.617,
+   "spread": {
+    "team": "LAL",
+    "line": -3.5
+   },
+   "total": 231.5,
+   "homeMargin": -3.6,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909286": {
+   "gameId": "401909286",
+   "date": "2026-10-31T02:00Z",
+   "home": "PHX",
+   "away": "DEN",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "DEN",
+   "pickProb": 0.54,
+   "spread": {
+    "team": "DEN",
+    "line": -1.0
+   },
+   "total": 230.0,
+   "homeMargin": -1.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909896": {
+   "gameId": "401909896",
+   "date": "2026-10-31T19:00Z",
+   "home": "UTAH",
+   "away": "POR",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "POR",
+   "pickProb": 0.708,
+   "spread": {
+    "team": "POR",
+    "line": -6.5
+   },
+   "total": 235.5,
+   "homeMargin": -6.6,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909897": {
+   "gameId": "401909897",
+   "date": "2026-10-31T22:00Z",
+   "home": "CHA",
+   "away": "PHI",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "PHI",
+   "pickProb": 0.506,
+   "spread": {
+    "team": "PHI",
+    "line": 0.0
+   },
+   "total": 224.0,
+   "homeMargin": -0.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909898": {
+   "gameId": "401909898",
+   "date": "2026-10-31T23:00Z",
+   "home": "NO",
+   "away": "ATL",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "ATL",
+   "pickProb": 0.647,
+   "spread": {
+    "team": "ATL",
+    "line": -4.5
+   },
+   "total": 239.0,
+   "homeMargin": -4.5,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909899": {
+   "gameId": "401909899",
+   "date": "2026-11-01T00:00Z",
+   "home": "MEM",
+   "away": "SAC",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "MEM",
+   "pickProb": 0.769,
+   "spread": {
+    "team": "MEM",
+    "line": -9.0
+   },
+   "total": 231.5,
+   "homeMargin": 8.8,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909900": {
+   "gameId": "401909900",
+   "date": "2026-11-01T00:00Z",
+   "home": "MIL",
+   "away": "CLE",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "CLE",
+   "pickProb": 0.617,
+   "spread": {
+    "team": "CLE",
+    "line": -3.5
+   },
+   "total": 235.0,
+   "homeMargin": -3.6,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909901": {
+   "gameId": "401909901",
+   "date": "2026-11-01T00:00Z",
+   "home": "SA",
+   "away": "MIN",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "SA",
+   "pickProb": 0.51,
+   "spread": {
+    "team": "SA",
+    "line": -0.5
+   },
+   "total": 228.0,
+   "homeMargin": 0.3,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909902": {
+   "gameId": "401909902",
+   "date": "2026-11-01T00:30Z",
+   "home": "HOU",
+   "away": "OKC",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "HOU",
+   "pickProb": 0.503,
+   "spread": {
+    "team": "HOU",
+    "line": 0.0
+   },
+   "total": 221.5,
+   "homeMargin": 0.1,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909903": {
+   "gameId": "401909903",
+   "date": "2026-11-01T20:30Z",
+   "home": "ORL",
+   "away": "BOS",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "BOS",
+   "pickProb": 0.583,
+   "spread": {
+    "team": "BOS",
+    "line": -2.5
+   },
+   "total": 225.0,
+   "homeMargin": -2.5,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909904": {
+   "gameId": "401909904",
+   "date": "2026-11-01T22:00Z",
+   "home": "IND",
+   "away": "BKN",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "IND",
+   "pickProb": 0.604,
+   "spread": {
+    "team": "IND",
+    "line": -3.0
+   },
+   "total": 227.5,
+   "homeMargin": 3.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909905": {
+   "gameId": "401909905",
+   "date": "2026-11-02T01:30Z",
+   "home": "GS",
+   "away": "LAC",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "LAC",
+   "pickProb": 0.573,
+   "spread": {
+    "team": "LAC",
+    "line": -2.0
+   },
+   "total": 228.5,
+   "homeMargin": -2.2,
+   "result": null,
+   "loggedBy": "manual-run"
+  },
+  "401909906": {
+   "gameId": "401909906",
+   "date": "2026-11-02T02:00Z",
+   "home": "LAL",
+   "away": "TOR",
+   "loggedAt": "2026-10-25T14:26:00+00:00",
+   "modelVersion": "pd-v1",
+   "pick": "LAL",
+   "pickProb": 0.504,
+   "spread": {
+    "team": "LAL",
+    "line": 0.0
+   },
+   "total": 227.5,
+   "homeMargin": 0.1,
+   "result": null,
+   "loggedBy": "manual-run"
+  }
+ },
+ "updatedAt": "2026-10-25T14:26:00+00:00"
+}

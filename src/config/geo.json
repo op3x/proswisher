@@ -1,0 +1,6 @@
+{
+  "_note": "Geoblock (memo 17 §3, Larry, Ingus). Shared by the site and the server. Paid sign-up + checkout ONLY. Ryan final-approves the list via Kiko.",
+  "enabled": true,
+  "usStates": ["WA", "HI", "UT"],
+  "countries": ["JP"]
+}

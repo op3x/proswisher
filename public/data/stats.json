@@ -1,0 +1,16 @@
+{
+ "updated": null,
+ "season": "2026-27",
+ "seasonYear": 2027,
+ "modelVersion": "pd-v1",
+ "model": {
+  "homeCourt": 2.5,
+  "priorGames": 10,
+  "priorRegress": 0.5,
+  "sigma": 12.0
+ },
+ "priorSeason": null,
+ "leaguePpg": null,
+ "teams": {},
+ "note": "Reset 2026-10-25: earlier preview data came from an unlicensed feed (Larry memo 20) and is not part of the official log. Populated by scripts/update_data.py once BALLDONTLIE_API_KEY is set."
+}

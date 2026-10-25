@@ -1,0 +1,46 @@
+{
+  "_note": "Shared by the site (src/config/site.ts) and the server (server/*.mjs). Copy: Laye, landing-page-copy.md 9:42 AM CT. Price is config only; Stripe prices are created by Ryan, never by code.",
+  "price": "$9",
+  "unitAmount": 900,
+  "currency": "usd",
+  "consentVersion": "consent-v1-2026-10-25",
+  "renewalDisclosure": "You'll be charged $9 today and $9 every month after that until you cancel. Cancel online any time in Account settings. Cancellation takes effect at the end of your current billing period.",
+  "gamePageTitle": "{Away} vs. {Home} Prediction, {date} | NBA | ProSwisher",
+  "gamePageDescription": "Projected score, projected spread and our model's lean for {Away} vs {Home}, posted before tip-off. Entertainment only. 21+. 1-800-GAMBLER.",
+  "geoBlockCopy": {
+    "title": "Subscriptions aren't available in your location",
+    "body": "Sorry, ProSwisher subscriptions aren't available in Washington, Hawaii, Utah or Japan. You're still welcome to browse our public pages, today's featured game and the track record.",
+    "checkoutBilling": "Sorry, we can't accept subscriptions with a billing address in Washington, Hawaii, Utah or Japan. You haven't been charged.",
+    "help": "Questions? Email support@proswisher.com. Gambling problem? Call 1-800-GAMBLER.",
+    "unconfirmed": "We couldn't confirm your location. Please turn off any VPN or proxy and try again.",
+    "unconfirmedTitle": "We couldn't confirm your location",
+    "unavailable": "Subscriptions are temporarily unavailable. Public pages and today's free game are still open."
+  },
+  "priceShown": "$9/month plus applicable tax",
+  "supportEmailActive": false,
+  "_supportNote": "Larry P11: support@proswisher.com is hidden everywhere (site, 451 page, legal pages) until the alias works. Flip to true only after Ingus sets it up, Ryan OKs DNS and a test email arrives.",
+  "utmAllowlist": {
+    "_note": "Larry memo 21 R6: only these combos are counted; anything else counts as 'other'. Laye week-1 calendar (psw_launch_2026). Rule: never put a person's name, handle or email in a UTM and never give one person a unique tag.",
+    "combos": [
+      "x|organic_social|psw_launch_2026|x_bio_v1",
+      "x|organic_social|psw_launch_2026|x_launch_v1",
+      "x|organic_social|psw_launch_2026|x_free_d2_v1",
+      "x|organic_social|psw_launch_2026|x_free_d3_v1",
+      "x|organic_social|psw_launch_2026|x_free_d4_v1",
+      "x|organic_social|psw_launch_2026|x_free_d5_v1",
+      "x|organic_social|psw_launch_2026|x_free_d7_v1",
+      "x|organic_social|psw_launch_2026|x_members_d6_v1",
+      "x|organic_social|psw_launch_2026|x_recap_d2_v1",
+      "x|organic_social|psw_launch_2026|x_recap_d3_v1",
+      "x|organic_social|psw_launch_2026|x_recap_d4_v1",
+      "x|organic_social|psw_launch_2026|x_recap_d5_v1",
+      "x|organic_social|psw_launch_2026|x_recap_d6_v1",
+      "x|organic_social|psw_launch_2026|x_recap_d7_v1"
+    ]
+  },
+  "disclaimers": {
+    "_note": "Larry's verbatim texts (disclaimer-footer.md §1-2). Shared by the SPA (site.ts) and the server block page. Don't edit without Larry.",
+    "footer": "ProSwisher provides sports predictions for entertainment and informational purposes only. It is not betting, financial or legal advice, and no outcome is guaranteed. Past results do not guarantee future results. Op3x LLC is not a sportsbook and does not accept wagers. Op3x LLC does not hold your money or pay out winnings. You must be 21+ and located where sports betting is legal to place bets; check your local laws. If you or someone you know has a gambling problem, call 1-800-GAMBLER. ProSwisher is not affiliated with or endorsed by the NBA, its teams or players.",
+    "short": "Entertainment only. Not betting advice. 21+. 1-800-GAMBLER."
+  }
+}

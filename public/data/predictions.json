@@ -1,0 +1,9 @@
+{
+ "modelVersion": "pd-v1",
+ "startedAt": null,
+ "updatedAt": null,
+ "marketSource": null,
+ "note": "Reset 2026-10-25: earlier preview data came from an unlicensed feed (Larry memo 20) and is not part of the official log. Populated by scripts/update_data.py once BALLDONTLIE_API_KEY is set.",
+ "entries": {},
+ "sealed": {}
+}

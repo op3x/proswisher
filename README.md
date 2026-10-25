@@ -4,12 +4,12 @@ Transparent pro basketball game predictions with a public, append-only track rec
 Web-only (no app-store packaging). Vite + React + TypeScript + Tailwind, served as static files.
 
 ## How it works
-- `scripts/update_data.py` (stdlib Python, run by `.github/workflows/update-stats.yml`) pulls the current
+- `scripts/update_data.py` (stdlib Python, run by the workflow staged at `ops/update-stats.yml`; it must be copied to `.github/workflows/` by someone with `workflow` scope, and scheduled runs only happen from `main`) pulls the current
   season's schedule and final scores, builds team ratings (point differential blended with last season),
   projects every game in the next 7 days, **appends new predictions to `public/data/predictions.json` before
   tip-off** (never edited afterwards) and grades them once games are final. It fails loudly instead of writing fallback data.
 - The site reads `public/data/*.json`. No backend, database, cookies, analytics or AI keys.
-- All copy is in `src/config/site.ts` (`FRAMING` switches the positioning). Disclaimers are verbatim from legal memo 17.
+- All copy is in `src/config/site.ts` (`FRAMING` switches the positioning). Copy follows Laye's landing-page-copy.md (9:28 AM CT) with Larry's final rulings (canonical footer, flat 21+, checkout consent, track-record rules, geoblock WA/HI/UT/JP).
 
 ## Run
 ```
@@ -30,3 +30,16 @@ The future plan is standard Stripe Billing + Stripe Tax with a dedicated restric
 server-side checkout geoblocked for WA, HI, UT and Japan (`src/lib/geoblock.ts` stub).
 `scripts/guard.mjs` runs before every build/start and refuses if a live key appears while `APP_ENV=preview`,
 if `STRIPE_LIVE_ENABLED=true` outside production, or if any `VITE_*` var holds a secret.
+
+## Pick log guarantees
+
+- `public/data/predictions.json` is append-only: a game is logged only while its state is `pre` and tip-off is in the future;
+  locked fields (pick, probability, spread, total, timestamps) are never rewritten and no entry is ever removed. The script refuses to write if that would change.
+- Entries are graded automatically once the game is final. The commit history of that file is the public proof of pre-tip-off timestamps.
+- `python3 tests/test_pipeline.py` runs an offline end-to-end check (log before tip → grade after final → nothing changed or removed); the workflow runs it before every data update.
+- The W-L summary appears only on the Track record page, always covering the full log since launch, with the date range, a link to the full log and "Past results do not guarantee future results".
+
+## Pricing / free tier (stub)
+
+$9/month, free tier of 1 game per day. Gating (`src/lib/access.ts`) is inert while payments are off, so every game is visible.
+Geoblock (`src/lib/geoblock.ts`): WA, HI, UT, Japan, by IP and billing ZIP/country, ON by default (`geoblock.enabled` in `src/config/site.ts`); it must run server-side once checkout exists.

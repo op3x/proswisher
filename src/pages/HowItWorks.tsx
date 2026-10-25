@@ -35,7 +35,7 @@ export default function HowItWorks() {
         <section className="rounded-2xl bg-panel border border-line p-4 overflow-x-auto">
           <h2 className="font-bold mb-2">Current ratings ({data!.season}, updated {data!.updated})</h2>
           <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-500"><tr><th className="py-1">#</th><th>Team</th><th>W-L</th><th>Margin</th><th>{data!.priorSeason}</th><th>Rating</th></tr></thead>
+            <thead className="text-xs text-slate-500"><tr><th className="py-1">#</th><th>Team</th><th>Team record</th><th>Margin</th><th>{data!.priorSeason}</th><th>Rating</th></tr></thead>
             <tbody>
               {teams.map(([ab, t], i) => (
                 <tr key={ab} className="border-t border-line">

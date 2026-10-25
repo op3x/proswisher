@@ -58,8 +58,8 @@ export default function GameDetail() {
         )}
         {logged && (
           <p className="mt-3 text-xs text-slate-500">
-            Logged to the public record at {new Date(logged.loggedAt).toLocaleString()}: pick {logged.pick} ({pct(logged.pickProb)}), {logged.spread.team} {fmtLine(logged.spread.line)}, total {logged.total}.
-            {logged.result && <> Result: {logged.result.pickCorrect ? "correct" : "incorrect"}.</>}
+            {site.predictionCard.postedAt.replace("{timestamp}", new Date(logged.loggedAt).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }))}: pick {logged.pick} ({pct(logged.pickProb)}), {logged.spread.team} {fmtLine(logged.spread.line)}, total {logged.total}.
+            
           </p>
         )}
       </div>
@@ -78,7 +78,7 @@ export default function GameDetail() {
         <section className="rounded-2xl bg-panel border border-line p-5 overflow-x-auto">
           <h2 className="font-bold mb-2">Team inputs</h2>
           <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-500"><tr><th className="py-1">Team</th><th>W-L</th><th>Margin</th><th>Last season</th><th>Rating</th></tr></thead>
+            <thead className="text-xs text-slate-500"><tr><th className="py-1">Team</th><th>Team record</th><th>Margin</th><th>Last season</th><th>Rating</th></tr></thead>
             <tbody>{[g.away.abbr, g.home.abbr].map(teamRow)}</tbody>
           </table>
         </section>

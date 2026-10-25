@@ -37,6 +37,7 @@ export default function Layout() {
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             {site.footerLinks.map((l) => <Link key={l.to} to={l.to} className="hover:text-white underline-offset-4 hover:underline">{l.label}</Link>)}
           </div>
+          <p className="text-xs">Support: {site.supportEmail}{site.supportEmailActive ? "" : " (not yet active)"} · {site.mailingAddress}</p>
           <p className="text-xs">© {site.year} {site.company}</p>
         </div>
       </footer>

@@ -27,6 +27,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Pipeline self-test (offline fixtures)
+        run: python3 tests/test_pipeline.py
       - name: Fetch data, project games, log + grade predictions
         run: python3 scripts/update_data.py
       - name: Commit data

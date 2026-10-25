@@ -252,6 +252,8 @@ def main():
     ppath = os.path.join(DATA, "predictions.json")
     log = load(ppath, {"modelVersion": MODEL_VERSION, "startedAt": now.isoformat(timespec="seconds"), "entries": {}})
     entries = log["entries"]
+    LOCKED = ("gameId", "date", "home", "away", "loggedAt", "modelVersion", "pick", "pickProb", "spread", "total", "homeMargin")
+    before = {k: {f: v.get(f) for f in LOCKED} for k, v in entries.items()}
     upcoming = []
     for g in glist:
         g_dt = datetime.fromisoformat(g["date"].replace("Z", "+00:00"))
@@ -288,6 +290,10 @@ def main():
                 "totalSide": "push" if tot == e["total"] else ("over" if tot > e["total"] else "under"),
                 "marginError": round(actual_margin - e["homeMargin"], 1),
             }
+    # append-only guard: nothing removed, locked fields never edited
+    for k, snap in before.items():
+        if k not in entries or any(entries[k].get(f) != snap[f] for f in LOCKED):
+            raise RuntimeError(f"append-only violation on log entry {k}; refusing to write")
     log["updatedAt"] = now.isoformat(timespec="seconds")
 
     store["games"] = games

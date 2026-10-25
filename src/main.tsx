@@ -9,9 +9,12 @@ import TrackRecord from "./pages/TrackRecord";
 import HowItWorks from "./pages/HowItWorks";
 import { Responsible, Terms, Privacy } from "./pages/Legal";
 import NotFound from "./pages/NotFound";
+import Faq from "./pages/Faq";
+import AgeGate from "./components/AgeGate";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
+    <AgeGate>
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
@@ -22,9 +25,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="responsible-gaming" element={<Responsible />} />
           <Route path="terms" element={<Terms />} />
           <Route path="privacy" element={<Privacy />} />
+          <Route path="faq" element={<Faq />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </BrowserRouter>
+    </AgeGate>
   </React.StrictMode>
 );

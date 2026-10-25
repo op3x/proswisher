@@ -1,4 +1,4 @@
-import { site } from "../config/site";
+import { site, legal } from "../config/site";
 import { paymentsEnabled } from "../lib/geoblock";
 
 export default function Faq() {
@@ -11,7 +11,7 @@ export default function Faq() {
       {items.map(([q, a]) => (
         <details key={q} className="rounded-xl bg-panel border border-line p-4">
           <summary className="font-semibold cursor-pointer">{q}</summary>
-          <p className="mt-2 text-sm text-slate-300">{a}</p>
+          <p className="mt-2 text-sm text-slate-300">{a === "{refunds}" ? legal.refunds : a}</p>
         </details>
       ))}
       <p className="text-sm text-slate-400">Contact: {site.supportEmail}{site.supportEmailActive ? "" : " (not yet active)"}</p>

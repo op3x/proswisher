@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ALL user-facing copy lives here. Switch FRAMING to re-position the product
 // (e.g. "betting" → "fan") without touching components.
-// Copy source: /workspace/marketing/proswisher/landing-page-copy.md (Laye, 9:28 AM CT update) with Larry's
+// Copy source: /workspace/marketing/proswisher/landing-page-copy.md (Laye, 9:37 AM CT update, incl. Larry round 2) with Larry's
 // final rulings: canonical footer (flat 21+), `disclaimers.short`, checkout consent, track-record rules, geoblocks.
 // The memo 17 longer footer is retired.
 // Rules from memo 17: no prizes/contests/pick'em, no profit or "make money" claims, no "lock"/"guaranteed",
@@ -40,7 +40,7 @@ export const site = {
   supportEmail: "support@proswisher.com",
   supportEmailActive: false, // no MX on proswisher.com yet; UI shows "(not yet active)"
   mailingAddress: "[MAILING ADDRESS TBD]",
-  refundPolicy: "[REFUND POLICY TBD]", // Larry/Kiko to decide
+  // refund text: see legal.refunds (Larry's exact wording, 9:36)
   cancelUrl: "[CANCEL_URL TBD]",
   proofLine: "Logged before tip-off. Graded in public.",
   // Where the full, append-only pick log lives. Switch logBranch to "main" when the PR merges.
@@ -51,13 +51,14 @@ export const site = {
     // Laye's description mentions "$9/month"; the price-free variant is used while nothing is for sale (payments off).
     description: "Projected scores, projected spreads and our model's lean for pro basketball games. Entertainment only. 21+.",
     descriptionWhenSelling: "Projected scores, projected spreads and our model's lean for pro basketball games. One game free every day; every game for $9/month. Entertainment only. 21+.",
-    // "NBA" in game-page SEO titles only, to identify the game: Kiko OK, PENDING Larry. Not used in this build.
-    gamePageTitle: "{Away} vs {Home} Prediction: NBA, {date} | ProSwisher",
+    // Larry 9:36 (approved): "NBA" as plain text in game-page SEO titles, exactly this format. Never "Official", no logos.
+    gamePageTitle: "{Away} vs. {Home} Prediction, {date} | NBA | ProSwisher",
+    gamePageDescription: "Projected score, projected spread and our model's lean for {Away} vs {Home}, posted before tip-off. Entertainment only. 21+. 1-800-GAMBLER.",
     ogTitle: "ProSwisher: Nothing but numbers.",
   },
   heroCta: "Get today's free prediction",
   heroCtaSecondary: "How it works",
-  heroCtaPaid: "Unlock every game: $9/month", // shown only when the subscribe flag is on
+  heroCtaPaid: "Get every game: $9/month", // shown only when the subscribe flag is on
   heroPriceNote: "One game free every day. Every game for $9/month, renews monthly, cancel online any time.", // flag-gated
   ageGate: {
     // Neutral click-through: no default choice, remembered for the browser session only (sessionStorage, no cookie).
@@ -67,11 +68,12 @@ export const site = {
     deny: "I'm under 21",
     deniedMessage: "Sorry, ProSwisher is only for adults 21 and older.",
     help: "Gambling problem? Call 1-800-GAMBLER.",
-    locationNote: "ProSwisher isn't available in Washington, Hawaii, Utah or Japan.",
+    locationNote: "ProSwisher accounts and subscriptions aren't available in Washington, Hawaii, Utah or Japan.",
   },
   geoBlockCopy: {
-    title: "ProSwisher isn't available in your location",
-    body: "Sorry, ProSwisher isn't offered in Washington, Hawaii, Utah or Japan, so we can't show predictions or take subscriptions there.",
+    // Shown ONLY at account creation (free and paid) and checkout. Public pages + track record stay viewable everywhere.
+    title: "Accounts aren't available in your location",
+    body: "Sorry, we can't create ProSwisher accounts, free or paid, in Washington, Hawaii, Utah or Japan. You're still welcome to browse our public pages and track record.",
     checkoutBilling: "Sorry, we can't accept subscriptions with a billing address in Washington, Hawaii, Utah or Japan. You haven't been charged.",
     help: "Questions? Email support@proswisher.com. Gambling problem? Call 1-800-GAMBLER.",
   },
@@ -95,7 +97,7 @@ export const site = {
       ["Projected score and projected spread", "for both sides."],
       ["Our model's lean:", "which side the numbers favor, and by how much."],
       ["The why:", "the key stat gaps behind every prediction."],
-      ["No locks, no tout talk.", "Just the model's read, plainly stated."],
+      ["No locks. No guarantees.", "Just the model's read, plainly stated."],
       ["Cancel any time, online.", "No calls, no emails, no hoops."],
     ],
   },
@@ -113,7 +115,7 @@ export const site = {
     cancel: "Cancel online any time in Account settings. Your access runs through the end of the period you've paid for.",
     includes: ["Every game's projected score, projected spread and model lean", "The stats behind each prediction", "Cancel online any time"],
     cta: "Subscribe for $9/month",
-    freeTier: { gamesPerDay: 1, label: "One game free every day" },
+    freeTier: { gamesPerDay: 1, label: "One game free every day", gatingEnabled: true, featuredBadge: "Today's free game" },
     unavailable: "Subscriptions aren't open yet. Nothing is for sale today.",
   },
   // [question, answer, onlyWhenSelling?]. Entries flagged true are hidden while payments are off
@@ -126,10 +128,10 @@ export const site = {
     // Laye asked Perry to confirm source wording: this is the accurate version for the shipped model.
     ["Where does the data come from?", "We build predictions from publicly available game results: schedules and final scores from a public scoreboard feed, turned into team scoring-margin ratings."],
     ["Are you affiliated with the league or any team?", "No. ProSwisher is independent and isn't affiliated with or endorsed by the NBA, its teams or players. Team names are used only to identify games."],
-    ["Who can use ProSwisher?", "Adults 21 and older. ProSwisher isn't available in Washington, Hawaii, Utah or Japan."],
+    ["Who can use ProSwisher?", "Adults 21 and older. Accounts and subscriptions aren't available in Washington, Hawaii, Utah or Japan, though anyone can browse our public pages and track record."],
     ["How much does it cost?", "The daily free prediction costs nothing. Membership is $9 a month plus applicable tax and renews monthly until you cancel. If the price ever changes, we'll email you at least 7 days before it applies to you.", true],
     ["How do I cancel?", "Go to Account settings → Cancel subscription and confirm. It takes about a minute, with no call or email required. Your access continues through the end of your current billing period, and we email you a confirmation.", true],
-    ["Do you offer refunds?", "[REFUND_POLICY: to be adapted from Larry's standard Op3x terms]", true],
+    ["Do you offer refunds?", "{refunds}", true],
     ["Do you run contests or giveaways?", "No. ProSwisher doesn't run contests, sweepstakes or prizes of any kind."],
     ["Should I bet based on your predictions?", "That's your decision. Our predictions are for entertainment and information only and aren't betting advice. If you bet, set a budget, bet only what you can afford to lose, and never chase losses. If gambling stops being fun, call 1-800-GAMBLER."],
     ["Do you send a daily email?", "Not yet. For now, find each day's predictions on the site."],
@@ -141,10 +143,9 @@ export const site = {
     summary: "ProSwisher Monthly: {price}/month plus applicable tax",
     renewalDisclosure: "You'll be charged {price} today and {price} every month after that until you cancel. Cancel online any time at [CANCEL_URL] or in Account settings. Cancellation takes effect at the end of your current billing period.",
     whatItIs: "ProSwisher sells sports predictions for entertainment and information only. Op3x LLC is not a sportsbook, doesn't accept wagers and doesn't hold your money or pay out winnings.",
-    // VERBATIM from Laye's 9:28 checkout.consentLabel (Larry ruling: cancel sentence before "and I agree to the Terms";
-    // Laye joined with a comma, Larry to confirm). Unchecked by default; CTA disabled until checked.
+    // Larry's EXACT text (9:36). Rendered next to an UNCHECKED checkbox (the box is UI, not copy). Swap here only.
     consentCheckbox:
-      "I'm 21 or older. I understand ProSwisher sells sports predictions for entertainment and information only, not betting advice. Op3x LLC is not a sportsbook, accepts no wagers and guarantees no results. My {price}/month subscription renews automatically until I cancel. You can cancel anytime online in Account settings, and I agree to the [Terms] and [Privacy Policy] and authorize Op3x LLC to charge my payment method {price} each month until I cancel. Refunds: [REFUND_POLICY].",
+      "I'm 21 or older. I understand ProSwisher sells sports predictions for entertainment and information only, not betting advice, and that Op3x LLC is not a sportsbook, accepts no wagers and guarantees no results. I agree that my {price}/month subscription renews automatically each month until I cancel. You can cancel anytime online in Account settings. I agree to the Terms and Privacy Policy.",
     cta: "Subscribe for {price}/month",
     consentDefaultChecked: false,
     consentRequiredError: "Please check the box to confirm before continuing.",
@@ -156,6 +157,9 @@ export const site = {
     postedAt: "Posted {timestamp} CT, before tip-off · Logged in our public track record",
     freeBadge: "Today's free game",
     lockedTeaser: "Members see every game on the slate. $9/month, cancel online any time.",
+    lockedCta: "Get every game: $9/month",
+    lockedUnavailable: "Memberships aren't open yet.", // shown under the disabled CTA while payments are off
+    lockedLogNote: "This prediction was posted before tip-off and appears in the track record once the game starts.",
   },
   ...framings[FRAMING],
   nav: [
@@ -187,11 +191,15 @@ export const site = {
     title: "Track record",
     intro:
       "Every ProSwisher prediction is timestamped before tip-off, added to this public log, and graded once the game is final. Nothing is edited or removed.",
-    summaryLabel: "All predictions since launch, {startDate}–{endDate}:",
+    summaryLabel: "All predictions since launch, {startDate}–{endDate}: {W}–{L}{P}", // {P} renders "–P" only if pushes
+    columns: ["Game", "Posted (CT)", "Projected score", "Projected spread", "Lean", "Market spread (source, time)", "Final", "Winner", "Against the spread"],
+    gradeNames: { winner: "Winner", ats: "Against the spread" },
     summaryDisclaimer: "Past results do not guarantee future results.",
     fullLogLink: "See the full log, every prediction since launch",
     method:
-      "How we grade (Larry to approve): straight-up pick = the team the model gives the higher win probability. Spread and total results are graded against the model's own projected line, not a sportsbook line, and no closing-line, unit, stake or -110 vig accounting is applied yet. These are not betting returns.",
+      "Each prediction is graded two ways once the game is final. Winner: did the team our model favored win? Against the spread: did our lean cover the market point spread we record, with its source and time, when we post the prediction? Pushes and postponed games are shown and not counted as wins or losses. Grades are never changed after the fact.",
+    // Shown while no market-spread source is configured (ODDS_API_KEY unset): ATS isn't graded.
+    atsUnavailable: "Against-the-spread grades start once a licensed market-spread source is connected. Until then only the Winner grade is recorded.",
     noRecord: "No graded results yet, so no record is shown. A record appears only after logged games are final.",
   },
 } as const;
@@ -220,6 +228,9 @@ export const geoblock = {
 export const legal = {
   draftNotice:
     "DRAFT: legal text pending counsel and owner approval. Terms, privacy and refund pages are placeholders to be adapted from Larry's standard Op3x terms.",
+  // Larry's exact refund text (9:36). Used by the FAQ and (later) the confirmation email. Swap here only.
+  refunds:
+    "Refunds. You can cancel anytime online in Account settings. Cancellation stops future charges, and you keep paid access until the end of your current billing period. Because predictions are delivered as soon as they're posted, we don't refund partial months or unused time, except where the law requires. If you were charged in error or charged after you canceled, email support@proswisher.com within 60 days and we'll refund that charge. If you dispute a charge with your card issuer, we may suspend paid access while it's reviewed.",
   responsible: [
     "ProSwisher publishes statistical projections for entertainment and informational purposes only. Nothing on this site is betting, financial, or investment advice, and no projection is a guarantee of any outcome.",
     "ProSwisher does not accept wagers, does not operate a sportsbook, and does not link to or receive payment from any sportsbook.",

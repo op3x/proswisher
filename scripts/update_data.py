@@ -4,8 +4,11 @@
 1. Pulls the current season's schedule + final scores (public scoreboard JSON, no key).
 2. Builds transparent team ratings (point differential, regressed toward last season).
 3. Projects every upcoming game (margin, spread, total, win probability).
-4. Appends NEW predictions to an append-only log *before* tip-off, and grades
-   logged predictions once the game is final. Logged picks are never edited.
+4. Appends NEW predictions to an append-only log *before* tip-off, with the MARKET point spread
+   (line, source, time recorded) when a licensed odds source is configured (ODDS_API_KEY).
+5. Grades each pick once the game is final, two ways: Winner (did our favored team win) and ATS
+   (did our lean cover the recorded MARKET spread). Never graded against our own projected spread.
+   Pushes and postponed games are recorded and shown but not counted. Grades are immutable.
 
 Fails loudly (non-zero exit) on fetch errors instead of silently writing stale data.
 """
@@ -26,6 +29,14 @@ PRIOR_GAMES = 10      # weight of last season's rating, in games
 PRIOR_REGRESS = 0.5   # last season's margin is shrunk 50% toward league average
 SIGMA = 12.0          # std-dev of NBA game margins vs projection (points)
 LEAGUE_PPG = 114.0    # fallback league scoring average
+
+# ---- market spread source (Larry round 2). No sportsbook scraping. ----
+# The Odds API (https://the-odds-api.com) licensed aggregator; key is a GitHub Actions secret read ONLY here.
+# Unset -> marketSpread stays null and only the Winner grade is recorded.
+ODDS_URL = ("https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
+            "?regions=us&markets=spreads&oddsFormat=american&dateFormat=iso&apiKey={key}")
+# Odds API full team names that differ from the scoreboard feed's displayName
+ODDS_NAME_ALIASES = {"Los Angeles Clippers": "LA Clippers"}
 
 
 def fetch(day: str, retries: int = 3) -> dict:
@@ -73,6 +84,7 @@ def parse_events(payload: dict) -> list:
             "state": st.get("state"),           # pre | in | post
             "final": bool(st.get("completed")),
             "status": st.get("shortDetail") or st.get("description"),
+            "statusName": st.get("name"),       # e.g. STATUS_FINAL, STATUS_POSTPONED, STATUS_CANCELED
             "neutral": bool(c.get("neutralSite")),
             "home": side(teams["home"]),
             "away": side(teams["away"]),
@@ -213,6 +225,53 @@ def project(g: dict, R: dict) -> dict | None:
     }
 
 
+def fetch_market_spreads(now: datetime) -> dict:
+    """Returns {(homeName, awayName, YYYY-MM-DD commence UTC): {...}} or {} if no source configured.
+    Line = median home point spread across the US books returned (negative = home favored)."""
+    key = os.environ.get("ODDS_API_KEY", "").strip()
+    if not key:
+        return {}
+    req = urllib.request.Request(ODDS_URL.format(key=key), headers={"User-Agent": "proswisher-data/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            events = json.loads(r.read().decode())
+    except Exception as ex:  # never print the URL (it carries the key)
+        raise RuntimeError(f"market spread fetch failed: {type(ex).__name__}") from None
+    out = {}
+    for ev in events:
+        home, away = ev.get("home_team"), ev.get("away_team")
+        pts, books = [], []
+        for b in ev.get("bookmakers", []):
+            for m in b.get("markets", []):
+                if m.get("key") != "spreads":
+                    continue
+                for o in m.get("outcomes", []):
+                    if o.get("name") == home and isinstance(o.get("point"), (int, float)):
+                        pts.append(float(o["point"])); books.append(b.get("key"))
+        if not pts:
+            continue
+        pts.sort(); n = len(pts)
+        med = pts[n // 2] if n % 2 else (pts[n // 2 - 1] + pts[n // 2]) / 2
+        h = ODDS_NAME_ALIASES.get(home, home); a = ODDS_NAME_ALIASES.get(away, away)
+        out[(h, a, ev["commence_time"][:10])] = {
+            "homeLine": round(med * 2) / 2,
+            "source": f"The Odds API, median of {n} US books",
+            "books": sorted(set(books)),
+            "recordedAt": now.isoformat(timespec="seconds"),
+        }
+    return out
+
+
+def ats_lean(home_margin: float, home_line: float):
+    """Our lean vs the market: home if the model expects home to beat the market number, else away."""
+    market_margin = -home_line
+    if home_margin > market_margin:
+        return "home"
+    if home_margin < market_margin:
+        return "away"
+    return None
+
+
 def main():
     now = datetime.now(timezone.utc)
     os.makedirs(DATA, exist_ok=True)
@@ -253,7 +312,10 @@ def main():
     log = load(ppath, {"modelVersion": MODEL_VERSION, "startedAt": now.isoformat(timespec="seconds"), "entries": {}})
     entries = log["entries"]
     LOCKED = ("gameId", "date", "home", "away", "loggedAt", "modelVersion", "pick", "pickProb", "spread", "total", "homeMargin")
-    before = {k: {f: v.get(f) for f in LOCKED} for k, v in entries.items()}
+    SET_ONCE = ("marketSpread", "atsLean", "result", "projScore")  # may go null -> value once, never change afterwards
+    before = {k: {f: v.get(f) for f in LOCKED + SET_ONCE} for k, v in entries.items()}
+    market = fetch_market_spreads(now)
+    log["marketSource"] = "the-odds-api" if os.environ.get("ODDS_API_KEY", "").strip() else None
     upcoming = []
     for g in glist:
         g_dt = datetime.fromisoformat(g["date"].replace("Z", "+00:00"))
@@ -267,32 +329,49 @@ def main():
                         "gameId": g["id"], "date": g["date"], "home": g["home"]["abbr"], "away": g["away"]["abbr"],
                         "loggedAt": now.isoformat(timespec="seconds"), "modelVersion": MODEL_VERSION,
                         "pick": pr["pick"], "pickProb": pr["pickProb"], "spread": pr["spread"], "total": pr["total"],
-                        "homeMargin": pr["homeMargin"], "result": None,
+                        "homeMargin": pr["homeMargin"], "marketSpread": None, "atsLean": None, "result": None,
                         "loggedBy": "github-actions" if os.environ.get("GITHUB_ACTIONS") == "true" else "manual-run",
                     }
+                e = entries[g["id"]]
+                e.setdefault("projScore", pr["projScore"])  # posted with the pick (pre-tip-off only)
+                # record the market spread once, only before tip-off
+                if e.get("marketSpread") is None and market:
+                    m = market.get((g["home"]["name"], g["away"]["name"], g["date"][:10]))
+                    if m:
+                        e["marketSpread"] = m
+                        e["atsLean"] = ats_lean(e["homeMargin"], m["homeLine"])
+                g["prediction"]["market"] = e.get("marketSpread")
         else:
             g.pop("prediction", None)
-    # grade
+    # grade (once; immutable). Winner + ATS vs the recorded MARKET spread. Never vs our own line.
     for e in entries.values():
+        e.setdefault("marketSpread", None); e.setdefault("atsLean", None)
         g = games.get(e["gameId"])
-        if e["result"] is None and g and g["final"]:
+        if e["result"] is not None or not g:
+            continue
+        if g.get("statusName") in ("STATUS_POSTPONED", "STATUS_CANCELED", "STATUS_SUSPENDED") and not g["final"]:
+            e["result"] = {"status": "postponed", "gradedAt": now.isoformat(timespec="seconds"),
+                           "winnerGrade": None, "atsGrade": None}
+            continue
+        if g["final"] and g["home"]["score"] is not None and g["away"]["score"] is not None:
             hs, as_ = g["home"]["score"], g["away"]["score"]
             winner = g["home"]["abbr"] if hs > as_ else g["away"]["abbr"]
-            actual_margin = hs - as_
-            fav = e["spread"]["team"]; line = e["spread"]["line"]
-            fav_margin = actual_margin if fav == e["home"] else -actual_margin
-            ats = "push" if fav_margin + line == 0 else ("fav" if fav_margin + line > 0 else "dog")
-            tot = hs + as_
+            ats = None
+            if e["marketSpread"] and e["atsLean"]:
+                home_cover = (hs - as_) + e["marketSpread"]["homeLine"]  # >0 home covered
+                lean_cover = home_cover if e["atsLean"] == "home" else -home_cover
+                ats = "P" if lean_cover == 0 else ("W" if lean_cover > 0 else "L")
             e["result"] = {
+                "status": "final", "gradedAt": now.isoformat(timespec="seconds"),
                 "homeScore": hs, "awayScore": as_, "winner": winner,
-                "pickCorrect": winner == e["pick"],
-                "favCovered": ats,          # did the model's favorite cover the model's own line
-                "totalSide": "push" if tot == e["total"] else ("over" if tot > e["total"] else "under"),
-                "marginError": round(actual_margin - e["homeMargin"], 1),
+                "winnerGrade": "W" if winner == e["pick"] else "L",
+                "atsGrade": ats,  # W/L/P vs market spread; null = no market line recorded (not counted)
+                "marginError": round((hs - as_) - e["homeMargin"], 1),
             }
     # append-only guard: nothing removed, locked fields never edited
     for k, snap in before.items():
-        if k not in entries or any(entries[k].get(f) != snap[f] for f in LOCKED):
+        if k not in entries or any(entries[k].get(f) != snap[f] for f in LOCKED) or any(
+                snap[f] is not None and entries[k].get(f) != snap[f] for f in SET_ONCE):
             raise RuntimeError(f"append-only violation on log entry {k}; refusing to write")
     log["updatedAt"] = now.isoformat(timespec="seconds")
 

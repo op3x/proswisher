@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+export type MarketSpread = { homeLine: number; source: string; books: string[]; recordedAt: string };
 export type Side = { abbr: string; name: string; short: string; score: number | null };
 export type Prediction = {
   homeMargin: number;
@@ -7,6 +8,7 @@ export type Prediction = {
   total: number;
   projScore: { home: number; away: number };
   pHome: number;
+  market?: MarketSpread | null;
   pick: string;
   pickProb: number;
   inputs: {
@@ -31,12 +33,18 @@ export type StatsFile = {
 export type LogEntry = {
   gameId: string; date: string; home: string; away: string; loggedAt: string; modelVersion: string;
   pick: string; pickProb: number; spread: { team: string; line: number }; total: number; homeMargin: number;
+  projScore?: { home: number; away: number };
+  marketSpread: MarketSpread | null; // recorded before tip-off, with source + time; null = no licensed source yet
+  atsLean: "home" | "away" | null;     // our lean vs the market spread
   result: null | {
-    homeScore: number; awayScore: number; winner: string; pickCorrect: boolean;
-    favCovered: "fav" | "dog" | "push"; totalSide: "over" | "under" | "push"; marginError: number;
+    status: "final" | "postponed"; gradedAt: string;
+    homeScore?: number; awayScore?: number; winner?: string;
+    winnerGrade: "W" | "L" | null;      // did our favored team win
+    atsGrade: "W" | "L" | "P" | null;   // did our lean cover the MARKET spread (null = no market line, not counted)
+    marginError?: number;
   };
 };
-export type LogFile = { modelVersion: string; startedAt: string; updatedAt: string; entries: Record<string, LogEntry> };
+export type LogFile = { modelVersion: string; startedAt: string; updatedAt: string; marketSource?: string | null; entries: Record<string, LogEntry> };
 
 const cache = new Map<string, Promise<unknown>>();
 function load<T>(name: string): Promise<T> {

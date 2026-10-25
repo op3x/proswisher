@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { Game, pct, fmtLine, tipTime } from "../lib/data";
 import { site } from "../config/site";
+import { gatingActive } from "../lib/access";
+import LockedTeaser from "./LockedTeaser";
 
-export default function GameCard({ g }: { g: Game }) {
-  const p = g.prediction;
+export default function GameCard({ g, featured = false, locked = false }: { g: Game; featured?: boolean; locked?: boolean }) {
+  const p = locked ? undefined : g.prediction;
   const row = (side: "away" | "home") => {
     const t = g[side];
     const prob = p ? (side === "home" ? p.pHome : 1 - p.pHome) : null;
@@ -26,7 +28,7 @@ export default function GameCard({ g }: { g: Game }) {
   return (
     <Link to={`/game/${g.id}`} className="block rounded-xl bg-panel border border-line hover:border-accent/50 transition p-4 space-y-3">
       <div className="flex justify-between text-xs text-slate-400">
-        <span>{tipTime(g.date)}</span>
+        <span>{tipTime(g.date)}{featured && gatingActive() && <span className="ml-2 rounded bg-accent/15 text-accent px-1.5 py-0.5 font-semibold">{site.pricing.freeTier.featuredBadge}</span>}</span>
         <span>{g.state === "pre" ? (g.neutral ? "Neutral site" : "") : g.status}</span>
       </div>
       {row("away")}
@@ -38,13 +40,14 @@ export default function GameCard({ g }: { g: Game }) {
             <div className="bg-accent" style={{ width: pct(p.pHome) }} />
           </div>
           <div className="grid grid-cols-3 text-center text-xs">
-            <div><div className="text-slate-500">Pick</div><div className="font-semibold text-white">{p.pick} {pct(p.pickProb)}</div></div>
+            <div><div className="text-slate-500">Lean</div><div className="font-semibold text-white">{p.pick} {pct(p.pickProb)}</div></div>
             <div><div className="text-slate-500">{site.spreadLabel}</div><div className="font-semibold text-white">{p.spread.team} {fmtLine(p.spread.line)}</div></div>
             <div><div className="text-slate-500">{site.totalLabel}</div><div className="font-semibold text-white">{p.total}</div></div>
           </div>
           <p className="text-[10px] leading-snug text-slate-500">{site.pickDisclaimer}</p>
         </>
       )}
+      {locked && <LockedTeaser compact />}
     </Link>
   );
 }

@@ -1,19 +1,21 @@
 import { site } from "../config/site";
-import { paymentsEnabled } from "./geoblock";
-import type { Game } from "./data";
 
-// Free tier STUB: 1 game per day free, the rest for subscribers. Gating is enforced only once payments
-// exist (paymentsEnabled() is always false in this build, so every game is visible).
-// A real implementation must gate server-side; a static site can't truly hide data in public JSON.
-export const gatingActive = () => paymentsEnabled();
-const isSubscriber = () => false; // stub until accounts exist
+// Free tier (Kiko's decision): ONE featured game per day shows its full prediction openly on its public
+// game page, no account needed. Other games show the matchup with the prediction behind the CTA.
+// Featured game = the day's earliest tip-off (CT calendar day), ties broken by game id. Deterministic.
+// CAVEAT: this is a static site, so all predictions are in the public JSON (/data/*.json, and the repo).
+// Client-side gating is cosmetic until a server/API gates the data; see README.
+export const gatingActive = () => site.pricing.freeTier.gatingEnabled;
+const isSubscriber = () => false; // stub until accounts + payments exist
 
-export function freeGameIds(games: Game[]): Set<string> {
-  const perDay = new Map<string, Game[]>();
-  for (const g of games) perDay.set(g.day, [...(perDay.get(g.day) || []), g]);
-  const free = new Set<string>();
-  for (const gs of perDay.values())
-    gs.sort((a, b) => a.date.localeCompare(b.date)).slice(0, site.pricing.freeTier.gamesPerDay).forEach((g) => free.add(g.id));
-  return free;
+const ctDay = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+
+export function featuredIds(items: Array<{ id: string; date: string }>): Set<string> {
+  const best = new Map<string, { id: string; date: string }>();
+  for (const it of items) {
+    const d = ctDay(it.date), cur = best.get(d);
+    if (!cur || it.date < cur.date || (it.date === cur.date && it.id < cur.id)) best.set(d, it);
+  }
+  return new Set([...best.values()].map((x) => x.id));
 }
-export const canSee = (g: Game, free: Set<string>) => !gatingActive() || isSubscriber() || free.has(g.id);
+export const canSeePrediction = (id: string, featured: Set<string>) => !gatingActive() || isSubscriber() || featured.has(id);

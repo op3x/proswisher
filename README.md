@@ -43,3 +43,21 @@ if `STRIPE_LIVE_ENABLED=true` outside production, or if any `VITE_*` var holds a
 
 $9/month, free tier of 1 game per day. Gating (`src/lib/access.ts`) is inert while payments are off, so every game is visible.
 Geoblock (`src/lib/geoblock.ts`): WA, HI, UT, Japan, by IP and billing ZIP/country, ON by default (`geoblock.enabled` in `src/config/site.ts`); it must run server-side once checkout exists.
+
+## Grading (Larry, round 2)
+- At post time (before tip-off) each log entry stores our pick, projected score/spread/total, and — when
+  `ODDS_API_KEY` is set as a GitHub Actions secret — the **market** point spread (median home line across US
+  books from The Odds API, a licensed aggregator; no sportsbook scraping) with its source and the time recorded,
+  plus our ATS lean vs that line.
+- When final: **Winner** (did our favored team win) and **ATS** (did our lean cover the market spread). Never
+  graded against our own projected spread. Pushes and postponed games are shown, not counted.
+- `result`, `marketSpread`, `atsLean`, `projScore` are set once and immutable; the pipeline aborts if any change.
+- Without `ODDS_API_KEY`, only the Winner grade is recorded and the track record says so.
+
+## Free tier (9:38 decision)
+- One **featured** game per day (earliest tip-off, CT day; ties by game id) shows its full prediction publicly.
+  Other games show the matchup plus a disabled "Get every game: $9/month" CTA stub (`pricing.freeTier.gatingEnabled`).
+- Track record: the featured game's row appears when posted; other rows appear at tip-off (pre-tip timestamps
+  still prove they were posted before the game). Every pick ends up listed; nothing is removed.
+- Caveat: this is a static site, so `/data/*.json` and the repo expose every prediction. Gating is cosmetic
+  until a server/API serves gated predictions (needs accounts + payments, out of scope here).

@@ -18,7 +18,13 @@
    "total": 236.5,
    "homeMargin": -5.8,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 115,
+    "away": 121
+   }
   },
   "401909862": {
    "gameId": "401909862",
@@ -36,7 +42,13 @@
    "total": 227.5,
    "homeMargin": 1.8,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 115,
+    "away": 113
+   }
   },
   "401909863": {
    "gameId": "401909863",
@@ -54,7 +66,13 @@
    "total": 225.0,
    "homeMargin": 6.5,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 116,
+    "away": 109
+   }
   },
   "401909864": {
    "gameId": "401909864",
@@ -72,7 +90,13 @@
    "total": 226.0,
    "homeMargin": 2.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 114,
+    "away": 112
+   }
   },
   "401909865": {
    "gameId": "401909865",
@@ -90,7 +114,13 @@
    "total": 221.0,
    "homeMargin": 7.3,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 114,
+    "away": 107
+   }
   },
   "401909866": {
    "gameId": "401909866",
@@ -108,7 +138,13 @@
    "total": 228.0,
    "homeMargin": -1.1,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 114,
+    "away": 115
+   }
   },
   "401909867": {
    "gameId": "401909867",
@@ -126,7 +162,13 @@
    "total": 231.5,
    "homeMargin": -3.8,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 114,
+    "away": 118
+   }
   },
   "401909868": {
    "gameId": "401909868",
@@ -144,7 +186,13 @@
    "total": 228.5,
    "homeMargin": 5.8,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 117,
+    "away": 111
+   }
   },
   "401909869": {
    "gameId": "401909869",
@@ -162,7 +210,13 @@
    "total": 231.5,
    "homeMargin": -1.4,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 115,
+    "away": 116
+   }
   },
   "401909870": {
    "gameId": "401909870",
@@ -180,7 +234,13 @@
    "total": 230.5,
    "homeMargin": 10.5,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 120,
+    "away": 110
+   }
   },
   "401909871": {
    "gameId": "401909871",
@@ -198,7 +258,13 @@
    "total": 235.0,
    "homeMargin": 3.3,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 119,
+    "away": 116
+   }
   },
   "401909872": {
    "gameId": "401909872",
@@ -216,7 +282,13 @@
    "total": 234.0,
    "homeMargin": 2.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 118,
+    "away": 116
+   }
   },
   "401909873": {
    "gameId": "401909873",
@@ -234,7 +306,13 @@
    "total": 220.0,
    "homeMargin": 11.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 116,
+    "away": 104
+   }
   },
   "401909874": {
    "gameId": "401909874",
@@ -252,7 +330,13 @@
    "total": 230.5,
    "homeMargin": 2.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 116,
+    "away": 114
+   }
   },
   "401909875": {
    "gameId": "401909875",
@@ -270,7 +354,13 @@
    "total": 236.0,
    "homeMargin": -2.0,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 117,
+    "away": 119
+   }
   },
   "401909876": {
    "gameId": "401909876",
@@ -288,7 +378,13 @@
    "total": 233.5,
    "homeMargin": 7.0,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 120,
+    "away": 113
+   }
   },
   "401909877": {
    "gameId": "401909877",
@@ -306,7 +402,13 @@
    "total": 221.0,
    "homeMargin": 10.5,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 116,
+    "away": 105
+   }
   },
   "401909878": {
    "gameId": "401909878",
@@ -324,7 +426,13 @@
    "total": 224.0,
    "homeMargin": -1.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 111,
+    "away": 113
+   }
   },
   "401909879": {
    "gameId": "401909879",
@@ -342,7 +450,13 @@
    "total": 229.5,
    "homeMargin": 12.5,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 121,
+    "away": 109
+   }
   },
   "401909880": {
    "gameId": "401909880",
@@ -360,7 +474,13 @@
    "total": 231.0,
    "homeMargin": 1.8,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 116,
+    "away": 114
+   }
   },
   "401909881": {
    "gameId": "401909881",
@@ -378,7 +498,13 @@
    "total": 236.0,
    "homeMargin": 9.8,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 123,
+    "away": 113
+   }
   },
   "401909882": {
    "gameId": "401909882",
@@ -396,7 +522,13 @@
    "total": 235.5,
    "homeMargin": 8.0,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 122,
+    "away": 114
+   }
   },
   "401909883": {
    "gameId": "401909883",
@@ -414,7 +546,13 @@
    "total": 224.5,
    "homeMargin": 8.8,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 117,
+    "away": 108
+   }
   },
   "401909884": {
    "gameId": "401909884",
@@ -432,7 +570,13 @@
    "total": 230.0,
    "homeMargin": -3.8,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 113,
+    "away": 117
+   }
   },
   "401909885": {
    "gameId": "401909885",
@@ -450,7 +594,13 @@
    "total": 227.0,
    "homeMargin": 10.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 119,
+    "away": 108
+   }
   },
   "401909886": {
    "gameId": "401909886",
@@ -468,7 +618,13 @@
    "total": 230.0,
    "homeMargin": -4.4,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 113,
+    "away": 117
+   }
   },
   "401909887": {
    "gameId": "401909887",
@@ -486,7 +642,13 @@
    "total": 231.0,
    "homeMargin": -6.4,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 112,
+    "away": 119
+   }
   },
   "401909888": {
    "gameId": "401909888",
@@ -504,7 +666,13 @@
    "total": 230.0,
    "homeMargin": 10.6,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 120,
+    "away": 110
+   }
   },
   "401909889": {
    "gameId": "401909889",
@@ -522,7 +690,13 @@
    "total": 240.0,
    "homeMargin": -1.7,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 119,
+    "away": 121
+   }
   },
   "401909890": {
    "gameId": "401909890",
@@ -540,7 +714,13 @@
    "total": 234.5,
    "homeMargin": -5.7,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 114,
+    "away": 120
+   }
   },
   "401909891": {
    "gameId": "401909891",
@@ -558,7 +738,13 @@
    "total": 224.5,
    "homeMargin": -7.7,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 108,
+    "away": 116
+   }
   },
   "401909892": {
    "gameId": "401909892",
@@ -576,7 +762,13 @@
    "total": 229.0,
    "homeMargin": 1.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 115,
+    "away": 114
+   }
   },
   "401909893": {
    "gameId": "401909893",
@@ -594,7 +786,13 @@
    "total": 234.5,
    "homeMargin": 5.7,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 120,
+    "away": 114
+   }
   },
   "401909894": {
    "gameId": "401909894",
@@ -612,7 +810,13 @@
    "total": 237.5,
    "homeMargin": 6.9,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 122,
+    "away": 115
+   }
   },
   "401909895": {
    "gameId": "401909895",
@@ -630,7 +834,13 @@
    "total": 230.0,
    "homeMargin": 7.0,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 119,
+    "away": 112
+   }
   },
   "401909277": {
    "gameId": "401909277",
@@ -648,7 +858,13 @@
    "total": 228.5,
    "homeMargin": -0.8,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 114,
+    "away": 115
+   }
   },
   "401909278": {
    "gameId": "401909278",
@@ -666,7 +882,13 @@
    "total": 230.5,
    "homeMargin": 10.5,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 120,
+    "away": 110
+   }
   },
   "401909279": {
    "gameId": "401909279",
@@ -684,7 +906,13 @@
    "total": 225.5,
    "homeMargin": -8.1,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 109,
+    "away": 117
+   }
   },
   "401909280": {
    "gameId": "401909280",
@@ -702,7 +930,13 @@
    "total": 223.0,
    "homeMargin": 2.5,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 113,
+    "away": 110
+   }
   },
   "401909281": {
    "gameId": "401909281",
@@ -720,7 +954,13 @@
    "total": 227.0,
    "homeMargin": 10.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 119,
+    "away": 108
+   }
   },
   "401909282": {
    "gameId": "401909282",
@@ -738,7 +978,13 @@
    "total": 235.5,
    "homeMargin": 4.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 120,
+    "away": 116
+   }
   },
   "401909283": {
    "gameId": "401909283",
@@ -756,7 +1002,13 @@
    "total": 229.5,
    "homeMargin": -5.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 112,
+    "away": 117
+   }
   },
   "401909284": {
    "gameId": "401909284",
@@ -774,7 +1026,13 @@
    "total": 227.5,
    "homeMargin": 5.9,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 117,
+    "away": 111
+   }
   },
   "401909285": {
    "gameId": "401909285",
@@ -792,7 +1050,13 @@
    "total": 231.5,
    "homeMargin": -3.6,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 114,
+    "away": 118
+   }
   },
   "401909286": {
    "gameId": "401909286",
@@ -810,7 +1074,13 @@
    "total": 230.0,
    "homeMargin": -1.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 114,
+    "away": 116
+   }
   },
   "401909896": {
    "gameId": "401909896",
@@ -828,7 +1098,13 @@
    "total": 235.5,
    "homeMargin": -6.6,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 114,
+    "away": 121
+   }
   },
   "401909897": {
    "gameId": "401909897",
@@ -846,7 +1122,13 @@
    "total": 224.0,
    "homeMargin": -0.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 112,
+    "away": 112
+   }
   },
   "401909898": {
    "gameId": "401909898",
@@ -864,7 +1146,13 @@
    "total": 239.0,
    "homeMargin": -4.5,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 117,
+    "away": 122
+   }
   },
   "401909899": {
    "gameId": "401909899",
@@ -882,7 +1170,13 @@
    "total": 231.5,
    "homeMargin": 8.8,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 120,
+    "away": 111
+   }
   },
   "401909900": {
    "gameId": "401909900",
@@ -900,7 +1194,13 @@
    "total": 235.0,
    "homeMargin": -3.6,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 116,
+    "away": 119
+   }
   },
   "401909901": {
    "gameId": "401909901",
@@ -918,7 +1218,13 @@
    "total": 228.0,
    "homeMargin": 0.3,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 114,
+    "away": 114
+   }
   },
   "401909902": {
    "gameId": "401909902",
@@ -936,7 +1242,13 @@
    "total": 221.5,
    "homeMargin": 0.1,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 111,
+    "away": 111
+   }
   },
   "401909903": {
    "gameId": "401909903",
@@ -954,7 +1266,13 @@
    "total": 225.0,
    "homeMargin": -2.5,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 111,
+    "away": 114
+   }
   },
   "401909904": {
    "gameId": "401909904",
@@ -972,7 +1290,13 @@
    "total": 227.5,
    "homeMargin": 3.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 115,
+    "away": 112
+   }
   },
   "401909905": {
    "gameId": "401909905",
@@ -990,7 +1314,13 @@
    "total": 228.5,
    "homeMargin": -2.2,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 113,
+    "away": 115
+   }
   },
   "401909906": {
    "gameId": "401909906",
@@ -1008,8 +1338,15 @@
    "total": 227.5,
    "homeMargin": 0.1,
    "result": null,
-   "loggedBy": "manual-run"
+   "loggedBy": "manual-run",
+   "marketSpread": null,
+   "atsLean": null,
+   "projScore": {
+    "home": 114,
+    "away": 114
+   }
   }
  },
- "updatedAt": "2026-10-25T14:30:24+00:00"
+ "updatedAt": "2026-10-25T14:41:32+00:00",
+ "marketSource": null
 }

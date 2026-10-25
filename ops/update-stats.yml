@@ -31,6 +31,9 @@ jobs:
         run: python3 tests/test_pipeline.py
       - name: Fetch data, project games, log + grade predictions
         run: python3 scripts/update_data.py
+        env:
+          # Optional. Licensed market-spread source (The Odds API). Unset = Winner grade only, no ATS.
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
       - name: Commit data
         run: |
           git config user.name  "github-actions[bot]"

@@ -3,7 +3,7 @@ import GameCard from "../components/GameCard";
 import Subscribe from "../components/Subscribe";
 import { site } from "../config/site";
 import { Link } from "react-router-dom";
-import { freeGameIds, canSee } from "../lib/access";
+import { featuredIds, canSeePrediction } from "../lib/access";
 
 export default function Home() {
   const { data, error } = useData<GamesFile>("games");
@@ -12,7 +12,7 @@ export default function Home() {
   const live = games.filter((g) => g.state === "in");
   const upcoming = games.filter((g) => g.state === "pre" && new Date(g.date).getTime() > now && g.prediction);
   const recent = games.filter((g) => g.final).slice(-8).reverse();
-  const free = freeGameIds(upcoming);
+  const featured = featuredIds(games);
   const byDay = new Map<string, Game[]>();
   for (const g of upcoming) {
     const k = new Date(g.date).toDateString();
@@ -70,9 +70,7 @@ export default function Home() {
       {[...byDay.entries()].map(([k, gs]) => (
         <section key={k}>
           <h2 className="text-lg font-bold mb-3">{dayLabel(gs[0].date)}</h2>
-          <div className="grid gap-3 sm:grid-cols-2">{gs.map((g) => canSee(g, free) ? <GameCard key={g.id} g={g} /> : (
-            <div key={g.id} className="rounded-xl bg-panel border border-line p-4 text-sm text-slate-400">{g.away.name} at {g.home.name}: subscribers only ({site.pricing.freeTier.label})</div>
-          ))}</div>
+          <div className="grid gap-3 sm:grid-cols-2">{gs.map((g) => <GameCard key={g.id} g={g} featured={featured.has(g.id)} locked={!canSeePrediction(g.id, featured)} />)}</div>
         </section>
       ))}
       {recent.length > 0 && (

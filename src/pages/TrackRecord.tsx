@@ -1,71 +1,88 @@
-import { useData, LogFile, pct, fmtLine } from "../lib/data";
+import { useData, LogFile, LogEntry, pct, fmtLine } from "../lib/data";
 import { site } from "../config/site";
+import { featuredIds, gatingActive } from "../lib/access";
 
-
+// The ONLY page with a W-L summary (Larry). Always the full log since launch.
+// Free-tier decision (9:38): every pick is listed once posted; for NON-featured games the row appears
+// after tip-off while gating is active (the featured game's row appears at post time). See README.
 export default function TrackRecord() {
   const { data, error } = useData<LogFile>("predictions");
-  const entries = data ? Object.values(data.entries).sort((a, b) => b.date.localeCompare(a.date)) : [];
-  const graded = entries.filter((e) => e.result);
-  const wins = graded.filter((e) => e.result!.pickCorrect).length;
+  const T = site.trackRecord;
+  const now = Date.now();
+  const all = data ? Object.values(data.entries).sort((a, b) => b.date.localeCompare(a.date)) : [];
+  const featured = featuredIds(all.map((e) => ({ id: e.gameId, date: e.date })));
+  const visible = (e: LogEntry) => !gatingActive() || featured.has(e.gameId) || new Date(e.date).getTime() <= now;
+  const entries = all.filter(visible);
+  const hiddenPending = all.length - entries.length;
+  const finals = all.filter((e) => e.result?.status === "final");
+  const postponed = all.filter((e) => e.result?.status === "postponed").length;
+  const count = (k: "winnerGrade" | "atsGrade") => {
+    const g = finals.map((e) => e.result![k]).filter(Boolean);
+    return { W: g.filter((x) => x === "W").length, L: g.filter((x) => x === "L").length, P: g.filter((x) => x === "P").length, n: g.length };
+  };
+  const win = count("winnerGrade"), ats = count("atsGrade");
   const REPO_LOG = `https://github.com/${site.repo}/blob/${site.logBranch}/public/data/predictions.json`;
   const REPO_HISTORY = `https://github.com/${site.repo}/commits/${site.logBranch}/public/data/predictions.json`;
-  const fmtDay = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-  const gradedDates = graded.map((e) => e.date).sort();
-  const range = graded.length ? `${fmtDay(gradedDates[0])} – ${fmtDay(gradedDates[gradedDates.length - 1])}` : "";
-  const mae = graded.length ? graded.reduce((s, e) => s + Math.abs(e.result!.marginError), 0) / graded.length : 0;
+  const day = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", year: "numeric" });
+  const lastFinal = finals.map((e) => e.date).sort().pop();
+  const label = (c: { W: number; L: number; P: number }) =>
+    T.summaryLabel.replace("{startDate}", data ? day(data.startedAt) : "").replace("{endDate}", lastFinal ? day(lastFinal) : "")
+      .replace("{W}", String(c.W)).replace("{L}", String(c.L)).replace("{P}", c.P ? `–${c.P}` : "");
+  const grade = (g: string | null | undefined) =>
+    g === "W" ? <span className="text-win font-semibold">W</span> : g === "L" ? <span className="text-loss font-semibold">L</span>
+      : g === "P" ? <span className="text-slate-300">Push</span> : <span className="text-slate-500">–</span>;
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl sm:text-3xl font-extrabold">{site.trackRecord.title}</h1>
-      <p className="text-slate-400 max-w-3xl">{site.trackRecord.intro}</p>
-      <p className="text-xs text-slate-500 max-w-3xl">{site.trackRecord.method}</p>
+      <h1 className="text-2xl sm:text-3xl font-extrabold">{T.title}</h1>
+      <p className="text-slate-400 max-w-3xl">{T.intro}</p>
+      <p className="text-xs text-slate-500 max-w-3xl">{T.method}</p>
       {error && <p className="text-slate-400">{site.empty.noLog}</p>}
       {data && (
         <>
-          {graded.length > 0 && (
-            <div className="rounded-2xl bg-panel border border-line p-4 sm:p-5">
-              <div className="text-xs text-slate-500">{site.trackRecord.summaryLabel.replace("{startDate}–{endDate}", range)} (straight-up)</div>
-              <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <span className="text-3xl font-extrabold tabular-nums">{wins}-{graded.length - wins}</span>
-                <span className="text-sm text-amber-300">{site.trackRecord.summaryDisclaimer}</span>
-              </div>
-              <div className="mt-1 text-xs text-slate-400">
-                {graded.length} graded of {entries.length} logged · avg. margin miss {mae.toFixed(1)} pts ·{" "}
-                <a className="text-accent" href="#full-log">{site.trackRecord.fullLogLink}</a>
+          {win.n > 0 && (
+            <div className="rounded-2xl bg-panel border border-line p-4 sm:p-5 space-y-2">
+              <div><span className="text-xs text-slate-500">{T.gradeNames.winner}</span><div className="font-bold tabular-nums">{label(win)}</div></div>
+              <div><span className="text-xs text-slate-500">{T.gradeNames.ats}</span>
+                <div className="font-bold tabular-nums">{ats.n > 0 ? label(ats) : <span className="text-sm font-normal text-slate-400">{T.atsUnavailable}</span>}</div></div>
+              <div className="text-sm text-amber-300">{T.summaryDisclaimer}</div>
+              <div className="text-xs text-slate-400">
+                {finals.length} final of {all.length} logged{postponed ? ` · ${postponed} postponed (not counted)` : ""} ·{" "}
+                <a className="text-accent" href="#full-log">{T.fullLogLink}</a>
               </div>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3">
-            <Stat k="Logged predictions" v={String(entries.length)} />
-            <Stat k="Graded (final)" v={String(graded.length)} />
-          </div>
-          {graded.length === 0 && <p className="rounded-xl border border-line bg-panel p-4 text-sm text-slate-300">{site.trackRecord.noRecord}</p>}
+          {win.n === 0 && <p className="rounded-xl border border-line bg-panel p-4 text-sm text-slate-300">{site.trackRecord.noRecord}</p>}
+          {!data.marketSource && <p className="text-xs text-slate-500">{T.atsUnavailable}</p>}
           <p className="text-xs text-slate-500">
-            Log started {new Date(data.startedAt).toLocaleString()} · model {data.modelVersion} · last updated {new Date(data.updatedAt).toLocaleString()} ·{" "}
+            Log started {day(data.startedAt)} · model {data.modelVersion} · last updated {ct(data.updatedAt)} CT ·{" "}
             <a className="text-accent" href={REPO_LOG} target="_blank" rel="noreferrer">full log (JSON)</a> ·{" "}
             <a className="text-accent" href={REPO_HISTORY} target="_blank" rel="noreferrer">commit history (proves pre-tip-off timestamps)</a>
+            {hiddenPending > 0 && <> · {hiddenPending} more posted predictions appear here at tip-off</>}
           </p>
           <div id="full-log" className="overflow-x-auto rounded-xl border border-line scroll-mt-20">
             <table className="w-full text-sm text-left">
               <thead className="bg-panel text-xs text-slate-500">
-                <tr><th className="p-2">Game</th><th className="p-2">Posted (CT)</th><th className="p-2">Lean</th><th className="p-2">Projected spread</th><th className="p-2">Projected total</th><th className="p-2">Final · Result</th></tr>
+                <tr>{T.columns.map((c) => <th key={c} className="p-2 whitespace-nowrap">{c}</th>)}</tr>
               </thead>
               <tbody>
-                {entries.map((e) => (
-                  <tr key={e.gameId} className="border-t border-line">
-                    <td className="p-2 whitespace-nowrap">{e.away} @ {e.home}<div className="text-[11px] text-slate-500">Tip-off {ct(e.date)} CT</div></td>
-                    <td className="p-2 text-xs text-slate-400 whitespace-nowrap">{ct(e.loggedAt)}</td>
-                    <td className="p-2 whitespace-nowrap">{e.pick} {pct(e.pickProb)}</td>
-                    <td className="p-2 whitespace-nowrap">{e.spread.team} {fmtLine(e.spread.line)}</td>
-                    <td className="p-2">{e.total}</td>
-                    <td className="p-2 whitespace-nowrap">
-                      {e.result ? (
-                        <span className={e.result.pickCorrect ? "text-win" : "text-loss"}>
-                          {e.result.pickCorrect ? "✓" : "✗"} {e.away} {e.result.awayScore}–{e.result.homeScore} {e.home}
-                        </span>
-                      ) : <span className="text-slate-500">pending</span>}
-                    </td>
-                  </tr>
-                ))}
+                {entries.map((e) => {
+                  const r = e.result, m = e.marketSpread;
+                  const fav = e.spread.team, favMargin = fav === e.home ? e.homeMargin : -e.homeMargin;
+                  const leanTeam = e.atsLean === "home" ? e.home : e.atsLean === "away" ? e.away : null;
+                  return (
+                    <tr key={e.gameId} className="border-t border-line align-top">
+                      <td className="p-2 whitespace-nowrap">{e.away} @ {e.home}<div className="text-[11px] text-slate-500">Tip-off {ct(e.date)} CT</div></td>
+                      <td className="p-2 text-xs text-slate-400 whitespace-nowrap">{ct(e.loggedAt)}</td>
+                      <td className="p-2 whitespace-nowrap tabular-nums">{projScore(e)}</td>
+                      <td className="p-2 whitespace-nowrap">{fav} {fmtLine(e.spread.line)}<div className="text-[11px] text-slate-500">{fav} by {Math.abs(favMargin).toFixed(1)}</div></td>
+                      <td className="p-2 whitespace-nowrap">{e.pick} {pct(e.pickProb)}{leanTeam && <div className="text-[11px] text-slate-500">ATS: {leanTeam}</div>}</td>
+                      <td className="p-2 whitespace-nowrap">{m ? <>{e.home} {fmtLine(m.homeLine)}<div className="text-[11px] text-slate-500">{m.source} · {ct(m.recordedAt)} CT</div></> : <span className="text-slate-500">not recorded</span>}</td>
+                      <td className="p-2 whitespace-nowrap">{r?.status === "final" ? `${e.away} ${r.awayScore}–${r.homeScore} ${e.home}` : r?.status === "postponed" ? <span className="text-slate-400">Postponed</span> : <span className="text-slate-500">pending</span>}</td>
+                      <td className="p-2 text-center">{grade(r?.winnerGrade)}</td>
+                      <td className="p-2 text-center">{grade(r?.atsGrade)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -76,6 +93,8 @@ export default function TrackRecord() {
   );
 }
 const ct = (iso: string) => new Date(iso).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-function Stat({ k, v }: { k: string; v: string }) {
-  return <div className="rounded-xl bg-panel border border-line p-3"><div className="text-xs text-slate-500">{k}</div><div className="text-xl font-bold">{v}</div></div>;
-}
+// projected score as posted (older entries: derived from the locked total + margin)
+const projScore = (e: LogEntry) => {
+  const p = e.projScore ?? { away: Math.round((e.total - e.homeMargin) / 2), home: Math.round((e.total + e.homeMargin) / 2) };
+  return `${e.away} ${p.away}–${p.home} ${e.home}`;
+};

@@ -1,10 +1,12 @@
 import { site, legal } from "../config/site";
-import { paymentsEnabled } from "../lib/geoblock";
+import { usePaymentsEnabled } from "../lib/runtime";
 
 export default function Faq() {
-  const selling = paymentsEnabled() || import.meta.env.VITE_SUBSCRIBE_ENABLED === "true";
+  const selling = usePaymentsEnabled();
   // [q, a, onlyWhenSelling, onlyWhenNotSelling]
-  const items = site.faq.filter(([, , whenSelling, whenNot]) => (whenSelling ? selling : true) && (whenNot ? !selling : true));
+  const items = site.faq.filter(([, a, whenSelling, whenNot]) => (whenSelling ? selling : true) && (whenNot ? !selling : true)
+    // Larry 9:38 HOLD: refund copy ships only once the support inbox works
+    && (a !== "{refunds}" || site.supportEmailActive));
   return (
     <div className="max-w-3xl space-y-4">
       <h1 className="text-2xl sm:text-3xl font-extrabold">FAQ</h1>

@@ -8,6 +8,9 @@
 // no sportsbook/affiliate links, text team names only, strictly basketball branding.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import commerce from "./commerce.json";
+import geo from "./geo.json";
+
 export type Framing = "betting" | "fan";
 export const FRAMING: Framing = "betting";
 
@@ -52,14 +55,14 @@ export const site = {
     description: "Projected scores, projected spreads and our model's lean for pro basketball games. Entertainment only. 21+.",
     descriptionWhenSelling: "Projected scores, projected spreads and our model's lean for pro basketball games. One game free every day; every game for $9/month. Entertainment only. 21+.",
     // Larry 9:36 (approved): "NBA" as plain text in game-page SEO titles, exactly this format. Never "Official", no logos.
-    gamePageTitle: "{Away} vs. {Home} Prediction, {date} | NBA | ProSwisher",
-    gamePageDescription: "Projected score, projected spread and our model's lean for {Away} vs {Home}, posted before tip-off. Entertainment only. 21+. 1-800-GAMBLER.",
+    gamePageTitle: commerce.gamePageTitle,
+    gamePageDescription: commerce.gamePageDescription,
     ogTitle: "ProSwisher: Nothing but numbers.",
   },
-  heroCta: "Get today's free prediction",
+  heroCta: "See today's free game", // hero.cta (Laye 9:42)
   heroCtaSecondary: "How it works",
-  heroCtaPaid: "Get every game: $9/month", // shown only when the subscribe flag is on
-  heroPriceNote: "One game free every day. Every game for $9/month, renews monthly, cancel online any time.", // flag-gated
+  heroCtaPaid: "Get every game: $9/month", // shown only when payments are enabled
+  heroPriceNote: "One game free every day, no sign-up. Every game for $9/month, renews monthly, cancel online any time.", // shown only when payments are enabled
   ageGate: {
     // Neutral click-through: no default choice, remembered for the browser session only (sessionStorage, no cookie).
     title: "You must be 21 or older to enter.",
@@ -68,27 +71,22 @@ export const site = {
     deny: "I'm under 21",
     deniedMessage: "Sorry, ProSwisher is only for adults 21 and older.",
     help: "Gambling problem? Call 1-800-GAMBLER.",
-    locationNote: "ProSwisher accounts and subscriptions aren't available in Washington, Hawaii, Utah or Japan.",
+    locationNote: "ProSwisher subscriptions aren't available in Washington, Hawaii, Utah or Japan.",
   },
-  geoBlockCopy: {
-    // Shown ONLY at account creation (free and paid) and checkout. Public pages + track record stay viewable everywhere.
-    title: "Accounts aren't available in your location",
-    body: "Sorry, we can't create ProSwisher accounts, free or paid, in Washington, Hawaii, Utah or Japan. You're still welcome to browse our public pages and track record.",
-    checkoutBilling: "Sorry, we can't accept subscriptions with a billing address in Washington, Hawaii, Utah or Japan. You haven't been charged.",
-    help: "Questions? Email support@proswisher.com. Gambling problem? Call 1-800-GAMBLER.",
-  },
+  // Paid sign-up and checkout ONLY (Laye 9:42). Shared with the server (451 page): edit src/config/commerce.json.
+  geoBlockCopy: commerce.geoBlockCopy,
   // Laye's howItWorks[0] listed rebounding/turnovers/free throws. That doesn't match the shipped model,
   // so step 1 is reworded to the actual inputs (FTC substantiation). Flagged for Laye/Larry.
   howItWorksSteps: [
     { title: "We crunch the matchups", body: "Our model rates every team on its scoring margin this season, blended with last season's, then adds home-court advantage. The full formula is public." },
-    { title: "You get one clear read", body: "Every prediction shows a projected score, a projected spread and our model's lean. One game is free every day; members get the full slate." },
+    { title: "You get one clear read", body: "Every prediction shows a projected score, a projected spread and our model's lean. One featured game is free every day, right on its page with no sign-up; members get the full slate." },
     { title: "We post it, then grade it, in public", body: "Every prediction is timestamped before tip-off and added to our public log, and it's graded once the game is final. Nothing gets edited or removed. You make your own call; we never take bets or tell you how much to wager." },
   ],
   whatYouGet: {
     title: "What you get",
-    freeTitle: "Free, every day",
+    freeTitle: "Free, every day. No sign-up",
     free: [
-      ["One game's full prediction:", "projected score, projected spread and our model's lean."],
+      ["Today's featured game, in full:", "projected score, projected spread and our model's lean, right on the game page."],
       ["The public track record:", "every prediction we've posted, timestamped and graded."],
     ],
     paidTitle: "Members, $9/month",
@@ -102,13 +100,13 @@ export const site = {
     ],
   },
   pricing: {
-    price: "$9", // per month (Larry/Kiko). Single source; templates use {price}.
-    priceCents: 900,
-    title: "Start free. Upgrade for the full slate.",
+    price: commerce.price, // per month (Larry/Kiko). Single source: src/config/commerce.json
+    priceCents: commerce.unitAmount,
+    title: "One game free every day. Every game for $9/month.",
     freeName: "Free",
     freePrice: "$0",
-    freeIncludes: ["One game's prediction every day", "Public track record"],
-    freeCta: "Get today's free prediction",
+    freeIncludes: ["Today's featured game, in full", "Public track record", "No account needed"],
+    freeCta: "See today's free game",
     planName: "ProSwisher Monthly",
     interval: "per month, plus applicable tax",
     renewal: "Renews automatically every month until you cancel.",
@@ -123,25 +121,27 @@ export const site = {
   faq: [
     ["Do you take bets?", "No. ProSwisher is not a sportsbook. Op3x LLC doesn't accept wagers, hold your money or pay out winnings. We sell predictions only."],
     ["What exactly is a ProSwisher prediction?", "For each game, our model gives a projected final score, a projected spread and its lean, meaning the side the numbers favor. It's information to consider, not advice to bet."],
-    ["What's free, and what do members get?", "Everyone gets one game's full prediction free every day, plus the public track record. Members ($9/month) get every game on the slate.", true],
+    ["What's free, and what do members get?", "Every day, one featured game's full prediction is free on its game page, with no account or sign-up, plus the public track record. Members ($9/month) get every game on the slate.", true],
     ["How have your predictions done?", "See our Track record page. Every prediction we've posted since launch is timestamped before tip-off and graded afterward, with nothing removed. No prediction is guaranteed, and past results do not guarantee future results."],
     // Laye asked Perry to confirm source wording: this is the accurate version for the shipped model.
     ["Where does the data come from?", "We build predictions from publicly available game results: schedules and final scores from a public scoreboard feed, turned into team scoring-margin ratings."],
     ["Are you affiliated with the league or any team?", "No. ProSwisher is independent and isn't affiliated with or endorsed by the NBA, its teams or players. Team names are used only to identify games."],
-    ["Who can use ProSwisher?", "Adults 21 and older. Accounts and subscriptions aren't available in Washington, Hawaii, Utah or Japan, though anyone can browse our public pages and track record."],
-    ["How much does it cost?", "The daily free prediction costs nothing. Membership is $9 a month plus applicable tax and renews monthly until you cancel. If the price ever changes, we'll email you at least 7 days before it applies to you.", true],
+    ["Who can use ProSwisher?", "Adults 21 and older. Subscriptions aren't available in Washington, Hawaii, Utah or Japan, though anyone 21+ can browse our public pages, the featured free game and the track record."],
+    ["How much does it cost?", "The daily featured game costs nothing and needs no account. Membership is $9 a month plus applicable tax and renews monthly until you cancel. If the price ever changes, we'll email you at least 7 days before it applies to you.", true],
     ["How do I cancel?", "Go to Account settings → Cancel subscription and confirm. It takes about a minute, with no call or email required. Your access continues through the end of your current billing period, and we email you a confirmation.", true],
+    // HOLD (Larry 9:38): refund copy ships only once support@proswisher.com works (site.supportEmailActive).
     ["Do you offer refunds?", "{refunds}", true],
     ["Do you run contests or giveaways?", "No. ProSwisher doesn't run contests, sweepstakes or prizes of any kind."],
     ["Should I bet based on your predictions?", "That's your decision. Our predictions are for entertainment and information only and aren't betting advice. If you bet, set a budget, bet only what you can afford to lose, and never chase losses. If gambling stops being fun, call 1-800-GAMBLER."],
     ["Do you send a daily email?", "Not yet. For now, find each day's predictions on the site."],
     ["Can I subscribe today?", "Not yet. Subscriptions aren't open, so nothing is for sale today. Every prediction on the site is free to view for now.", false, true],
   ] as ReadonlyArray<readonly [string, string, boolean?, boolean?]>,
-  // Checkout / cancel copy (Laye) kept for later. NOT rendered: payments are disabled.
+  // Checkout / cancel copy (Laye). Rendered on /subscribe; the form is inactive while payments are disabled.
   checkout: {
     title: "Confirm your subscription",
     summary: "ProSwisher Monthly: {price}/month plus applicable tax",
-    renewalDisclosure: "You'll be charged {price} today and {price} every month after that until you cancel. Cancel online any time at [CANCEL_URL] or in Account settings. Cancellation takes effect at the end of your current billing period.",
+    // Laye's text has "at [CANCEL_URL]"; dropped until a cancel URL exists (cancel is via the Stripe customer portal).
+    renewalDisclosure: commerce.renewalDisclosure,
     whatItIs: "ProSwisher sells sports predictions for entertainment and information only. Op3x LLC is not a sportsbook, doesn't accept wagers and doesn't hold your money or pay out winnings.",
     // Larry's EXACT text (9:36). Rendered next to an UNCHECKED checkbox (the box is UI, not copy). Swap here only.
     consentCheckbox:
@@ -152,10 +152,23 @@ export const site = {
     // Rules: price/renewal/cancel above payment fields; don't name the provider; store consent timestamp + IP;
     // billing ZIP/country geoblock runs before any charge (geoBlockCopy.checkoutBilling).
   },
+  // Laye 9:42 (Perry 9:38): featured game open in full; others show matchup, tip time and CTA ONLY (no partial numbers).
+  gamePage: {
+    featured: { badge: "Today's free game", note: "This one's on us, in full. No account needed.", cta: "Get every game: $9/month" },
+    membersOnly: {
+      matchup: "{Away} vs. {Home} · Tip {time} CT",
+      body: "Our projected score, projected spread and model's lean for this game are for members. Today's free game is {FeaturedAway} vs. {FeaturedHome}.",
+      cta: "Get every game: $9/month",
+      ctaSecondary: "See today's free game",
+      priceNote: "$9/month plus applicable tax, renews monthly, cancel online any time.",
+    },
+    paymentsOff: "Memberships aren't open yet.", // under the CTA while payments are disabled (no keys)
+  },
   predictionCard: {
     projectedScore: "Projected score", lean: "Our model's lean", why: "Why the model leans this way",
     postedAt: "Posted {timestamp} CT, before tip-off · Logged in our public track record",
     freeBadge: "Today's free game",
+    freeNote: "Free today, no sign-up needed.",
     lockedTeaser: "Members see every game on the slate. $9/month, cancel online any time.",
     lockedCta: "Get every game: $9/month",
     lockedUnavailable: "Memberships aren't open yet.", // shown under the disabled CTA while payments are off
@@ -219,11 +232,7 @@ export const payments = {
 };
 
 // Checkout geoblock (memo 17 §3 + Larry's ruling). ON by default. Checked by IP geolocation AND billing ZIP/country.
-export const geoblock = {
-  enabled: true,
-  usStates: ["WA", "HI", "UT"],
-  countries: ["JP"],
-};
+export const geoblock = { enabled: geo.enabled, usStates: geo.usStates, countries: geo.countries };
 
 export const legal = {
   draftNotice:
@@ -246,10 +255,16 @@ export const legal = {
     "ProSwisher is independent and is not affiliated with, endorsed by, or sponsored by any professional league, team, or player. Team names are used only to identify games.",
     "We may change or discontinue the site or these terms at any time.",
   ],
+  // PLACEHOLDER for counsel/Larry. Reflects what the code actually does.
   privacy: [
-    "ProSwisher has no accounts, no sign-ups, no cookies set by us, and no analytics or advertising trackers.",
+    "ProSwisher has no free accounts and sets no cookies. We use no third-party analytics or advertising trackers.",
+    "Visit counting: our own server counts daily unique visitors, weekly viewers of the featured free game, and clicks on the membership button. To do that it computes a one-way hash of your IP address and browser user agent with a random value that is replaced every day and never stored. We never store your IP address or user agent, and the hash can't be linked across days. We keep only the daily totals.",
+    "Location: when you open the subscription page or start checkout, we look up your approximate country and state from your IP address (on our server, using a local database) to apply our location limits. We record only the country and state code with your subscription, never the IP address.",
+    "Our age confirmation is remembered only for your browser session (session storage, not a cookie). If you subscribe, your browser stores your checkout reference locally so the site can recognize your membership; you can clear it any time.",
+    "Payments are processed by Stripe. We receive your name, email, billing address and subscription status from Stripe; we never see or store full card numbers. We record when you agreed to the subscription terms.",
     "Our hosting provider may keep standard server logs (such as IP address, user agent and request time) for security and operations.",
-    "We do not sell or share personal information. If paid features launch, payment would be processed by a third-party payment processor and this policy will be updated first.",
+    "We do not sell or share personal information.",
     "Questions: support@proswisher.com (not yet active). Mailing address: [MAILING ADDRESS TBD].",
   ],
+
 };

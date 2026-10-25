@@ -47,7 +47,5 @@ export function checkoutGeoDecision(input: GeoInput, cfg: GeoConfig = defaults):
   return { allowed: true };
 }
 
-// Payments are possible only when ALL are true. In this build __PAYMENTS_WIRED__ is false, so this is always false.
-export function paymentsEnabled(): boolean {
-  return __PAYMENTS_WIRED__ && __APP_ENV__ === "production" && import.meta.env.VITE_SUBSCRIBE_ENABLED === "true";
-}
+// Client copy of the rules, advisory only. Enforcement is server-side (server/geo.mjs): HTTP 451 on /subscribe
+// and POST /api/checkout, and the billing-address check in the checkout.session.completed webhook.

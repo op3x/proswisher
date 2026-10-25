@@ -11,6 +11,8 @@ import { Responsible, Terms, Privacy } from "./pages/Legal";
 import NotFound from "./pages/NotFound";
 import Faq from "./pages/Faq";
 import AgeGate from "./components/AgeGate";
+import SubscribePage from "./pages/Subscribe";
+import Account from "./pages/Account";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -26,6 +28,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="terms" element={<Terms />} />
           <Route path="privacy" element={<Privacy />} />
           <Route path="faq" element={<Faq />} />
+          <Route path="subscribe" element={<SubscribePage />} />
+          <Route path="account" element={<Account />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

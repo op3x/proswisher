@@ -22,4 +22,4 @@ if (problems.length) {
   console.error("[guard] REFUSING to build/start:\n - " + problems.join("\n - "));
   process.exit(1);
 }
-console.log(`[guard] ok: APP_ENV=${APP_ENV} STRIPE_LIVE_ENABLED=${LIVE_ENABLED} (payments are not wired in this build)`);
+console.log(`[guard] ok: APP_ENV=${APP_ENV} STRIPE_LIVE_ENABLED=${LIVE_ENABLED} (payments: test keys only in preview; disabled if any Stripe var is missing)`);

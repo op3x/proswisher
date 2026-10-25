@@ -28,7 +28,7 @@ export default function GameCard({ g, featured = false, locked = false }: { g: G
   return (
     <Link to={`/game/${g.id}`} className="block rounded-xl bg-panel border border-line hover:border-accent/50 transition p-4 space-y-3">
       <div className="flex justify-between text-xs text-slate-400">
-        <span>{tipTime(g.date)}{featured && gatingActive() && <span className="ml-2 rounded bg-accent/15 text-accent px-1.5 py-0.5 font-semibold">{site.pricing.freeTier.featuredBadge}</span>}</span>
+        <span>{tipTime(g.date)}{featured && gatingActive() && <span className="ml-2 rounded bg-accent/15 text-accent px-1.5 py-0.5 font-semibold">{site.gamePage.featured.badge}</span>}</span>
         <span>{g.state === "pre" ? (g.neutral ? "Neutral site" : "") : g.status}</span>
       </div>
       {row("away")}
@@ -47,7 +47,7 @@ export default function GameCard({ g, featured = false, locked = false }: { g: G
           <p className="text-[10px] leading-snug text-slate-500">{site.pickDisclaimer}</p>
         </>
       )}
-      {locked && <LockedTeaser compact />}
+      {locked && <LockedTeaser g={g} compact />}
     </Link>
   );
 }

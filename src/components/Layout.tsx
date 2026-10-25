@@ -1,10 +1,11 @@
 import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { site, legal, LEGAL_DRAFT } from "../config/site";
+import { countView } from "../lib/runtime";
 
 export default function Layout() {
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  useEffect(() => { window.scrollTo(0, 0); countView(pathname); }, [pathname]);
   return (
     <div className="min-h-screen flex flex-col">
       {__APP_ENV__ !== "production" && (

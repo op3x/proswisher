@@ -3,22 +3,30 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "guard": "node scripts/guard.mjs",
     "dev": "vite",
     "prebuild": "node scripts/guard.mjs",
     "build": "tsc -b && vite build",
     "prestart": "node scripts/guard.mjs",
-    "start": "serve -s dist -l tcp://0.0.0.0:${PORT:-3000} --no-port-switching",
+    "start": "node server/index.mjs",
     "preview": "vite preview",
-    "data": "python3 scripts/update_data.py"
+    "data": "python3 scripts/update_data.py",
+    "test:server": "node --test tests/server/",
+    "test": "node --test tests/server/ && python3 -m unittest discover -s tests -p \"test_*.py\"",
+    "geoip": "node scripts/fetch-geoip.mjs"
   },
   "dependencies": {
+    "express": "^5.3.0",
+    "maxmind": "^5.0.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",
-    "serve": "^14.2.4"
+    "serve": "^14.2.4",
+    "stripe": "^23.0.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",

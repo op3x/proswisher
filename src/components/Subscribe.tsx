@@ -1,9 +1,10 @@
 import { site } from "../config/site";
+import { usePaymentsEnabled } from "../lib/runtime";
 
-// Feature-flagged pricing placeholder. Rendered only when VITE_SUBSCRIBE_ENABLED === "true" (default false).
-// No checkout, payment link or Stripe code exists in this build; the paid button is permanently disabled.
+// Pricing section. Rendered only when the server reports payments enabled (test key + webhook secret + price set).
 export default function Subscribe() {
-  if (import.meta.env.VITE_SUBSCRIBE_ENABLED !== "true") return null;
+  const selling = usePaymentsEnabled();
+  if (!selling) return null;
   const p = site.pricing;
   return (
     <section className="space-y-3">
@@ -12,12 +13,13 @@ export default function Subscribe() {
         <div className="rounded-xl bg-panel border border-line p-4 space-y-2">
           <div className="font-semibold">{p.freeName} · {p.freePrice}</div>
           <ul className="text-sm text-slate-400 list-disc list-inside">{p.freeIncludes.map((i) => <li key={i}>{i}</li>)}</ul>
+          <a href="/#slate" className="inline-block text-sm text-accent">{p.freeCta}</a>
         </div>
         <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 space-y-2">
           <div className="font-semibold">{p.planName} · {p.price} <span className="text-sm font-normal">{p.interval}</span></div>
           <p className="text-sm text-slate-300">{p.renewal} {p.cancel}</p>
           <ul className="text-sm text-slate-400 list-disc list-inside">{p.includes.map((i) => <li key={i}>{i}</li>)}</ul>
-          <button disabled aria-disabled className="rounded-lg bg-line px-3 py-2 text-sm text-slate-400 cursor-not-allowed">{p.unavailable}</button>
+          <a href="/go/subscribe" className="inline-block rounded-lg bg-accent text-ink font-semibold px-3 py-2 text-sm">{site.gamePage.membersOnly.cta}</a>
         </div>
       </div>
       <p className="text-xs text-slate-500">{site.pickDisclaimer}</p>

@@ -1,7 +1,14 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect } from "react";
-import { featuredIds, canSeePrediction, gatingActive } from "../lib/access";
+import { featuredIds, useCanSee, gatingActive } from "../lib/access";
 import LockedTeaser from "../components/LockedTeaser";
+import { usePaymentsEnabled } from "../lib/runtime";
+
+function FeaturedCta() {
+  const selling = usePaymentsEnabled();
+  if (!selling) return null;
+  return <a href="/go/subscribe" className="mt-4 inline-block rounded-lg bg-accent text-ink font-semibold px-3 py-2 text-sm">{site.gamePage.featured.cta}</a>;
+}
 import { useData, GamesFile, StatsFile, LogFile, pct, fmtLine, signed, tipTime } from "../lib/data";
 import { site } from "../config/site";
 
@@ -10,6 +17,7 @@ export default function GameDetail() {
   const games = useData<GamesFile>("games");
   const stats = useData<StatsFile>("stats");
   const log = useData<LogFile>("predictions");
+  const canSee = useCanSee();
   const g0 = games.data?.games[id];
   useEffect(() => {
     if (!g0) return;
@@ -25,7 +33,10 @@ export default function GameDetail() {
   const g = games.data.games[id];
   if (!g) return <p>Game not found. <Link className="text-accent" to="/">Back to games</Link></p>;
   const featured = featuredIds(Object.values(games.data.games));
-  const locked = g.state === "pre" && !canSeePrediction(g.id, featured);
+  const locked = g.state === "pre" && !canSee(g.id, featured);
+  const isFeatured = featured.has(g.id) && gatingActive();
+  const featuredToday = Object.values(games.data.games).find((x) => featured.has(x.id) && x.id !== g.id &&
+    new Date(x.date).toLocaleDateString("en-CA", { timeZone: "America/Chicago" }) === new Date(g.date).toLocaleDateString("en-CA", { timeZone: "America/Chicago" }));
   const p = locked ? undefined : g.prediction;
   const logged = locked ? undefined : log.data?.entries[id];
   const mkt = logged?.marketSpread ?? p?.market ?? null;
@@ -49,8 +60,8 @@ export default function GameDetail() {
       <div className="rounded-2xl bg-panel border border-line p-5 sm:p-7">
         <p className="text-xs text-slate-400">{tipTime(g.date)} · {g.neutral ? "Neutral site" : `at ${g.home.name}`} · {g.status}</p>
         <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold">{g.away.name} <span className="text-slate-500">at</span> {g.home.name}</h1>
-        {featured.has(g.id) && gatingActive() && <p className="mt-2 inline-block rounded bg-accent/15 text-accent px-2 py-0.5 text-xs font-semibold">{site.pricing.freeTier.featuredBadge}</p>}
-        {locked && <div className="mt-5"><LockedTeaser /></div>}
+        {isFeatured && <p className="mt-2 text-xs"><span className="rounded bg-accent/15 text-accent px-2 py-0.5 font-semibold">{site.gamePage.featured.badge}</span> <span className="text-slate-400">{site.gamePage.featured.note}</span></p>}
+        {locked && <div className="mt-5"><LockedTeaser g={g} featured={featuredToday} /></div>}
         {(g.final || g.state === "in") && (
           <p className="mt-3 text-xl tabular-nums">{g.away.abbr} {g.away.score} – {g.home.score} {g.home.abbr}</p>
         )}
@@ -73,6 +84,7 @@ export default function GameDetail() {
             <p className="mt-4 text-sm text-slate-400">Projected score: {g.away.abbr} {p.projScore.away} – {p.projScore.home} {g.home.abbr}</p>
             {mkt && <p className="mt-1 text-sm text-slate-400">Market spread: {g.home.abbr} {fmtLine(mkt.homeLine)} ({mkt.source}, recorded {new Date(mkt.recordedAt).toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} CT)</p>}
             <p className="mt-3 text-xs text-slate-500">{site.pickDisclaimer}</p>
+            {isFeatured && <FeaturedCta />}
           </>
         )}
         {logged && (

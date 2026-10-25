@@ -61,3 +61,33 @@ Geoblock (`src/lib/geoblock.ts`): WA, HI, UT, Japan, by IP and billing ZIP/count
   still prove they were posted before the game). Every pick ends up listed; nothing is removed.
 - Caveat: this is a static site, so `/data/*.json` and the repo expose every prediction. Gating is cosmetic
   until a server/API serves gated predictions (needs accounts + payments, out of scope here).
+
+## Server (server/index.mjs)
+A small Express server serves the static build plus a few endpoints. It runs with **no keys at all**; payments then report disabled.
+
+| Route | Purpose | Geo-checked |
+|---|---|---|
+| `GET /health` | Railway healthcheck | never |
+| `POST /api/stripe/webhook` | Stripe `checkout.session.completed` (signature verified with `STRIPE_WEBHOOK_SECRET`) | never |
+| `GET /api/config` | `{payments:{enabled}}` for the UI | no |
+| `GET /subscribe` | paid sign-up page (451 block page if GeoIP-blocked) | **yes** |
+| `POST /api/checkout` | creates a Checkout Session (`mode=subscription`, `billing_address_collection=required`) | **yes** (+ declared billing country/state) |
+| `GET /api/me`, `POST /api/portal` | membership status / Stripe customer portal (cancel any time) | no |
+| `POST /api/v`, `GET /go/subscribe` | cookieless counting / CTA click counter + 302 to `/subscribe` | no |
+| `GET /admin/stats` | counts; `Authorization: Bearer $ADMIN_TOKEN`; 404 when unset | no |
+
+## Payments (Stripe Billing, TEST mode in preview)
+- Enabled only when `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and `STRIPE_PRICE_ID` are all set. `APP_ENV=preview` accepts only `sk_test_`/`rk_test_`; a live key anywhere stops the build/server (`scripts/guard.mjs`). Production needs a live key **and** `STRIPE_LIVE_ENABLED=true`.
+- The code never creates products or prices. At startup it checks the configured price is active, monthly, and matches `src/config/commerce.json` (900 usd); otherwise payments stay off.
+- Membership = a completed Checkout Session whose subscription is active. The session id is kept in the browser's localStorage (no cookies). Revocations are in memory plus the canceled Stripe subscription (no database).
+
+## Geoblock (server/geo.mjs, src/config/geo.json)
+- Blocked: JP; US-WA, US-HI, US-UT. Only on paid sign-up (`/subscribe`) and checkout creation, HTTP 451.
+- GeoIP: MaxMind GeoLite2 City, downloaded at start and weekly with `MAXMIND_LICENSE_KEY` (never committed; `geoip/` is gitignored). No key/DB => GeoIP gate skipped with a warning (fail open). IP not in DB => allowed. Client IP = rightmost `X-Forwarded-For` hop (Railway edge). Logs record country/region only.
+- Second gates: the buyer declares billing country/state before checkout; the webhook checks Stripe's collected billing address and, if blocked, refunds the first payment, cancels the subscription and revokes access.
+
+## Counting (server/counter.mjs)
+First-party, cookieless, no third-party trackers. Identity = sha256(IP + UA + daily random salt); the salt lives in memory and is replaced each CT day; raw IPs/UAs are never stored. Counts: unique visitors/day, featured-game page viewers/week (sum of daily uniques, since ids can't be linked across days), and clicks on "Get every game: $9/month". In memory; flushed to `$STATS_DIR/counts.json` every 5 min if `STATS_DIR` is set (e.g. a Railway volume; none created).
+
+## Tests
+`npm test` runs `tests/server/*.test.mjs` (node:test: geo samples for JP/WA/HI/UT/TX, fail-open, rightmost XFF, 451 scope, webhook refund/cancel/revoke, payments guards, no cookies) and the Python pipeline tests.

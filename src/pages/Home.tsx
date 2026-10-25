@@ -3,16 +3,20 @@ import GameCard from "../components/GameCard";
 import Subscribe from "../components/Subscribe";
 import { site } from "../config/site";
 import { Link } from "react-router-dom";
-import { featuredIds, canSeePrediction } from "../lib/access";
+import { featuredIds, useCanSee } from "../lib/access";
+import { usePaymentsEnabled } from "../lib/runtime";
 
 export default function Home() {
   const { data, error } = useData<GamesFile>("games");
+  const selling = usePaymentsEnabled();
+  const canSee = useCanSee();
   const now = Date.now();
   const games = data ? Object.values(data.games).sort((a, b) => a.date.localeCompare(b.date)) : [];
   const live = games.filter((g) => g.state === "in");
   const upcoming = games.filter((g) => g.state === "pre" && new Date(g.date).getTime() > now && g.prediction);
   const recent = games.filter((g) => g.final).slice(-8).reverse();
   const featured = featuredIds(games);
+  const todayFeatured = upcoming.find((g) => featured.has(g.id)) || games.find((g) => featured.has(g.id) && g.state !== "post");
   const byDay = new Map<string, Game[]>();
   for (const g of upcoming) {
     const k = new Date(g.date).toDateString();
@@ -26,11 +30,12 @@ export default function Home() {
         <p className="mt-3 text-slate-400 max-w-2xl">{site.heroBody}</p>
         <p className="mt-3 text-sm font-semibold text-slate-200">{site.proofLine}</p>
         <div className="mt-4 flex flex-wrap gap-3 text-sm">
-          <a href="#slate" className="rounded-lg bg-accent text-ink font-semibold px-3 py-2">{site.heroCta}</a>
+          <Link to={todayFeatured ? `/game/${todayFeatured.id}` : "/#slate"} className="rounded-lg bg-accent text-ink font-semibold px-3 py-2">{site.heroCta}</Link>
+          {selling && <a href="/go/subscribe" className="rounded-lg border border-accent/60 text-accent px-3 py-2">{site.heroCtaPaid}</a>}
           <Link to="/how-it-works" className="rounded-lg border border-line px-3 py-2 text-slate-200">{site.heroCtaSecondary}</Link>
           <Link to="/track-record" className="rounded-lg border border-line px-3 py-2 text-slate-200">See the track record</Link>
         </div>
-        {import.meta.env.VITE_SUBSCRIBE_ENABLED === "true" && <p className="mt-2 text-xs text-slate-400">{site.heroPriceNote}</p>}
+        {selling && <p className="mt-2 text-xs text-slate-400">{site.heroPriceNote}</p>}
         <p className="mt-3 text-xs text-slate-500">{site.pickDisclaimer}</p>
         {data && <p className="mt-4 text-xs text-slate-500">Season {data.seasonLabel} · data updated {new Date(data.updatedAt).toLocaleString()}</p>}
       </section>
@@ -50,7 +55,7 @@ export default function Home() {
             <div className="font-semibold text-slate-200">{site.whatYouGet.freeTitle}</div>
             <ul className="mt-1 space-y-1 text-slate-400">{site.whatYouGet.free.map(([b, t]) => <li key={b}><b className="text-slate-200">{b}</b> {t}</li>)}</ul>
           </div>
-          {import.meta.env.VITE_SUBSCRIBE_ENABLED === "true" && (
+          {selling && (
             <div>
               <div className="font-semibold text-slate-200">{site.whatYouGet.paidTitle}</div>
               <ul className="mt-1 space-y-1 text-slate-400">{site.whatYouGet.paid.map(([b, t]) => <li key={b}><b className="text-slate-200">{b}</b> {t}</li>)}</ul>
@@ -70,7 +75,7 @@ export default function Home() {
       {[...byDay.entries()].map(([k, gs]) => (
         <section key={k}>
           <h2 className="text-lg font-bold mb-3">{dayLabel(gs[0].date)}</h2>
-          <div className="grid gap-3 sm:grid-cols-2">{gs.map((g) => <GameCard key={g.id} g={g} featured={featured.has(g.id)} locked={!canSeePrediction(g.id, featured)} />)}</div>
+          <div className="grid gap-3 sm:grid-cols-2">{gs.map((g) => <GameCard key={g.id} g={g} featured={featured.has(g.id)} locked={!canSee(g.id, featured)} />)}</div>
         </section>
       ))}
       {recent.length > 0 && (

@@ -6,3 +6,7 @@ dist/
 *.log
 *.tsbuildinfo
 __pycache__/
+geoip/
+*.mmdb
+*.mmdb.new
+stats-data/

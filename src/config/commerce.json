@@ -1,0 +1,16 @@
+{
+  "_note": "Shared by the site (src/config/site.ts) and the server (server/*.mjs). Copy: Laye, landing-page-copy.md 9:42 AM CT. Price is config only; Stripe prices are created by Ryan, never by code.",
+  "price": "$9",
+  "unitAmount": 900,
+  "currency": "usd",
+  "consentVersion": "larry-2026-10-25-0936",
+  "renewalDisclosure": "You'll be charged $9 today and $9 every month after that until you cancel. Cancel online any time in Account settings. Cancellation takes effect at the end of your current billing period.",
+  "gamePageTitle": "{Away} vs. {Home} Prediction, {date} | NBA | ProSwisher",
+  "gamePageDescription": "Projected score, projected spread and our model's lean for {Away} vs {Home}, posted before tip-off. Entertainment only. 21+. 1-800-GAMBLER.",
+  "geoBlockCopy": {
+    "title": "Subscriptions aren't available in your location",
+    "body": "Sorry, ProSwisher subscriptions aren't available in Washington, Hawaii, Utah or Japan. You're still welcome to browse our public pages, today's featured game and the track record.",
+    "checkoutBilling": "Sorry, we can't accept subscriptions with a billing address in Washington, Hawaii, Utah or Japan. You haven't been charged.",
+    "help": "Questions? Email support@proswisher.com. Gambling problem? Call 1-800-GAMBLER."
+  }
+}

@@ -1,12 +1,12 @@
 import { site } from "../config/site";
+import { useSubscriber } from "./runtime";
 
-// Free tier (Kiko's decision): ONE featured game per day shows its full prediction openly on its public
-// game page, no account needed. Other games show the matchup with the prediction behind the CTA.
-// Featured game = the day's earliest tip-off (CT calendar day), ties broken by game id. Deterministic.
-// CAVEAT: this is a static site, so all predictions are in the public JSON (/data/*.json, and the repo).
-// Client-side gating is cosmetic until a server/API gates the data; see README.
+// Free tier (Perry 9:38): ONE featured game per day shows its full prediction openly on its public game page,
+// no account needed. Other games show matchup + tip time + CTA only (no partial numbers).
+// Featured game = the day's earliest tip-off (CT calendar day), ties broken by game id. Same rule in server/index.mjs.
+// CAVEAT: static data, so all predictions are in the public JSON (/data/*.json, and the repo). Gating is
+// presentation-only until a server-side data API gates predictions; see README.
 export const gatingActive = () => site.pricing.freeTier.gatingEnabled;
-const isSubscriber = () => false; // stub until accounts + payments exist
 
 const ctDay = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
 
@@ -18,4 +18,7 @@ export function featuredIds(items: Array<{ id: string; date: string }>): Set<str
   }
   return new Set([...best.values()].map((x) => x.id));
 }
-export const canSeePrediction = (id: string, featured: Set<string>) => !gatingActive() || isSubscriber() || featured.has(id);
+export function useCanSee() {
+  const sub = useSubscriber();
+  return (id: string, featured: Set<string>) => !gatingActive() || sub || featured.has(id);
+}

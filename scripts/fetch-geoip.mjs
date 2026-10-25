@@ -1,6 +1,6 @@
 // Downloads MaxMind GeoLite2 City into geoip/ (gitignored). Needs MAXMIND_LICENSE_KEY (Ryan sets it in Railway);
 // MAXMIND_ACCOUNT_ID optional (uses the newer basic-auth endpoint when set). Never prints the key or the URL.
-// Missing key or any failure -> warning and exit 0 (the app then fails open on GeoIP, per Ingus).
+// Missing key or any failure -> warning and exit 0 (build never breaks; the app keeps public pages open and DISABLES checkout without a fresh DB, per Larry).
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -8,7 +8,7 @@ import { GEOIP_DIR, GEOIP_PATH } from "../server/geo.mjs";
 
 export async function fetchGeoip() {
   const key = (process.env.MAXMIND_LICENSE_KEY || "").trim();
-  if (!key) { console.warn("[geoip] MAXMIND_LICENSE_KEY unset; skipping download (GeoIP gate fails open)"); return false; }
+  if (!key) { console.warn("[geoip] MAXMIND_LICENSE_KEY unset; skipping download (checkout will be disabled; public pages stay open)"); return false; }
   const acct = (process.env.MAXMIND_ACCOUNT_ID || "").trim();
   const url = acct
     ? "https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz"
@@ -31,7 +31,7 @@ export async function fetchGeoip() {
     console.log("[geoip] GeoLite2 City updated");
     return true;
   } catch (e) {
-    console.warn(`[geoip] download failed (${e.message}); GeoIP gate fails open until the next refresh`);
+    console.warn(`[geoip] download failed (${e.message}); checkout stays disabled until a fresh DB is present`);
     return false;
   }
 }

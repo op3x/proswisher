@@ -102,7 +102,7 @@ export function readerLookup(reader) {
 }
 
 export function geoipDecision(lookup, ip) {
-  if (!lookup) return { blocked: false, checked: false };      // fail open (no key/DB): warned at startup
+  if (!lookup) return { blocked: false, checked: false };      // legacy helper only; sign-up/checkout use signupIpDecision (fail closed)
   const g = ip ? lookup(ip) : null;
   if (!g) return { blocked: false, checked: true, found: false }; // not in DB -> allow
   return { blocked: isBlocked(g.country, g.region), checked: true, found: true, country: g.country, region: g.region };

@@ -2,6 +2,33 @@
 import { appName } from "../brand.mjs";
 import { LEAGUES, ATTRIBUTION, disclaimer } from "./store.mjs";
 import { allLeagues } from "../sports/index.mjs";
+import crypto from "node:crypto";
+
+/**
+ * Larry memo 24 B2: the score ticker serves our own front end only. Same-origin check (Origin / Sec-Fetch-Site), no
+ * CORS header ever, per-client rate limit, no query parameters (no bulk or historical queries), not in public docs.
+ */
+export function tickerGuard({ perMin = 30, now = () => Date.now() } = {}) {
+  const hits = new Map(); // hashed client -> {start, n}; in memory only, the raw IP is never stored
+  return (req, res, next) => {
+    res.removeHeader("Access-Control-Allow-Origin"); res.set("X-Robots-Tag", "noindex");
+    if (Object.keys(req.query || {}).length) return res.status(400).json({ error: "no query parameters are accepted" });
+    const site = req.get("sec-fetch-site");
+    if (site && !["same-origin", "none"].includes(site)) return res.status(403).json({ error: "same-origin only" });
+    const origin = req.get("origin");
+    if (origin) {
+      let oh = null; try { oh = new URL(origin).host; } catch {}
+      const host = req.get("x-forwarded-host") || req.get("host");
+      if (!oh || oh !== host) return res.status(403).json({ error: "same-origin only" });
+    }
+    const key = crypto.createHash("sha256").update(String(req.ip || req.socket?.remoteAddress || "")).digest("hex").slice(0, 16);
+    const t = now(), h = hits.get(key);
+    if (!h || t - h.start >= 60e3) hits.set(key, { start: t, n: 1 });
+    else if (++h.n > perMin) { res.set("Retry-After", String(Math.ceil((h.start + 60e3 - t) / 1000))); return res.status(429).json({ error: "rate limited" }); }
+    if (hits.size > 5000) for (const [k, v] of hits) if (t - v.start >= 60e3) hits.delete(k);
+    next();
+  };
+}
 
 export function registerFootballRoutes(app, { store, ticker, pipeline, env = process.env }) {
   const maxN = Number(env.FOOTBALL_SIM_MAX_N || 20000), maxConc = Number(env.FOOTBALL_SIM_CONCURRENCY || 2);
@@ -91,12 +118,13 @@ export function registerFootballRoutes(app, { store, ticker, pipeline, env = pro
   app.post("/api/sim", (req, res) => simHandler(req.body && typeof req.body === "object" ? req.body : {}, req, res));
   app.get("/api/sim", (req, res) => simHandler(req.query, req, res));
   app.get("/api/schedule", gamesHandler);
-  app.get("/api/scores", (_req, res) => {
+  const guard = tickerGuard({ perMin: Number(env.FOOTBALL_TICKER_RATE_PER_MIN || 30) });
+  app.get("/api/scores", guard, (_req, res) => {
     if (!ticker) return res.status(503).json({ error: "ticker not running" });
     res.set("Cache-Control", "public, max-age=15").json(ticker.snapshot());
   });
 
-  app.get("/api/football/ticker", (_req, res) => {
+  app.get("/api/football/ticker", guard, (_req, res) => {
     if (!ticker) return res.status(503).json({ error: "ticker not running" });
     res.set("Cache-Control", "public, max-age=15").json(ticker.snapshot());
   });

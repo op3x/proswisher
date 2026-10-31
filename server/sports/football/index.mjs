@@ -1,6 +1,7 @@
 // Football SportModule (NFL + NCAAF): wraps the snap-by-snap engine in the generic sport contract.
 import { RULES, prepare as prepareEngine, simulateGame } from "../../sim/engine.mjs";
 import { envelope } from "../sport-module.mjs";
+import { NFL_ATTRIBUTION, NCAAF_ATTRIBUTION } from "../../football/attribution.mjs";
 
 const clockSec = (c) => { const [m, s] = String(c || "0:00").split(":").map(Number); return m * 60 + (s || 0); };
 
@@ -18,12 +19,12 @@ const leagueRules = (r) => ({ periods: 4, periodSec: r.quarterSec, overtime: r.o
 export const football = {
   id: "football",
   leagues: {
-    nfl: { name: "NFL", rules: leagueRules(RULES.nfl), attribution: "Data: nflverse (CC-BY 4.0)" },
-    ncaaf: { name: "NCAA Football (FBS)", rules: leagueRules(RULES.ncaaf), attribution: "Data: CollegeFootballData.com" },
+    nfl: { name: "NFL", rules: leagueRules(RULES.nfl), attribution: NFL_ATTRIBUTION },
+    ncaaf: { name: "NCAA Football (FBS)", rules: leagueRules(RULES.ncaaf), attribution: NCAAF_ATTRIBUTION },
   },
   providers: {
-    nfl: { name: "nflverse-data", url: "https://github.com/nflverse/nflverse-data", terms: "CC-BY 4.0" },
-    ncaaf: { name: "CollegeFootballData.com", url: "https://api.collegefootballdata.com", terms: "commercial use permitted; no raw redistribution" },
+    nfl: { name: "nflverse-data", url: "https://github.com/nflverse/nflverse-data", terms: "CC BY 4.0 (pbp and schedules releases only)" },
+    ncaaf: { name: "CollegeFootballData.com", url: "https://api.collegefootballdata.com", terms: "derived outputs only; no raw-data endpoint or bulk download" },
   },
   ratingsFitter: { command: ["python3", "scripts/football/refresh.py"], schedule: "daily 04:00 America/Chicago" },
   prepare: (params, league) => prepareEngine(params, league),

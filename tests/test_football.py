@@ -99,6 +99,82 @@ class Sources(unittest.TestCase):
             self.assertEqual(u.call_args_list[0][0][0].get_header("Authorization"), "Bearer k")
 
 
+class BannedSources(unittest.TestCase):
+    """Larry memo 24 N2 (+ memo 20): only the CC BY 4.0 pbp and schedules releases; banned sources fail before any I/O."""
+    BANNED = ["ftn_charting", "pbp_participation", "participation", "nextgen_stats", "pfr_advstats", "snap_counts",
+              "draft_picks", "combine", "espn_data", "contracts", "teams", "teams_colors_logos"]
+
+    def test_banned_tags_are_listed_and_refused(self):
+        for t in self.BANNED:
+            self.assertIn(t, SRC.BANNED_NFLVERSE_TAGS)
+            with mock.patch("urllib.request.urlopen") as u, self.assertRaises(ValueError):
+                SRC._open(f"https://github.com/nflverse/nflverse-data/releases/download/{t}/{t}.csv", {}, t)
+            u.assert_not_called()
+
+    def test_banned_hosts_are_refused(self):
+        for url in ["https://site.api.espn.com/apis/x", "https://api.sportradar.us/nfl", "https://www.pro-football-reference.com/x",
+                    "https://www.sports-reference.com/cfb", "https://overthecap.com/x", "https://nextgenstats.nfl.com/x"]:
+            with mock.patch("urllib.request.urlopen") as u, self.assertRaises(ValueError):
+                SRC._open(url, {}, "x")
+            u.assert_not_called()
+
+    def test_allowed_releases_pass(self):
+        for t in SRC.ALLOWED_NFLVERSE_TAGS:
+            SRC.check_url(f"https://github.com/nflverse/nflverse-data/releases/download/{t}/x.csv")
+        self.assertEqual(set(SRC.ALLOWED_NFLVERSE_TAGS), {"pbp", "schedules"})
+
+    def test_no_code_references_banned_releases(self):
+        root = os.path.join(os.path.dirname(__file__), "..")
+        hits = []
+        for d in ("scripts", "server", "src"):
+            for dp, _, fs in os.walk(os.path.join(root, d)):
+                for f in fs:
+                    if not f.endswith((".py", ".mjs", ".js", ".ts", ".tsx")) or "__pycache__" in dp:
+                        continue
+                    txt = open(os.path.join(dp, f), encoding="utf-8").read()
+                    for t in self.BANNED:
+                        if f"releases/download/{t}/" in txt:
+                            hits.append((f, t))
+        self.assertEqual(hits, [])
+
+    def test_attribution_strings(self):
+        self.assertEqual(SRC.NFL_ATTRIBUTION, "NFL data: nflverse (github.com/nflverse/nflverse-data), licensed under CC BY 4.0 "
+                         "(https://creativecommons.org/licenses/by/4.0/). Modified by Op3x LLC (aggregated, modeled and simulated). "
+                         "Not affiliated with or endorsed by the NFL or nflverse.")
+        self.assertEqual(SRC.NCAAF_ATTRIBUTION, "Data provided by CollegeFootballData.com.")
+
+
+class Elo(unittest.TestCase):
+    def test_elo_learns_strength_and_is_walk_forward(self):
+        from football import elo as E
+        gs = []
+        for i in range(40):  # A beats B by 14 every week, alternating home
+            h, a = ("A", "B") if i % 2 else ("B", "A")
+            gs.append({"id": str(i), "season": 2020 + i // 20, "kickoff": f"2020-{1 + i // 4:02d}-{1 + (i % 4) * 7:02d}T{i:02d}", "home": h, "away": a,
+                       "neutral": False, "homeScore": 24 if h == "A" else 10, "awayScore": 10 if h == "A" else 24})
+        gs.append({"id": "next", "season": 2021, "kickoff": "2099", "home": "A", "away": "B", "neutral": True, "homeScore": None, "awayScore": None})
+        pre, now = E.run_elo(gs)
+        self.assertAlmostEqual(pre["0"]["spread"], E.NFL_ELO["hfa"] / E.NFL_ELO["per_pt"], places=6)  # first game: equal teams, home edge only
+        self.assertGreater(now["A"], now["B"]); self.assertGreater(pre["next"]["spread"], 3); self.assertGreater(pre["next"]["p"], 0.6)
+        self.assertEqual(now, E.run_elo(gs[:-1])[1], "an unplayed game never changes ratings")
+        self.assertEqual(E.split_points(45, 5), (25.0, 20.0))
+
+
+class UnitRatings(unittest.TestCase):
+    def test_ridge_unit_ratings_recover_a_strong_pass_offense(self):
+        from football import unit_ratings as U
+        obs = []
+        teams = ["A", "B", "C", "D"]
+        for w in range(1, 9):
+            for i, o in enumerate(teams):
+                d = teams[(i + w) % 4] if teams[(i + w) % 4] != o else teams[(i + w + 1) % 4]
+                obs.append((2024, w, f"{w}{o}", o, d, 1 if i % 2 else -1, {"pass": (35, 35 * (0.3 if o == "A" else 0.0)), "run": (25, 0.0)}))
+        ur = U.UnitRatings(obs, dict(U.DEFAULTS))
+        r = ur.at(2024, 9)
+        self.assertEqual(max(r["pass"]["off"], key=r["pass"]["off"].get), "A")
+        self.assertLess(r["pass"]["off"]["A"], 0.3, "ridge shrinks toward the mean")
+
+
 class Time(unittest.TestCase):
     def test_eastern_to_utc_dst(self):
         self.assertEqual(iso(eastern_to_utc("2026-10-25", "13:00")), "2026-10-25T17:00:00Z")   # EDT
@@ -142,12 +218,18 @@ class Refresh(unittest.TestCase):
         self.assertTrue(res["ok"]); self.assertEqual(res["asOfWeek"], 7)
         r = json.load(open(os.path.join(self.pub, "nfl", "ratings.json")))
         self.assertEqual(r["teams"][0]["team"], "KC"); self.assertEqual(r["teams"][0]["name"], "Kansas City Chiefs")
+        self.assertEqual(r["marginModel"]["type"], "elo"); self.assertIn("elo", r["teams"][0])
         s = json.load(open(os.path.join(self.pub, "nfl", "schedule.json")))
         up = [g for g in s["games"] if g["status"] == "scheduled"]
         self.assertEqual(len(up), 2); self.assertIn("expected", up[0]); self.assertTrue(up[0]["kickoff"].endswith("T17:00:00Z"))
         self.assertFalse(os.path.exists(os.path.join(self.pub, "nfl", "play_by_play_2025.csv.gz")))
         for f in os.listdir(os.path.join(self.pub, "nfl")):  # nothing raw in the public dir
             self.assertTrue(f.endswith(".json"))
+        # memo 24: attribution with licence link; odds columns stay backtest-only (N3); no raw play rows (N1)
+        self.assertEqual(s["source"], SRC.NFL_ATTRIBUTION)
+        blob = "".join(open(os.path.join(self.pub, "nfl", f)).read() for f in os.listdir(os.path.join(self.pub, "nfl")))
+        for k in ("spread_line", "total_line", "moneyline", "spreadLine", "totalLine", "_odds", "play_id", "desc\"", "passer", "referee", "_coach", "_qb_name", "logo"):
+            self.assertNotIn(k, blob, k)
 
     def test_blocked_source_is_stopped_and_remembered(self):
         b = RF.Blocks(os.path.join(self.priv, "blocked.json"))

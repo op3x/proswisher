@@ -18,7 +18,12 @@ def phi(z):
     return 0.5 * (1 + math.erf(z / math.sqrt(2)))
 
 
-def elo_predictions(games_csv, want_ids):
+ELO_DEFAULTS = {"k": 20, "hfa": 48, "keep": 2 / 3, "mean": 1505, "per_pt": 25}
+
+
+def elo_predictions(games_csv, want_ids, cfg=None):
+    """538-style NFL Elo. cfg overrides ELO_DEFAULTS (k, hfa in Elo points, keep = share of rating kept each offseason)."""
+    c = {**ELO_DEFAULTS, **(cfg or {})}
     rows = [r for r in csv.DictReader(open(games_csv)) if r["home_score"] not in ("", "NA")]
     rows.sort(key=lambda r: (r["gameday"], r["game_id"]))
     elo, season, out = {}, None, {}
@@ -26,18 +31,18 @@ def elo_predictions(games_csv, want_ids):
         if r["season"] != season:
             season = r["season"]
             for t in elo:
-                elo[t] = elo[t] * 2 / 3 + 1505 / 3
+                elo[t] = elo[t] * c["keep"] + c["mean"] * (1 - c["keep"])
         h, a = r["home_team"], r["away_team"]
-        eh, ea = elo.get(h, 1505), elo.get(a, 1505)
-        hfa = 0 if r["location"] == "Neutral" else 48
+        eh, ea = elo.get(h, c["mean"]), elo.get(a, c["mean"])
+        hfa = 0 if r["location"] == "Neutral" else c["hfa"]
         d = eh + hfa - ea
         p = 1 / (1 + 10 ** (-d / 400))
         if r["game_id"] in want_ids:
-            out[r["game_id"]] = {"p": p, "spread": d / 25}
+            out[r["game_id"]] = {"p": p, "spread": d / c["per_pt"]}
         mv = int(r["home_score"]) - int(r["away_score"])
         y = 1 if mv > 0 else 0 if mv < 0 else 0.5
         mult = math.log(abs(mv) + 1) * 2.2 / ((d if mv > 0 else -d) * 0.001 + 2.2) if mv != 0 else 1
-        shift = 20 * mult * (y - p)
+        shift = c["k"] * mult * (y - p)
         elo[h], elo[a] = eh + shift, ea - shift
     return out
 

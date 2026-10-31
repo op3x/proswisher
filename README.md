@@ -193,5 +193,7 @@ Do **not** set `PIPELINE_DRY_RUN` on Railway. Saving the variables redeploys the
 
 ## Football simulation (pivot, Phase 1)
 NFL + NCAAF snap-by-snap simulator with a daily 04:00 America/Chicago hard-data refresh. See
-[docs/football-model.md](docs/football-model.md) for sources, method, API and the backtest. Data: nflverse (CC-BY 4.0);
+[docs/football-model.md](docs/football-model.md) for sources, method, API and the backtest. NFL data: nflverse (github.com/nflverse/nflverse-data), licensed under
+CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Modified by Op3x LLC (aggregated, modeled and simulated). Not
+affiliated with or endorsed by the NFL or nflverse. NCAAF: Data provided by CollegeFootballData.com.
 NCAAF needs `CFBD_API_KEY`. Product name comes from `APP_NAME`.

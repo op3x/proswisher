@@ -1,7 +1,10 @@
 """Football data sources behind small provider interfaces (same rules as scripts/providers.py, Larry memo 20).
 
-- NFL: nflverse release files (play-by-play, schedules incl. scores). Data licence CC-BY 4.0: attribution required,
-  shown on the site. We never fetch FTN charting or participation files (CC-BY-SA).
+- NFL: nflverse release files, ONLY the CC BY 4.0 `pbp` and `schedules` releases (Larry memo 24, N2). Attribution
+  (with licence link and change note, memo 24 N4) is NFL_ATTRIBUTION below. Banned (BANNED_NFLVERSE_TAGS, enforced in
+  Nflverse._download and by tests): FTN charting and participation (CC BY-SA), Next Gen Stats (NFL-owned), anything
+  sourced from Pro-Football-Reference, ESPN or OverTheCap, and the teams file (logo URLs). Raw play rows are never
+  published (N1); schedule odds columns stay inside the backtest (N3).
 - NCAAF: CollegeFootballData (CFBD) API, key in CFBD_API_KEY. CFBD terms: derived outputs may be sold, raw data may
   NOT be redistributed, so raw CFBD responses only ever go to the PRIVATE cache dir, never to public JSON or the repo.
   Free tier = 1,000 calls/month; a local monthly call counter (CFBD_MONTHLY_BUDGET, default 800) keeps us under it.
@@ -9,8 +12,32 @@
 - A 401/403, or a 429 that persists after one polite back-off, raises SourceBlocked: the caller stops THAT source,
   logs it and never routes around it (no other hosts, mirrors, header tricks or scraping).
 """
-import csv, io, json, os, time, urllib.error, urllib.parse, urllib.request
+import csv, io, json, os, re, time, urllib.error, urllib.parse, urllib.request
 from datetime import datetime, timezone
+
+NFL_ATTRIBUTION = ("NFL data: nflverse (github.com/nflverse/nflverse-data), licensed under CC BY 4.0 "
+                   "(https://creativecommons.org/licenses/by/4.0/). Modified by Op3x LLC (aggregated, modeled and simulated). "
+                   "Not affiliated with or endorsed by the NFL or nflverse.")
+NCAAF_ATTRIBUTION = "Data provided by CollegeFootballData.com."
+ALLOWED_NFLVERSE_TAGS = ("pbp", "schedules")
+# memo 24: excluded nflverse releases (licence or upstream owner) plus the teams file (logo URLs)
+BANNED_NFLVERSE_TAGS = ("ftn_charting", "pbp_participation", "participation", "nextgen_stats", "pfr_advstats", "snap_counts",
+                        "draft_picks", "combine", "espn_data", "contracts", "teams", "teams_colors_logos")
+# memo 20 / 24: hosts we never fetch from
+BANNED_HOSTS = ("espn", "sportradar", "sports-reference", "pro-football-reference", "sportsreference", "overthecap",
+                "nextgenstats", "ftndata", "ftnfantasy")
+
+
+def check_url(url):
+    """Raise ValueError for a banned host, or an nflverse release outside the CC BY 4.0 allow-list."""
+    host = urllib.parse.urlparse(url).netloc.lower()
+    if any(b in host for b in BANNED_HOSTS):
+        raise ValueError(f"banned data source host: {host}")
+    m = re.search(r"nflverse-data/releases/download/([^/]+)/", url)
+    if "nflverse" in url and (not m or m.group(1) in BANNED_NFLVERSE_TAGS or m.group(1) not in ALLOWED_NFLVERSE_TAGS):
+        raise ValueError(f"nflverse release not allowed (memo 24 N2): {m.group(1) if m else url}")
+    return url
+
 
 UA = {"User-Agent": "proswisher-data/3.0 (+https://proswisher.com)"}
 
@@ -24,6 +51,7 @@ class NotConfigured(RuntimeError):
 
 
 def _open(url, headers, what, retries=2, timeout=60):
+    check_url(url)
     last = None
     for i in range(retries + 1):
         try:
@@ -57,6 +85,7 @@ class Nflverse(NflDataProvider):
     BASE = "https://github.com/nflverse/nflverse-data/releases/download"
 
     def _download(self, url, dest, what):
+        check_url(url)
         meta_path = dest + ".etag"
         headers = {}
         if os.path.exists(dest) and os.path.exists(meta_path):

@@ -6,6 +6,7 @@ import { getSchedule, getTeams, runSim, Sourced } from "../sports/api";
 import { ctDateTime, pct, signed } from "../sports/format";
 import type { League, ScoreGame, SimResult, Team } from "../sports/types";
 import GamePlayer from "../components/GamePlayer";
+import DataSources from "../components/DataSources";
 import { site } from "../config/site";
 
 const THIS_SEASON = 2026;
@@ -183,6 +184,7 @@ export default function Simulate() {
             </div>
             {r.label && <p className="text-xs text-fuchsia-200">{r.label}</p>}
             <p className="text-xs text-slate-400">{site.pickDisclaimer}</p>
+            <DataSources only={[hl, al]} />
           </div>
 
           <div className="rounded-xl bg-panel border border-line p-4 space-y-2">

@@ -34,6 +34,18 @@ const fromFootballRow = (lg: string) => (g: any): ScoreGame => (g.home && typeof
 // Outside production, an empty live feed shows the labeled sample so the preview still demonstrates the UI.
 const demoFallback = __APP_ENV__ !== "production";
 
+// Larry memo 24: required data-source credits. The API's attribution field wins once it carries the full text;
+// until then (the engine currently sends a short "Data: ..." form) we show the memo's exact wording.
+export const REQUIRED_ATTRIBUTION: Record<string, string> = {
+  nfl: "NFL data: nflverse (github.com/nflverse/nflverse-data), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Modified by Op3x LLC (aggregated, modeled and simulated). Not affiliated with or endorsed by the NFL or nflverse.",
+  ncaaf: "Data provided by CollegeFootballData.com.",
+};
+export function attributionFor(id: string, api?: string): string | undefined {
+  const req = REQUIRED_ATTRIBUTION[id];
+  if (api && (!req || api.length >= req.length)) return api;
+  return req || api;
+}
+
 // /api/leagues rows: either League-shaped or the engine's SportModule rows {id, sport, name, rules:{periods}, ready}.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const fromLeagueRow = (l: any): League => {
@@ -41,7 +53,7 @@ const fromLeagueRow = (l: any): League => {
   const count = l.periods?.count ?? l.rules?.periods ?? mock?.periods.count ?? 4;
   return { id: String(l.id), sport: l.sport, name: mock?.name || String(l.name || l.id).toUpperCase(),
     periods: l.periods?.label ? l.periods : { count, label: count === 2 ? "Half" : "Quarter", short: count === 2 ? "H" : "Q" },
-    enabled: l.enabled ?? true };
+    enabled: l.enabled ?? true, attribution: attributionFor(String(l.id), l.attribution) };
 };
 export async function getLeagues(): Promise<Sourced<League[]>> {
   try {

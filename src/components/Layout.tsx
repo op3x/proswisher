@@ -2,6 +2,7 @@ import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { site, legal, LEGAL_DRAFT } from "../config/site";
 import { countView } from "../lib/runtime";
+import DataSources from "./DataSources";
 import Ticker from "./Ticker";
 
 export default function Layout() {
@@ -49,6 +50,7 @@ export default function Layout() {
           {LEGAL_DRAFT && <p className="text-[11px] uppercase tracking-wider text-amber-400">{legal.draftNotice}</p>}
           <p className="text-slate-300">{site.footerDisclaimer}</p>
           <p className="text-xs">{site.dataCredit}</p>
+          <DataSources />
           {/* Sal #10: 44px tap targets */}
           <nav aria-label="Footer" className="flex flex-wrap gap-x-4">
             {site.footerLinks.map((l) => <Link key={l.to} to={l.to} className="inline-flex items-center min-h-11 text-slate-300 underline underline-offset-4 hover:text-white">{l.label}</Link>)}

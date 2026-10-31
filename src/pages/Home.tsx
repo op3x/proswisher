@@ -63,7 +63,7 @@ export default function Home() {
       </section>
       <section id="slate">
         <div className="flex items-baseline gap-2 mb-3">
-          <h2 className="text-lg font-bold">Live and upcoming</h2>
+          <h2 className="text-lg font-bold">Upcoming games</h2>
           {sched?.source === "sample" && <span className="rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 text-[11px] font-semibold">Sample data</span>}
           <span className="ml-auto text-xs text-slate-400">Times in Central Time</span>
         </div>

@@ -202,7 +202,7 @@ export const site = {
     { to: "/contact", label: "Contact" },
     { to: "/faq", label: "FAQ" },
   ],
-  dataCredit: "Football data: nflverse (NFL) and CollegeFootballData.com (NCAAF), refreshed daily at 4 AM CT. Simulated plays use position labels only.",
+  dataCredit: "Football data refreshed daily at 4 AM CT. Simulated plays use position labels only.",
   // Ingus 10:00: required GeoLite2 attribution (MaxMind EULA). Footer, every page.
   geoCredit: "This product includes GeoLite2 data created by MaxMind, available from https://www.maxmind.com",
   empty: {

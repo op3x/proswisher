@@ -10,6 +10,7 @@ export interface League {
   sport: Sport;
   periods: { count: number; label: string; short: string }; // football: 4 quarters "Q"; basketball: 4 quarters / 2 halves
   enabled: boolean;      // false = "coming soon" in the picker
+  attribution?: string;  // data-source credit from /api/leagues (Larry memo 24)
 }
 
 export interface Team { id: string; name: string } // name = plain-text "City Name" (e.g. "Chicago Bears"), never logos

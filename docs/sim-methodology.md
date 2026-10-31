@@ -1,4 +1,4 @@
-# Simculus football sim: methodology and honest validation (v1 + rigor steps 1, 2, 4; 2026-10-31)
+# Simculus football sim: methodology and honest validation (v1 + rigor steps 1, 2, 4, 5, Q2 fix; 2026-10-31)
 
 Status: v1 slice. Everything below is what the code does today. Pending items are listed at the end.
 Numbers come from /workspace/proswisher/scratch/bt3 (rows.json, results.json) and research/backtest-nfl/report.json + calibration.png.
@@ -151,14 +151,58 @@ Finding: game totals are right, but the engine moves about 1.1 points of scoring
 predictions are no better than a constant per-quarter mean. Quarter-level outputs should be read as a shape, not a forecast. Fix candidates:
 end-of-half pace/aggressiveness from pbp, or a fitted per-quarter scoring-rate term; not done yet.
 
+## 5d. Q2 scoring shape: end-of-half clock and two-minute logic (2026-10-31)
+Diagnosis (nflverse pbp 2018-2022 regular season, training years only): real teams score 4.87 points per game in the last 2:00 of Q2,
+2.16 in 2:00-5:00 and 7.33 earlier in Q2. The step-2 engine scored 2.91 in the last 2:00 of Q2 (and 1.6 vs 2.5 in the last 2:00 of Q4),
+because only a trailing or tied team hurried before half-time and nobody used timeouts.
+Fix (server/sim/engine.mjs; both leagues):
+- In Q2, both teams use the two-minute offense inside the last `halfHurrySec` seconds, whatever the score.
+- Each team has 3 timeouts per half. Inside the last 2:00 of each half, after an in-bounds play (run, completion, sack) the side that wants
+  the clock stopped uses one: a hurrying offense, or in Q4 a trailing defense. The play then costs 5 s instead of its full run-off.
+- `halfHurrySec` = 90 was chosen by matching the 2018-2022 Q2 last-2:00 scoring (sim 4.99 vs real 4.87 at 90 s; 120 s gave 5.8 because
+  the timeouts already add points). Test games were not used.
+
+Per-quarter result, same 963 test games and harness as 5c:
+
+| quarter | actual mean total | step-2 sim (bias) | Q2-fix sim (bias) | MAE step 2 -> fix | MAE of a constant |
+|---|---|---|---|---|---|
+| Q1 | 8.83 | 9.89 (+1.06) | 9.36 (+0.53) | 4.60 -> 4.49 | 4.40 |
+| Q2 | 13.93 | 12.61 (-1.33) | 14.00 (+0.07) | 5.38 -> 5.35 | 5.40 |
+| Q3 | 9.30 | 9.89 (+0.60) | 9.37 (+0.08) | 4.74 -> 4.69 | 4.76 |
+| Q4 | 12.98 | 12.80 (-0.18) | 12.49 (-0.49) | 6.03 -> 6.03 | 5.97 |
+
+Game level (all 963): Brier 0.2230 -> 0.2237, log loss 0.6376 -> 0.6393, margin MAE 10.17 -> 10.17, total MAE 10.64 -> 10.66;
+coverage margin 78.6/94.6 -> 78.9/95.0, total 81.9/95.1 -> 82.9/95.8. The Brier change is +0.0007 with a paired SE of 0.0008, so it is
+noise-level (by season 2023 0.2306->0.2325, 2024 0.2125->0.2150, 2025 0.2224->0.2211, 2026 0.2322->0.2302). Adopted for the quarter shape;
+game-level accuracy is unchanged within error. Remaining: Q4 last 2:00 is still short (2.0 vs 2.5) and Q1 is still +0.5.
+
+**Quarter display.** Taking the median of each quarter on its own snaps to 7 (or 3/0), because quarter scores are lumpy, and those medians need not
+add up to the median final. The Monte Carlo output now has `periodLine`: each team's mean scoring shape by quarter, scaled to its median
+final and rounded by largest remainder, so the quarters add up exactly to the final (example: 21-24 game -> 4/7/4/6 and 5/7/5/7, where the
+per-quarter medians were 3/7/3/7 and 6/7/6/7). `medianByPeriod` is kept for compatibility, with a note to show `periodLine` instead.
+
+## 5e. Win-probability recalibration: tested, not adopted (2026-10-31)
+Fitted on out-of-sample sim rows only (walk-forward: each test game is recalibrated with a map fitted on games before it; or an Elo-trained
+map fitted on 2010-2022 Elo margins). Step-2 rows, Brier / log loss:
+
+| method | all 963 games | 2024 onward |
+|---|---|---|
+| raw sim WP (production) | **0.2230 / 0.6376** | 0.2198 / 0.6309 |
+| Platt on Elo-trained margin map (fit 2010-2022, a=0.0076, b=0.1554) | 0.2231 / 0.6381 | **0.2193 / 0.6299** |
+| walk-forward Platt on logit(WP) | 0.2234 / 0.6386 | 0.2204 / 0.6324 |
+| walk-forward Platt on sim margin | 0.2235 / - | 0.2205 / - |
+| walk-forward isotonic | 0.2256 / 0.6446 | 0.2235 / 0.6408 |
+
+No method improves consistently out of sample (the one 2024+ gain is 0.0005 and it loses on all games), so the raw sim WP stays.
+
 ## 6. Pending from the rigor brief
 1. (Done 5a; not adopted, Elo won.) Ridge regression per pass and run unit (EPA ~ off + def + HFA + situation) with exponential decay / Kalman recency and a Bayesian prior
    regressed to preseason, weight chosen by rolling CV. scripts/football/linalg.py has the pure-Python solvers (weighted ridge with prior mean, logistic Newton with SEs,
    multinomial logit) and is unit-tested. It is not wired in yet.
 2. Fitted logistic/multinomial play sub-models (play call, completion, sack, INT, fumble, FG by distance, 4th-down choice) evaluated by out-of-sample log loss against the
    current bucket tables. The bucket tables stay unless they are beaten.
-3. Optional market calibration (keep raw + calibrated outputs).
-4. (Done 5c; error measured, Q2 under-scoring found, not fixed yet.) Per-quarter error vs actual quarter scores.
+3. Optional market calibration (keep raw + calibrated outputs). Statistical WP recalibration tested in 5e, not adopted.
+4. (Done 5c + 5d: Q2 under-scoring fixed with end-of-half hurry and timeouts.) Per-quarter error vs actual quarter scores.
 5. (Done 5b: home bias root-caused and fixed; total intervals fixed.) Sensitivity analysis (half-life, lambda covered in 5a; n sims, HFA pending).
 6. NCAAF: its own engine parameters, a CFBD walk-forward backtest, and an HFA check.
 7. Generic backtest harness keyed by SportModule (today backtest.mjs is football-specific; the MC runner, API and scheduler hook are generic).

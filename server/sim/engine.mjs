@@ -7,9 +7,9 @@
 
 export const RULES = {
   nfl: { league: "nfl", quarterSec: 900, otSec: 600, otSecPlayoff: 900, twoMinuteWarning: true, firstDownStopsLate: false,
-         tempo: 1.0, ot: "nfl", safetyFreeKickStart: 60, fgMaxDist: 66, fgSnapAdd: 17, twoPointFrom: 2 },
+         tempo: 1.0, halfHurrySec: 90, timeouts: 3, ot: "nfl", safetyFreeKickStart: 60, fgMaxDist: 66, fgSnapAdd: 17, twoPointFrom: 2 },
   ncaaf: { league: "ncaaf", quarterSec: 900, otSec: 0, otSecPlayoff: 0, twoMinuteWarning: false, firstDownStopsLate: true,
-           tempo: 0.88, ot: "ncaaf", safetyFreeKickStart: 60, fgMaxDist: 62, fgSnapAdd: 17, twoPointFrom: 3 },
+           tempo: 0.88, halfHurrySec: 90, timeouts: 3, ot: "ncaaf", safetyFreeKickStart: 60, fgMaxDist: 62, fgSnapAdd: 17, twoPointFrom: 3 },
 };
 
 export function mulberry32(seed) {
@@ -33,7 +33,8 @@ const DIST4 = (t) => (t <= 1 ? "1" : t <= 3 ? "2-3" : t <= 6 ? "4-6" : "7+");
 
 /** Turn the params JSON into fast lookup structures (do once per params object). */
 export function prepare(params, league = params.league || "nfl") {
-  const rules = RULES[league]; if (!rules) throw new Error(`unknown league ${league}`);
+  if (!RULES[league]) throw new Error(`unknown league ${league}`);
+  const rules = { ...RULES[league], ...(params.rules || {}) };   // fitted per-league overrides (e.g. NCAAF tempo)
   const clock = {}; for (const [k, h] of Object.entries(params.clock)) clock[k] = prepHist(h);
   const punt = {}; for (const [k, h] of Object.entries(params.punt.landing)) punt[k] = prepHist(h);
   const call = {}; for (const [k, [p, t]] of Object.entries(params.playCall)) call[k] = { p, t };
@@ -64,6 +65,7 @@ export function simulateGame(S, opts) {
   const qs = { H: [0, 0, 0, 0], A: [0, 0, 0, 0] };
   const other = (s) => (s === "H" ? "A" : "H");
   let qtr = 1, clock = rules.quarterSec, poss = "H", yl = 75, down = 1, togo = 10;
+  const tos = { H: rules.timeouts || 0, A: rules.timeouts || 0 };
   let ended = false, inOT = false, otPossessions = 0, otPeriod = 0, driveOver = false;
   const firstReceiver = rng() < 0.5 ? "H" : "A";
 
@@ -77,7 +79,7 @@ export function simulateGame(S, opts) {
   const sit = () => {
     const sd = score[poss] - score[other(poss)];
     if (qtr === 4 && clock <= 600 && sd > 0) return "late_lead";
-    if ((qtr === 4 && clock <= 600 && sd < 0) || ((qtr === 2 || qtr === 4) && clock <= 120 && sd <= 0) || (inOT && sd <= 0)) return "hurry";
+    if ((qtr === 4 && clock <= 600 && sd < 0) || (qtr === 2 && clock <= S.rules.halfHurrySec) || (qtr === 4 && clock <= 120 && sd <= 0) || (inOT && sd <= 0)) return "hurry";
     return "norm";
   };
   const shiftYards = (y, t) => { const s = t * 1.0; const f = Math.floor(s); return y + f + (rng() < s - f ? 1 : 0); };
@@ -88,6 +90,13 @@ export function simulateGame(S, opts) {
     const h = S.clock[key] || S.clock["norm:" + cat];
     let el = h ? sample(h, rng) : 6;
     el = Math.round(el * rules.tempo);
+    // timeouts (3 per team per half) inside the last two minutes of each half: the side that wants the clock stopped
+    // (a hurrying offense, or a trailing defense) stops it after an in-bounds play. Each saves the run-off beyond ~5 s.
+    if (rules.timeouts && (qtr === 2 || qtr === 4) && !inOT && clock <= 120 && (cat === "run" || cat === "complete" || cat === "sack") && el > 5) {
+      const d = other(poss), sd = score[poss] - score[d];
+      const who = sit() === "hurry" && tos[poss] > 0 ? poss : tos[d] > 0 && qtr === 4 && sd > 0 ? d : null;
+      if (who) { tos[who]--; el = 5; }
+    }
     if (rules.firstDownStopsLate && firstDown && (qtr === 2 || qtr === 4) && clock <= 120) el = Math.min(el, 8);
     if (rules.twoMinuteWarning && (qtr === 2 || qtr === 4) && !inOT && clock > 120 && clock - el < 120) { clock = 120; return; }
     clock -= el;
@@ -274,7 +283,7 @@ export function simulateGame(S, opts) {
       }
     }
     if (qtr === 1 || qtr === 3) { log("end_quarter", `End of quarter ${qtr}`); qtr++; clock = rules.quarterSec; continue; }
-    if (qtr === 2) { log("end_half", "Halftime"); qtr = 3; clock = rules.quarterSec; kickoff(firstReceiver); continue; }
+    if (qtr === 2) { log("end_half", "Halftime"); qtr = 3; clock = rules.quarterSec; tos.H = tos.A = rules.timeouts || 0; kickoff(firstReceiver); continue; }
     if (qtr === 4) {
       if (score.H !== score.A) break;
       // overtime

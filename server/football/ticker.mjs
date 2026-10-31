@@ -1,19 +1,28 @@
 // Light live-score ticker. Polls ONLY while a game is in its window (kickoff-15 min .. kickoff+5 h, not final).
-//  NFL : balldontlie NFL /games (free tier: real-time scores for in-progress games, 5 req/min shared with the legacy
-//        NBA pipeline) every FOOTBALL_TICKER_NFL_SEC (default 120 s) when BALLDONTLIE_API_KEY is set; otherwise the
-//        nflverse schedules file (finals only) via conditional GET every 10 min.
-//  NCAAF: no free live source exists (CFBD /scoreboard is a paid tier; balldontlie NCAAF is paid). With CFBD_API_KEY we
-//        poll CFBD /games for the current week every FOOTBALL_TICKER_NCAAF_MIN (default 60) min, counted against the
-//        same monthly CFBD budget as the daily refresh. Scores there are final/near-final, not live.
-// TODO(Larry, legal clearance): the live NFL source (balldontlie) is NOT cleared yet. It stays OFF unless
-//   FOOTBALL_TICKER_LIVE_CLEARED=true, which must only be set after Larry signs off on
-//   /workspace/proswisher/research/data-sources-terms.md (balldontlie aggregates from undisclosed third-party sources;
-//   no ESPN data is allowed). Until then the NFL ticker shows nflverse finals only.
+//  NFL : balldontlie NFL /games every FOOTBALL_TICKER_NFL_SEC (default 120 s), ONLY when BALLDONTLIE_API_KEY is set AND
+//        FOOTBALL_TICKER_LIVE_CLEARED=true. Otherwise the nflverse schedules file (finals only) via conditional GET
+//        every 10 min.
+//  NCAAF: finals only, from CFBD /games (hourly, counted against the monthly CFBD budget). balldontlie is NEVER used
+//        for NCAAF (memo 24). Live college scores need CFBD Tier 1, which needs Ryan's approval.
+// Larry memo 24 (Oct 31, 2026) cleared balldontlie NFL with conditions B1-B5:
+//  B1 only teams, score, quarter, clock and status are kept or shown (pickLive whitelist); never summary, venue or play text.
+//  B2 /api/football/ticker is same-origin only, no CORS, rate-limited, undocumented, no bulk/historical params (routes.mjs).
+//  B3 never "official"; the not-affiliated disclaimer rides on every response.
+//  B4 the NFL ALL-STAR plan ($9.99/mo) must be bought first, which needs Ryan's approval. Until then the flag stays OFF.
+//  B5 key server-side only; poll only in game windows; no workarounds when throttled or blocked.
 // A 401/403, or a 429 twice in a row, STOPS that source until the next deploy. Never routed around.
 import fs from "node:fs";
 import path from "node:path";
 
 export const liveNflCleared = (env) => String(env.FOOTBALL_TICKER_LIVE_CLEARED || "").toLowerCase() === "true";
+const STATUSES = new Set(["scheduled", "live", "halftime", "final", "postponed", "canceled", "delayed"]);
+/** B1 whitelist: the ONLY fields a live/final score may carry. Anything else in the vendor payload is dropped. */
+export function pickLive({ homeScore = null, awayScore = null, quarter = null, clock = null, status = null } = {}) {
+  const int = (v) => (Number.isInteger(Number(v)) && v !== null && v !== "" ? Number(v) : null);
+  const q = int(quarter);
+  return { homeScore: int(homeScore), awayScore: int(awayScore), quarter: q && q >= 1 && q <= 6 ? q : null,
+           clock: /^\d{1,2}:\d{2}$/.test(String(clock ?? "")) ? String(clock) : null, status: STATUSES.has(status) ? status : null };
+}
 export const BDL_ALIASES = { WSH: "WAS", LAR: "LA", JAC: "JAX", OAK: "LV", SD: "LAC", STL: "LA" };
 const WINDOW_BEFORE = 15 * 60e3, WINDOW_AFTER = 5 * 3600e3;
 
@@ -39,7 +48,7 @@ export function inWindow(g, now) {
 }
 
 export function createTicker({ store, env = process.env, privateDir = "", fetchImpl = globalThis.fetch, log = console.log, now = () => Date.now() } = {}) {
-  const live = new Map(); // game id -> override {homeScore, awayScore, status, detail, source, at}
+  const live = new Map(); // game id -> override {homeScore, awayScore, quarter, clock, status, source, at} (pickLive whitelist)
   const src = {
     balldontlie: { blocked: null, last: 0, strikes: 0, every: Number(env.FOOTBALL_TICKER_NFL_SEC || 120) * 1000 },
     nflverse: { blocked: null, last: 0, strikes: 0, every: 10 * 60e3, etag: null },
@@ -75,7 +84,7 @@ export function createTicker({ store, env = process.env, privateDir = "", fetchI
   }
 
   async function pollNfl(active) {
-    if (env.BALLDONTLIE_API_KEY && liveNflCleared(env)) {   // TODO(Larry): live source pending legal clearance
+    if (env.BALLDONTLIE_API_KEY && liveNflCleared(env)) {   // memo 24 B4: flag stays off until Ryan approves the paid plan
       if (!due("balldontlie")) return;
       src.balldontlie.last = now();
       const dates = [...new Set(active.map((g) => new Date(Date.parse(g.kickoff) - 5 * 3600e3).toISOString().slice(0, 10)))];
@@ -87,8 +96,9 @@ export function createTicker({ store, env = process.env, privateDir = "", fetchI
         const h = BDL_ALIASES[x.home_team?.abbreviation] || x.home_team?.abbreviation, a = BDL_ALIASES[x.visitor_team?.abbreviation] || x.visitor_team?.abbreviation;
         const g = active.find((y) => y.home === h && y.away === a) || store.games("nfl").find((y) => y.home === h && y.away === a && Math.abs(Date.parse(y.kickoff) - Date.parse(x.date)) < 36 * 3600e3);
         if (!g) continue;
-        const st = x.status_state === "final" ? "final" : x.status_state === "in_progress" ? "live" : x.status_state || "scheduled";
-        live.set(g.id, { homeScore: x.home_team_score ?? null, awayScore: x.visitor_team_score ?? null, status: st, detail: x.status || null, source: "balldontlie", at: new Date(now()).toISOString() });
+        const st = x.status_state === "final" ? "final" : x.status_state === "in_progress" ? "live" : x.status_state === "pre" ? "scheduled" : null;
+        // B1: never read summary, venue or any play text from the payload.
+        live.set(g.id, { ...pickLive({ homeScore: x.home_team_score, awayScore: x.visitor_team_score, quarter: x.period ?? x.quarter, clock: x.time ?? x.clock, status: st }), source: "balldontlie", at: new Date(now()).toISOString() });
       }
       return;
     }
@@ -100,7 +110,7 @@ export function createTicker({ store, env = process.env, privateDir = "", fetchI
     const rows = parseCsv(await r.text());
     for (const g of active) {
       const x = rows.find((y) => y.game_id === g.id);
-      if (x && x.home_score !== "" && x.home_score !== "NA") live.set(g.id, { homeScore: Number(x.home_score), awayScore: Number(x.away_score), status: "final", detail: "Final", source: "nflverse", at: new Date(now()).toISOString() });
+      if (x && x.home_score !== "" && x.home_score !== "NA") live.set(g.id, { ...pickLive({ homeScore: x.home_score, awayScore: x.away_score, status: "final" }), source: "nflverse", at: new Date(now()).toISOString() });
     }
   }
 
@@ -114,7 +124,8 @@ export function createTicker({ store, env = process.env, privateDir = "", fetchI
     if (!r || !r.ok) return;
     for (const x of await r.json()) {
       const g = active.find((y) => y.id === String(x.id));
-      if (g && x.homePoints != null) live.set(g.id, { homeScore: x.homePoints, awayScore: x.awayPoints, status: x.completed ? "final" : "live", detail: x.completed ? "Final" : "In progress (delayed)", source: "cfbd", at: new Date(now()).toISOString() });
+      // College shows finals only (memo 24): in-progress scores are ignored unless CFBD Tier 1 is approved later.
+      if (g && x.completed && x.homePoints != null) live.set(g.id, { ...pickLive({ homeScore: x.homePoints, awayScore: x.awayPoints, status: "final" }), source: "cfbd", at: new Date(now()).toISOString() });
     }
   }
 
@@ -136,18 +147,18 @@ export function createTicker({ store, env = process.env, privateDir = "", fetchI
         const o = live.get(g.id) || {};
         out.push({ league: lg, id: g.id, kickoff: g.kickoff, home: g.home, away: g.away, homeName: g.homeName, awayName: g.awayName,
           homeScore: o.homeScore ?? g.homeScore ?? null, awayScore: o.awayScore ?? g.awayScore ?? null,
-          status: o.status || g.status, detail: o.detail || null, source: o.source || "daily refresh", updatedAt: o.at || null });
+          quarter: o.quarter ?? null, clock: o.clock ?? null, status: o.status || g.status, source: o.source || "daily refresh", updatedAt: o.at || null });
       }
     }
     out.sort((a, b) => (a.kickoff < b.kickoff ? -1 : 1));
     return { games: out, sources: Object.fromEntries(Object.entries(src).map(([k, v]) => [k, { blocked: v.blocked, lastPoll: v.last ? new Date(Math.min(v.last, now())).toISOString() : null }])),
-             notes: [liveNflCleared(env) && env.BALLDONTLIE_API_KEY ? "NFL live scores via balldontlie." : "NFL live scores are off pending legal clearance of the live source (TODO Larry); NFL shows finals from nflverse only.", "NCAAF: no free live source; scores update at most hourly from CFBD when CFBD_API_KEY is set."] };
+             notes: [liveNflCleared(env) && env.BALLDONTLIE_API_KEY ? "NFL live scores via balldontlie." : "NFL live scores are off until the paid live plan is approved; NFL shows finals from nflverse only.", "NCAAF shows final scores only (CollegeFootballData.com, at most hourly)."] };
   }
 
   function start() {
     if (/^(0|false|no|off)$/i.test(String(env.FOOTBALL_TICKER_ENABLED ?? "true"))) { log("[ticker] disabled (FOOTBALL_TICKER_ENABLED=false)"); return; }
     timer = setInterval(tick, 30e3); timer.unref?.();
-    log(`[ticker] on: NFL via ${env.BALLDONTLIE_API_KEY && liveNflCleared(env) ? "balldontlie (live)" : "nflverse (finals only; live source pending legal clearance, TODO Larry)"}; NCAAF ${env.CFBD_API_KEY ? "via CFBD (hourly, not live)" : "off (no CFBD_API_KEY)"}`);
+    log(`[ticker] on: NFL via ${env.BALLDONTLIE_API_KEY && liveNflCleared(env) ? "balldontlie (live)" : "nflverse (finals only; live plan not approved yet)"}; NCAAF ${env.CFBD_API_KEY ? "finals via CFBD (hourly)" : "off (no CFBD_API_KEY)"}`);
   }
   return { tick, snapshot, start, stop: () => clearInterval(timer), sources: src, live };
 }

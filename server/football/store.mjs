@@ -6,7 +6,8 @@ import { sportForLeague } from "../sports/index.mjs";
 import { buildCurve, runMonteCarlo } from "../sim/montecarlo.mjs";
 
 export const LEAGUES = ["nfl", "ncaaf"];
-export const ATTRIBUTION = { nfl: "Data: nflverse (CC-BY 4.0)", ncaaf: "Data: CollegeFootballData.com" };
+import { ATTRIBUTION, NFL_ATTRIBUTION, NCAAF_ATTRIBUTION } from "./attribution.mjs";
+export { ATTRIBUTION, NFL_ATTRIBUTION, NCAAF_ATTRIBUTION };
 // Larry's binding rules (Oct 31): betting disclaimers + non-affiliation line; teams as plain-text "City Name" only; no
 // player names/likenesses, logos, helmets or mascot art anywhere (UI, play logs, API).
 export const disclaimer = (name) => `${name} provides sports simulations and predictions for entertainment and informational purposes only. ` +
@@ -48,7 +49,7 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
     const cur = x.ratings.season;
     if (season == null || Number(season) === cur) {
       const t = x.ratings.teams.find((r) => r.team === team || r.name.toLowerCase() === String(team).toLowerCase());
-      return t ? { team: t.team, name: t.name, off: t.off, def: t.def, season: cur, model: x.ratings.model } : null;
+      return t ? { team: t.team, name: t.name, off: t.off, def: t.def, elo: t.elo ?? null, season: cur, model: x.ratings.model, marginModel: x.ratings.marginModel || null } : null;
     }
     const h = x.history?.seasons?.[String(season)];
     const key = h && (h[team] ? team : Object.keys(h).find((k) => k.toLowerCase() === String(team).toLowerCase()));
@@ -68,6 +69,12 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
     if (home.league === away.league) {
       const model = h.season === a.season ? h.model : L[home.league].ratings.model;
       H = pts(model, h.off, a.def, site); A = pts(model, a.off, h.def, -site);
+      // Rigor step 1: same-season matchups take the margin from Elo (better out of sample), the total from EPA ratings.
+      const mm = h.marginModel;
+      if (h.season === a.season && mm?.type === "elo" && h.elo != null && a.elo != null) {
+        const tot = H + A, mg = (h.elo - a.elo + mm.hfa * site) / mm.per_pt;
+        H = (tot + mg) / 2; A = (tot - mg) / 2;
+      }
       if (h.season !== a.season) notes.push("Cross-era: each team's ratings are relative to its own season's league average.");
     } else {
       rules = "nfl"; // mixed level: NFL rules

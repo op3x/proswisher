@@ -7,10 +7,10 @@ No logos or league/team marks are used: teams appear as plain-text names only (t
 
 | League | Source | Licence / terms | Needs |
 |---|---|---|---|
-| NFL | nflverse play-by-play + schedules (GitHub releases) | CC-BY 4.0. Attribution shown in the API: **"Data: nflverse (CC-BY 4.0)"** | nothing |
-| NCAAF | CollegeFootballData.com (CFBD) `/games`, `/ppa/games` | free tier, 1,000 calls/month; raw data is **not redistributed**, only derived ratings/sims are served | `CFBD_API_KEY` |
-| Live NFL ticker | balldontlie `/nfl/v1/games` (free, 5 req/min). **TODO(Larry): OFF pending legal clearance** | existing key | `BALLDONTLIE_API_KEY` + `FOOTBALL_TICKER_LIVE_CLEARED=true` (default off: nflverse finals only) |
-| Live NCAAF ticker | CFBD `/games` for the current week, hourly | counts against the same 800-call self-cap | `CFBD_API_KEY` |
+| NFL | nflverse `pbp` + `schedules` releases only (CC BY 4.0) | Attribution (API `attribution`/`source`): **"NFL data: nflverse (github.com/nflverse/nflverse-data), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Modified by Op3x LLC (aggregated, modeled and simulated). Not affiliated with or endorsed by the NFL or nflverse."** Banned and test-enforced: FTN charting, participation, Next Gen Stats, PFR/ESPN/OverTheCap-sourced releases, the teams file (logo URLs). Raw play rows never published; odds columns backtest-only | nothing |
+| NCAAF | CollegeFootballData.com (CFBD) `/games`, `/ppa/games` | **"Data provided by CollegeFootballData.com."** Key server-side only; derived output only, no raw-data endpoint or bulk download; never called "official" | `CFBD_API_KEY` |
+| Live NFL scores | balldontlie `/nfl/v1/games`. Cleared with conditions (Larry memo 24) but **OFF** until Ryan approves the NFL ALL-STAR plan ($9.99/mo) | teams, score, quarter, clock and status only | `BALLDONTLIE_API_KEY` + `FOOTBALL_TICKER_LIVE_CLEARED=true` (default off: nflverse finals only) |
+| NCAAF scores | CFBD `/games`, hourly, **finals only** (live needs CFBD Tier 1, not approved). balldontlie is never used for NCAAF | counts against the same 800-call self-cap | `CFBD_API_KEY` |
 
 Not used: Sportradar, Sports Reference, ESPN, and nflverse FTN/participation files (CC-BY-SA).
 
@@ -33,7 +33,9 @@ after resolving it. One league failing never stops the other.
 Only polls while a game is inside its window (kickoff −15 min to +5 h, not final). NFL: balldontlie every 120 s
 (`FOOTBALL_TICKER_NFL_SEC`) — at most 1 call per poll, under the 5/min limit, but **shared with the legacy NBA pipeline**
 (set `LEGACY_NBA_PIPELINE=false`). Without the key: nflverse `games.csv` with ETag every 10 min (final scores only).
-NCAAF: CFBD every 60 min (`FOOTBALL_TICKER_NCAAF_MIN`). 401/403 or two 429s in a row stop that source until the next deploy.
+NCAAF: CFBD every 60 min (`FOOTBALL_TICKER_NCAAF_MIN`), finals only.
+The score feed for our own front end is same-origin only, sends no CORS header, is rate-limited per client
+(`FOOTBALL_TICKER_RATE_PER_MIN`, default 30) and takes no query parameters. 401/403 or two 429s in a row stop that source until the next deploy.
 
 ## Ratings (`scripts/football/ratings.py`)
 Offense and defense EPA per play (nflverse EPA for NFL, CFBD PPA for NCAAF), opponent-adjusted by a ridge-regularised
@@ -64,7 +66,6 @@ A CFBD play-level fit is Phase 2. NCAAF has not been backtested (no key availabl
 * `GET /api/football/games?league&week&status&upcoming`
 * `GET /api/football/games/:id/sim` (`?plays=0` omits the log) · `GET /api/football/games/:id/plays` (play log)
 * `GET /api/football/sim?home&away[&league&homeLeague&awayLeague&homeSeason&awaySeason&neutral&n&seed]` (N capped, concurrency-limited, cached)
-* `GET /api/football/ticker`
 
 ## NFL backtest (walk-forward, honest numbers)
 Method: test seasons 2023–2026 (through week 8 of 2026), 963 games. For each game, ratings use only plays from

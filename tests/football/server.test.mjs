@@ -5,7 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import { EventEmitter } from "node:events";
 import { nextRunAt, createFootballPipeline, FOOTBALL_CHILD_ENV } from "../../server/football/scheduler.mjs";
-import { createTicker, parseCsv, inWindow } from "../../server/football/ticker.mjs";
+import { createTicker, parseCsv, inWindow, pickLive } from "../../server/football/ticker.mjs";
+import { tickerGuard } from "../../server/football/routes.mjs";
+import { NFL_ATTRIBUTION, NCAAF_ATTRIBUTION } from "../../server/football/attribution.mjs";
 import { createFootballStore } from "../../server/football/store.mjs";
 import { createApp } from "../../server/index.mjs";
 import { createCounter } from "../../server/counter.mjs";
@@ -71,13 +73,16 @@ test("ticker: balldontlie scores mapped (WSH->WAS); 403 stops the source for goo
   const calls = [];
   let status = 200;
   const fetchImpl = async (url, o) => { calls.push({ url, auth: o.headers.Authorization }); return { status, ok: status === 200, headers: new Map(),
-    json: async () => ({ data: [{ home_team: { abbreviation: "BUF" }, visitor_team: { abbreviation: "WSH" }, date: new Date().toISOString(), status: "3rd Quarter", status_state: "in_progress", home_team_score: 17, visitor_team_score: 10 }] }) }; };
+    json: async () => ({ data: [{ home_team: { abbreviation: "BUF" }, visitor_team: { abbreviation: "WSH" }, date: new Date().toISOString(), status: "3rd Quarter", status_state: "in_progress", home_team_score: 17, visitor_team_score: 10,
+      period: 3, time: "7:12", summary: "AP-STYLE HEADLINE TEXT", venue: "SOME STADIUM NAME", plays: [{ text: "PLAY TEXT" }] }] }) }; };
   let t = Date.now(); const logs = [];
   const tk = createTicker({ store, env: { BALLDONTLIE_API_KEY: "bdl", FOOTBALL_TICKER_LIVE_CLEARED: "true" }, fetchImpl, log: (m) => logs.push(m), now: () => t });
   await tk.tick();
   assert.equal(calls.length, 1); assert.match(calls[0].url, /api\.balldontlie\.io\/nfl\/v1\/games\?dates\[\]=/);
   const g = tk.snapshot().games.find((x) => x.id === "2026_09_WAS_BUF");
-  assert.deepEqual([g.homeScore, g.awayScore, g.status], [17, 10, "live"]);
+  assert.deepEqual([g.homeScore, g.awayScore, g.status, g.quarter, g.clock], [17, 10, "live", 3, "7:12"]);
+  const blob = JSON.stringify(tk.snapshot());
+  assert.ok(!/HEADLINE|STADIUM|PLAY TEXT|summary|venue|detail/.test(blob), "memo 24 B1: no summary, venue or play text");
   await tk.tick(); assert.equal(calls.length, 1, "respects the poll interval");
   status = 403; t += 121e3; await tk.tick();
   assert.ok(tk.snapshot().sources.balldontlie.blocked);
@@ -86,14 +91,14 @@ test("ticker: balldontlie scores mapped (WSH->WAS); 403 stops the source for goo
   assert.ok(!logs.join(" ").includes("bdl"));
 });
 
-test("ticker: live NFL source stays off until legal clears it (TODO Larry), even with a key", async () => {
+test("ticker: live NFL source stays off until the paid plan is approved (memo 24 B4), even with a key", async () => {
   const d = fixtureDir(); const store = createFootballStore({ publicDir: d, log: quiet }); store.load();
   const urls = []; const fetchImpl = async (url) => { urls.push(url); return { status: 304, ok: false, headers: new Map() }; };
   const tk = createTicker({ store, env: { BALLDONTLIE_API_KEY: "bdl" }, fetchImpl, log: quiet });
   await tk.tick();
   assert.ok(urls.every((u) => !u.includes("balldontlie")), urls.join());
   assert.ok(urls.every((u) => !/espn/i.test(u)));
-  assert.match(tk.snapshot().notes.join(" "), /pending legal clearance/);
+  assert.match(tk.snapshot().notes.join(" "), /off until the paid live plan is approved/);
 });
 
 test("ticker: no live NCAAF without a key and no network at all when no game is in its window", async () => {
@@ -111,7 +116,7 @@ test("football API: teams, games, game sim with play log, custom and cross-era s
   try {
     const j = async (p) => { const r = await fetch(s.url + p); return { status: r.status, body: await r.json() }; };
     const teams = await j("/api/football/teams?league=nfl");
-    assert.equal(teams.status, 200); assert.equal(teams.body.teams.length, 4); assert.equal(teams.body.attribution, "Data: nflverse (CC-BY 4.0)");
+    assert.equal(teams.status, 200); assert.equal(teams.body.teams.length, 4); assert.equal(teams.body.attribution, NFL_ATTRIBUTION);
     assert.equal((await j("/api/football/teams?league=ncaaf")).status, 503);
     assert.equal((await j("/api/football/teams?league=nba")).status, 400);
     assert.equal((await j("/api/football/games?league=nfl")).body.games.length, 2);
@@ -177,4 +182,72 @@ test("startup refresh runs when data is stale, or when NCAAF is missing but a CF
   assert.equal(await runs({ CFBD_API_KEY: "test-placeholder" }), 1);
   write({ generatedAt: "2026-10-29T20:00:00Z", nfl: { ok: true }, ncaaf: { ok: true } });
   assert.equal(await runs({}), 1);
+});
+
+test("memo 24: exact attribution strings; nothing calls the data official", () => {
+  assert.equal(NFL_ATTRIBUTION, "NFL data: nflverse (github.com/nflverse/nflverse-data), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Modified by Op3x LLC (aggregated, modeled and simulated). Not affiliated with or endorsed by the NFL or nflverse.");
+  assert.equal(NCAAF_ATTRIBUTION, "Data provided by CollegeFootballData.com.");
+  for (const f of ["server/football/ticker.mjs", "server/football/routes.mjs", "server/football/store.mjs", "server/sports/football/index.mjs", "server/football/attribution.mjs"]) {
+    const src = fs.readFileSync(path.join(import.meta.dirname, "../..", f), "utf8").split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+    assert.ok(!/official/i.test(src.replace(/never "official"|never say "official"/gi, "")), `${f} must never call the data official`);
+  }
+});
+
+test("memo 24 B1: pickLive keeps only score, quarter, clock and status", () => {
+  assert.deepEqual(pickLive({ homeScore: "21", awayScore: 7, quarter: 2, clock: "0:45", status: "live", summary: "x", venue: "y" }),
+    { homeScore: 21, awayScore: 7, quarter: 2, clock: "0:45", status: "live" });
+  assert.deepEqual(pickLive({ quarter: "Halftime", clock: "End of 2nd", status: "weird" }), { homeScore: null, awayScore: null, quarter: null, clock: null, status: null });
+});
+
+test("memo 24: NCAAF shows finals only and never touches balldontlie", async () => {
+  const t = Date.now();
+  const games = [{ id: "401", season: 2026, week: 10, kickoff: new Date(t - 3600e3).toISOString(), status: "scheduled", home: "A", away: "B" },
+                 { id: "402", season: 2026, week: 10, kickoff: new Date(t - 3600e3).toISOString(), status: "scheduled", home: "C", away: "D" }];
+  const store = { games: (lg) => (lg === "ncaaf" ? games : []) };
+  const urls = [];
+  const fetchImpl = async (url) => { urls.push(url); return { status: 200, ok: true, headers: new Map(), json: async () => [
+    { id: 401, completed: false, homePoints: 14, awayPoints: 3 }, { id: 402, completed: true, homePoints: 28, awayPoints: 24 }] }; };
+  const priv = fs.mkdtempSync(path.join(os.tmpdir(), "tk-"));
+  const tk = createTicker({ store, env: { CFBD_API_KEY: "k", BALLDONTLIE_API_KEY: "bdl", FOOTBALL_TICKER_LIVE_CLEARED: "true" }, privateDir: priv, fetchImpl, log: () => {}, now: () => t });
+  await tk.tick();
+  assert.ok(urls.length === 1 && urls.every((u) => u.includes("collegefootballdata") && !u.includes("balldontlie")), urls.join());
+  assert.equal(tk.live.has("401"), false, "in-progress college scores are not shown");
+  assert.deepEqual({ ...tk.live.get("402"), at: undefined }, { homeScore: 28, awayScore: 24, quarter: null, clock: null, status: "final", source: "cfbd", at: undefined });
+});
+
+test("memo 24 B2: ticker endpoint is same-origin, no CORS, no params, rate-limited", async () => {
+  const d = fixtureDir();
+  const app = await createApp({ env: { APP_ENV: "preview", PUBLIC_DATA_DIR: d, FOOTBALL_TICKER_RATE_PER_MIN: "5" }, geoLookup: null, counter: createCounter({ enabled: false }), log: quiet });
+  const s = await serve(app);
+  try {
+    for (const p of ["/api/football/ticker", "/api/scores"]) {
+      const ok = await fetch(s.url + p, { headers: { "Sec-Fetch-Site": "same-origin" } });
+      assert.ok([200, 503].includes(ok.status)); assert.equal(ok.headers.get("access-control-allow-origin"), null);
+      assert.equal((await fetch(s.url + p, { headers: { Origin: "https://evil.example" } })).status, 403);
+      assert.equal((await fetch(s.url + p, { headers: { "Sec-Fetch-Site": "cross-site" } })).status, 403);
+      assert.equal((await fetch(s.url + p + "?season=2020&all=1")).status, 400, "no bulk or historical params");
+    }
+    const same = new URL(s.url).host;
+    assert.notEqual((await fetch(s.url + "/api/scores", { headers: { Origin: `http://${same}` } })).status, 403);
+    let last = 200; for (let i = 0; i < 6; i++) last = (await fetch(s.url + "/api/scores")).status;
+    assert.equal(last, 429, "rate-limited");
+    const docs = fs.readFileSync(path.join(import.meta.dirname, "../../docs/football-model.md"), "utf8");
+    assert.ok(!docs.includes("/api/football/ticker"), "ticker endpoint stays undocumented");
+  } finally { s.close(); }
+});
+
+test("rigor step 1: same-season margin comes from Elo, total from EPA ratings; cross-era keeps EPA", () => {
+  const d = fixtureDir(); const f = path.join(d, "football", "nfl", "ratings.json");
+  const r = JSON.parse(fs.readFileSync(f, "utf8"));
+  const base = createFootballStore({ publicDir: d, log: quiet }); base.load();
+  const m0 = base.matchup({ league: "nfl", team: "KC" }, { league: "nfl", team: "LV" });
+  r.marginModel = { type: "elo", k: 16, hfa: 36, keep: 0.5, mean: 1505, per_pt: 22 };
+  r.teams.find((t) => t.team === "KC").elo = 1505 + 110; r.teams.find((t) => t.team === "LV").elo = 1505;
+  fs.writeFileSync(f, JSON.stringify(r));
+  const s = createFootballStore({ publicDir: d, log: quiet }); s.load();
+  const m = s.matchup({ league: "nfl", team: "KC" }, { league: "nfl", team: "LV" });
+  assert.ok(Math.abs(m.target.H - m.target.A - (110 + 36) / 22) < 1e-9, "Elo margin");
+  assert.ok(Math.abs(m.target.H + m.target.A - (m0.target.H + m0.target.A)) < 1e-9, "EPA total unchanged");
+  const x = s.matchup({ league: "nfl", team: "KC", season: 2022 }, { league: "nfl", team: "LV" });
+  assert.ok(x.target.H > 0 && !Number.isNaN(x.target.A));
 });

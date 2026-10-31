@@ -18,7 +18,8 @@ sys.path.insert(0, os.path.dirname(HERE))
 
 from football import ratings as R, params as PR, teams as T
 from football.extract import extract_pbp, save_compact, load_compact, IDX
-from football.sources import SourceBlocked, NotConfigured, nfl_provider, ncaaf_provider
+from football import elo as E
+from football.sources import SourceBlocked, NotConfigured, nfl_provider, ncaaf_provider, NFL_ATTRIBUTION, NCAAF_ATTRIBUTION
 from football.timeutil import eastern_to_utc, iso
 
 NFL_FIRST_SEASON = 2019          # earliest season we keep ratings for (cross-era sims)
@@ -212,10 +213,21 @@ def refresh_nfl(pub, priv, blocks, now, prov=None):
     model = R.fit_points_model(asof_samples(obs, fit_games, cfg))
     model["fittedOn"] = f"{cur - POINTS_SEASONS}-{cur} completed games (ratings as of each game's week)"
     r = R.fit(obs, cur, at_week, cfg)
+    # rigor step 1: Elo carries the expected margin (beat EPA, unit ratings and blends out of sample), EPA the total
+    hist_games = []
+    for s in sorted({int(x["season"]) for x in sched}):
+        hist_games += nfl_schedule_games(sched, s)
+    elo_pre, elo_now = E.run_elo(hist_games)
     played = {}
     for g in done:
         played[g["home"]] = played.get(g["home"], 0) + 1; played[g["away"]] = played.get(g["away"], 0) + 1
-    wjson(os.path.join(out_dir, "ratings.json"), ratings_payload("nfl", r, model, T.NFL, cur, at_week, cfg, played))
+    rp = ratings_payload("nfl", r, model, T.NFL, cur, at_week, cfg, played)
+    for t in rp["teams"]:
+        if t["team"] in elo_now:
+            t["elo"] = round(elo_now[t["team"]], 1)
+    rp["marginModel"] = {"type": "elo", **E.NFL_ELO, "note": "expected margin = (elo_home - elo_away + hfa*site) / per_pt; expected total from the EPA points model"}
+    rp["source"] = NFL_ATTRIBUTION
+    wjson(os.path.join(out_dir, "ratings.json"), rp)
 
     # cross-era snapshots: end-of-season ratings for each past season we hold
     hist = {"model": model, "seasons": {}}
@@ -230,9 +242,14 @@ def refresh_nfl(pub, priv, blocks, now, prov=None):
     for g in cur_games:
         if g["status"] != "final":
             site = 0 if g["neutral"] else 1
-            g["expected"] = {"home": round(R.expected_points(r, model, g["home"], g["away"], site), 2),
-                             "away": round(R.expected_points(r, model, g["away"], g["home"], -site), 2)}
-    wjson(os.path.join(out_dir, "schedule.json"), {"league": "nfl", "season": cur, "generatedAt": iso(now), "source": "nflverse schedules (CC-BY 4.0)", "games": cur_games})
+            tot = R.expected_points(r, model, g["home"], g["away"], site) + R.expected_points(r, model, g["away"], g["home"], -site)
+            if g["home"] in elo_now and g["away"] in elo_now:
+                mg = (elo_now[g["home"]] - elo_now[g["away"]] + (0 if g["neutral"] else E.NFL_ELO["hfa"])) / E.NFL_ELO["per_pt"]
+            else:
+                mg = R.expected_points(r, model, g["home"], g["away"], site) - R.expected_points(r, model, g["away"], g["home"], -site)
+            h, a = E.split_points(tot, mg)
+            g["expected"] = {"home": round(h, 2), "away": round(a, 2)}
+    wjson(os.path.join(out_dir, "schedule.json"), {"league": "nfl", "season": cur, "generatedAt": iso(now), "source": NFL_ATTRIBUTION, "games": cur_games})
 
     # play-level sim parameters (weekly is enough; plays change slowly)
     ppath = os.path.join(out_dir, "params.json")
@@ -355,7 +372,7 @@ def refresh_ncaaf(pub, priv, blocks, now, prov=None):
             g["expected"] = {"home": round(R.expected_points(r, model, g["home"], g["away"], site), 2),
                              "away": round(R.expected_points(r, model, g["away"], g["home"], -site), 2)}
     wjson(os.path.join(out, "schedule.json"), {"league": "ncaaf", "season": cur, "generatedAt": iso(now),
-          "source": "CollegeFootballData (derived; raw data is not redistributed)", "games": window,
+          "source": NCAAF_ATTRIBUTION, "games": window,
           "note": "Only a rolling window (8 days back, 15 ahead) is published."})
     log(f"NCAAF ok: season {cur}, ratings as of week {at_week}, {len(fbs)} FBS teams, model {model}")
     return {"ok": True, "season": cur, "asOfWeek": at_week, "teams": len(fbs), "windowGames": len(window)}

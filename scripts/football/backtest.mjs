@@ -1,4 +1,4 @@
-// NFL backtest step 2: simulate every test game (Monte Carlo over the snap engine) and score it honestly.
+// Backtest step 2 (NFL default; BT_LEAGUE=ncaaf for the NCAAF games.json from backtest_ncaaf.py): simulate every test game (Monte Carlo over the snap engine) and score it honestly.
 // usage: node scripts/football/backtest.mjs [dir=/tmp/proswisher-backtest] [n=1000]
 // Metrics (pushes excluded from ATS and O/U; a game counts only if the line exists):
 //   margin MAE (sim median and sim mean vs actual), total MAE, straight-up winner %, ATS % vs the nflverse closing
@@ -8,7 +8,7 @@ import path from "node:path";
 import { prepare } from "../../server/sim/engine.mjs";
 import { buildCurve, runMonteCarlo } from "../../server/sim/montecarlo.mjs";
 
-export function score(rows) {
+export function score(rows, lineSd = Number(process.env.BT_LINE_SD || 13.5)) {
   const m = { n: rows.length };
   const mae = (f) => rows.reduce((s, r) => s + Math.abs(f(r)), 0) / rows.length;
   m.marginMaeMedian = mae((r) => r.simMarginMedian - r.margin);
@@ -21,10 +21,10 @@ export function score(rows) {
   const clip = (p) => Math.min(1 - 1e-4, Math.max(1e-4, p));
   m.logLoss = rows.reduce((s, r) => { const y = outcome(r), p = clip(r.wpHome); return s - (y * Math.log(p) + (1 - y) * Math.log(1 - p)); }, 0) / rows.length;
   const sp0 = rows.filter((r) => r.spreadLine != null);
-  if (sp0.length) { // closing line as a win-probability benchmark: P(home) = Phi(spread / 13.5)
+  if (sp0.length) { // closing line as a win-probability benchmark: P(home) = Phi(spread / lineSd); 13.5 NFL, NCAAF fitted on the validation season
     const phi = (z) => 0.5 * (1 + Math.tanh(0.7978845608 * (z + 0.044715 * z ** 3)));
-    m.lineBrier = sp0.reduce((s, r) => s + (phi(r.spreadLine / 13.5) - outcome(r)) ** 2, 0) / sp0.length;
-    m.lineLogLoss = sp0.reduce((s, r) => { const y = outcome(r), p = clip(phi(r.spreadLine / 13.5)); return s - (y * Math.log(p) + (1 - y) * Math.log(1 - p)); }, 0) / sp0.length;
+    m.lineBrier = sp0.reduce((s, r) => s + (phi(r.spreadLine / lineSd) - outcome(r)) ** 2, 0) / sp0.length;
+    m.lineLogLoss = sp0.reduce((s, r) => { const y = outcome(r), p = clip(phi(r.spreadLine / lineSd)); return s - (y * Math.log(p) + (1 - y) * Math.log(1 - p)); }, 0) / sp0.length;
     m.lineMarginRmse = Math.sqrt(sp0.reduce((s, r) => s + (r.spreadLine - r.margin) ** 2, 0) / sp0.length);
   }
   m.totalMaeMedian = mae((r) => r.simTotalMedian - r.total);
@@ -48,7 +48,7 @@ export function score(rows) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const dir = process.argv[2] || "/tmp/proswisher-backtest", n = Number(process.argv[3] || 1000);
   const { games, config, models } = JSON.parse(fs.readFileSync(path.join(dir, "games.json"), "utf8"));
-  const S = prepare(JSON.parse(fs.readFileSync(path.join(dir, "params.json"), "utf8")), "nfl");
+  const S = prepare(JSON.parse(fs.readFileSync(path.join(dir, "params.json"), "utf8")), process.env.BT_LEAGUE || "nfl");
   const curve = buildCurve(S);
   const rows = []; const t0 = Date.now();
   // BT_SEASONS=2023,2024 shards by season; BT_ENV_SD sets the game-environment shock; BT_PILOT / BT_PASSES the calibration effort.

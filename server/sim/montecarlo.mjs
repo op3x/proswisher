@@ -47,6 +47,16 @@ const r1 = (x) => Math.round(x * 10) / 10;
 const r2 = (x) => Math.round(x * 100) / 100;
 const r3 = (x) => Math.round(x * 1000) / 1000;
 const bin = (k, n) => { const p = k / n; return { p: r3(p), se: r3(Math.sqrt((p * (1 - p)) / n)) }; };
+/** Integer per-period line that sums exactly to `total`: period means scaled to the total, largest remainder rounding. */
+export function periodLine(means, total) {
+  const T = Math.max(0, Math.round(total)), sum = means.reduce((a, b) => a + b, 0);
+  if (!means.length) return [];
+  const raw = means.map((x) => (sum > 0 ? (x / sum) * T : T / means.length)), out = raw.map(Math.floor);
+  let left = T - out.reduce((a, b) => a + b, 0);
+  const order = raw.map((x, i) => [x - Math.floor(x), i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]);
+  for (let j = 0; left > 0; j = (j + 1) % order.length, left--) out[order[j][1]]++;
+  return out;
+}
 function qStats(a) { const d = dist(a); return { mean: d.mean, se: d.se, median: d.median, interval80: d.interval80, interval95: d.interval95 }; }
 
 function dist(values) {
@@ -121,7 +131,9 @@ export function runMonteCarlo(S, opts) {
     medianScore: { home: med(H), away: med(A) },
     periodName: S.periodName || "quarter",
     byPeriod: { home: QH.map(qStats), away: QA.map(qStats), note: "points scored in each period (quarter): mean with Monte Carlo SE, median, 80% and 95% simulation intervals (overtime excluded)" },
-    medianByPeriod: { home: QH.map(med), away: QA.map(med), note: "median points in each period, taken period by period (overtime excluded), so the medians need not add up to the median final" },
+    medianByPeriod: { home: QH.map(med), away: QA.map(med), note: "median points in each period, taken period by period (overtime excluded). Quarter scores are lumpy (0, 3, 7...), so these often all equal 7 or 0 and need not add up to the median final: show periodLine instead" },
+    periodLine: (() => { const mh = QH.map((q) => q.reduce((a, b) => a + b, 0) / n), ma = QA.map((q) => q.reduce((a, b) => a + b, 0) / n);
+      return { home: periodLine(mh, med(H)), away: periodLine(ma, med(A)), note: "projected points per period: each team's mean period scoring shape, scaled so the periods add up exactly to its median final score (whole points, largest-remainder rounding). Use this for a quarter-by-quarter line." }; })(),
     calibration: { targetPoints: { home: r1(target.H), away: r1(target.A) }, simMeanPoints: { home: r1(H.reduce((a, b) => a + b, 0) / n), away: r1(A.reduce((a, b) => a + b, 0) / n) },
                    tilt: { home: Math.round(tilt.H * 1000) / 1000, away: Math.round(tilt.A * 1000) / 1000 }, envSd, teamSd },
     playLogFields: "generic envelope: seq, t (elapsed game seconds), period, clock, score (after the event), type, text, payload (sport-specific; football: poss, down, togo, yl = yards to the opponent goal line, at the snap for type 'play', after the event otherwise)",

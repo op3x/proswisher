@@ -191,6 +191,10 @@ class CfbdProvider:
     def lines(self, year, season_type="regular"):
         return self.get("/lines", year=year, seasonType=season_type)
 
+    def plays(self, year, week, season_type="regular"):
+        # play-by-play for one week (FBS). Used once a season to fit the NCAAF play parameters; raw rows stay private.
+        return self.get("/plays", year=year, week=week, seasonType=season_type, classification="fbs")
+
 
 # ---------------------------------------------------------------- selectors
 def nfl_provider():

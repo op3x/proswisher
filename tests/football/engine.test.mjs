@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { prepare, simulateGame, mulberry32, RULES } from "../../server/sim/engine.mjs";
-import { buildCurve, runMonteCarlo, drawSeed } from "../../server/sim/montecarlo.mjs";
+import { buildCurve, runMonteCarlo, drawSeed, periodLine } from "../../server/sim/montecarlo.mjs";
 
 const P = JSON.parse(fs.readFileSync(new URL("../fixtures/football/nfl-params.json", import.meta.url)));
 const PC = JSON.parse(fs.readFileSync(new URL("../fixtures/football/ncaaf-params.json", import.meta.url)));
@@ -90,4 +90,29 @@ test("rigor step 2: nearby seeds give independent draws; env shock widens totals
     assert.ok(Math.abs(r.calibration.simMeanPoints.away - 20) < 0.9, JSON.stringify(r.calibration));
   }
   assert.equal(wide.calibration.envSd, 0.8);
+});
+
+test("periodLine: whole-point quarters that add up exactly to the median final", () => {
+  assert.deepEqual(periodLine([5.1, 6.9, 5.2, 6.8], 24), [5, 7, 5, 7]);
+  assert.equal(periodLine([2.4, 2.4, 2.4, 2.4], 10).reduce((a, b) => a + b, 0), 10);
+  assert.deepEqual(periodLine([0, 0, 0, 0], 0), [0, 0, 0, 0]);
+  const r = runMonteCarlo(NFL, { target: { H: 27, A: 20 }, n: 400, seed: 3, pilot: 300, passes: 2, curve: buildCurve(NFL, 300) });
+  for (const s of ["home", "away"]) {
+    const line = r.periodLine[s];
+    assert.equal(line.length, 4);
+    assert.equal(line.reduce((a, b) => a + b, 0), Math.round(r.medianScore[s]));
+    assert.ok(new Set(line).size > 1 || line[0] === 0, `quarters not all equal: ${line}`);
+  }
+});
+
+test("params can override league rules; end-of-half timeouts reset at halftime", () => {
+  const fast = prepare({ ...PC, rules: { tempo: 1.2 } }, "ncaaf"), slow = prepare({ ...PC, rules: { tempo: 0.8 } }, "ncaaf");
+  assert.equal(fast.rules.tempo, 1.2);
+  assert.equal(slow.rules.fgMaxDist, RULES.ncaaf.fgMaxDist);
+  const snaps = (S) => { let k = 0; for (let i = 0; i < 60; i++) k += sim(S, 500 + i, { record: true }).plays.filter((p) => p.type === "play").length; return k; };
+  assert.ok(snaps(fast) < snaps(slow));
+  assert.throws(() => prepare(P, "xfl"));
+  const noTo = prepare({ ...P, rules: { timeouts: 0 } }, "nfl");
+  const q2 = (S) => { let pts = 0; for (let i = 0; i < 300; i++) { const g = sim(S, 900 + i); pts += g.q.H[1] + g.q.A[1]; } return pts / 300; };
+  assert.ok(q2(NFL) > q2(noTo), "timeouts add second-quarter points");
 });

@@ -265,7 +265,7 @@ class Refresh(unittest.TestCase):
             def teams(s, y): s.calls += 1; return [{"school": "Georgia", "mascot": "Bulldogs"}, {"school": "Texas", "mascot": "Longhorns"}]
         f = FakeCfbd()
         res = RF.refresh_ncaaf(self.pub, self.priv, RF.Blocks(os.path.join(self.priv, "b.json")), datetime(2025, 10, 15, tzinfo=timezone.utc), prov=f)
-        self.assertTrue(res["ok"]); self.assertEqual(f.calls, 5)
+        self.assertTrue(res["ok"]); self.assertEqual(f.calls, 6)          # + one cached Elo burn-in season; no plays() on this fake
         r = json.load(open(os.path.join(self.pub, "ncaaf", "ratings.json")))
         self.assertEqual(r["teams"][0]["team"], "Georgia")
         self.assertEqual(r["teams"][0]["name"], "Georgia Bulldogs")             # school + mascot, plain text
@@ -285,6 +285,50 @@ class Params(unittest.TestCase):
         self.assertLess(c["fieldGoal"]["a"], nfl["fieldGoal"]["a"]); self.assertEqual(nfl["league"], "nfl")
 
 
+
+
+class CfbdPlays(unittest.TestCase):
+    def test_cfbd_plays_map_to_compact_rows(self):
+        from football import cfbd_plays as CP
+        base = dict(gameId=1, season=2023, week=1, home="Ohio State", away="Indiana", period=1, clock={"minutes": 10, "seconds": 0},
+                    offenseScore=0, defenseScore=0, down=1, distance=10, yardsToGoal=75, ppa=0.1)
+        plays = [
+            {**base, "id": 1, "offense": "Indiana", "defense": "Ohio State", "playType": "Kickoff", "playText": "kickoff for 65 yds , touchback", "yardsGained": 0},
+            {**base, "id": 2, "offense": "Ohio State", "defense": "Indiana", "playType": "Rush", "playText": "X run for 6 yds", "yardsGained": 6},
+            {**base, "id": 3, "offense": "Ohio State", "defense": "Indiana", "playType": "Passing Touchdown", "playText": "X pass complete to Y for 69 yds for a TD (Z KICK)", "yardsGained": 69, "scoring": True},
+            {**base, "id": 4, "offense": "Indiana", "defense": "Ohio State", "playType": "Penalty", "playText": "Indiana Penalty, False Start (-5 Yards)", "yardsGained": -5},
+            {**base, "id": 5, "offense": "Indiana", "defense": "Ohio State", "playType": "Sack", "playText": "Q sacked by W for a loss of 8", "yardsGained": -8},
+            {**base, "id": 6, "offense": "Indiana", "defense": "Ohio State", "playType": "Field Goal Good", "playText": "K 47 yd FG GOOD", "yardsGained": 0},
+            {**base, "id": 7, "period": 5, "offense": "Indiana", "defense": "Ohio State", "playType": "Rush", "playText": "OT run", "yardsGained": 3},
+        ]
+        rows = CP.to_rows(plays); I = X.IDX
+        self.assertEqual([r[I["play_type"]] for r in rows], ["kickoff", "run", "pass", "extra_point", "no_play", "pass", "field_goal"])
+        self.assertEqual(rows[0][I["posteam"]], "Ohio State")                      # receiving team on kickoffs
+        self.assertEqual(rows[2][I["touchdown"]], 1); self.assertEqual(rows[3][I["extra_point_result"]], "good")
+        self.assertEqual(rows[4][I["penalty_team"]], "Indiana")                    # negative yards = offensive foul
+        self.assertEqual(rows[5][I["sack"]], 1); self.assertEqual(rows[6][I["kick_distance"]], 47)
+        self.assertEqual(rows[1][I["half_seconds_remaining"]], 1500)
+        self.assertEqual(CP._try("PASS FAILED (TWO-POINT CONVERSION FAILED)"), ("2pt", False))
+        self.assertEqual(CP._try("Y run for a TD (PAT MISSED)"), ("xp", False))
+        with open(os.path.join(HERE, "fixtures", "football", "nfl-params.json")) as f: nfl = json.load(f)
+        p = CP.ncaaf_params_from_fit({"league": "ncaaf", "source": "t"}, nfl)
+        self.assertEqual(p["clock"], nfl["clock"]); self.assertEqual(p["rules"]["tempo"], CP.NCAAF_TEMPO)
+
+    def test_ncaaf_play_fit_is_cached_private_and_feeds_public_params(self):
+        d = tempfile.mkdtemp(); priv, pub, raw = os.path.join(d, "priv"), os.path.join(d, "pub"), os.path.join(d, "priv", "raw")
+        os.makedirs(raw); os.makedirs(os.path.join(pub, "ncaaf"))
+        class Few:
+            calls = 0
+            def plays(s, y, wk, st): s.calls += 1; return []
+        f = Few()
+        self.assertIsNone(RF.ncaaf_play_fit(f, raw, priv, 2025)); self.assertEqual(f.calls, 16)     # 15 weeks + postseason, too few plays
+        self.assertIsNone(RF.ncaaf_play_fit(f, raw, priv, 2025)); self.assertEqual(f.calls, 16)     # raw weeks cached, no refetch
+        self.assertFalse(RF.ncaaf_fitted_params(pub, priv, {"clock": {}}, datetime(2025, 10, 1, tzinfo=timezone.utc)))
+        with open(os.path.join(priv, "ncaaf_play_fit_2025.json"), "w") as fh: json.dump({"league": "ncaaf", "source": "x"}, fh)
+        with open(os.path.join(HERE, "fixtures", "football", "nfl-params.json")) as fh: nfl = json.load(fh)
+        self.assertTrue(RF.ncaaf_fitted_params(pub, priv, nfl, datetime(2025, 10, 1, tzinfo=timezone.utc)))
+        out = json.load(open(os.path.join(pub, "ncaaf", "params.json")))
+        self.assertEqual(out["rules"]["tempo"], 0.95); self.assertIn("fittedAt", out)
 
 class LinAlg(unittest.TestCase):
     def test_ridge_and_logistic_recover_known_coefficients(self):

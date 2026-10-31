@@ -29,7 +29,7 @@ export default function Ticker() {
   return (
     <div className="bg-black/60 border-b border-line" aria-label="Schedule and final scores">
       <div className="flex items-stretch">
-        <span className="shrink-0 flex items-center gap-1 px-3 text-[10px] font-bold uppercase tracking-wider bg-accent text-ink">
+        <span className="shrink-0 flex items-center gap-1 px-2 sm:px-3 max-w-[6.5rem] sm:max-w-none leading-tight text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-accent text-ink">
           Schedule &amp; final scores{s?.source === "sample" && <span className="ml-1 rounded bg-ink/80 text-amber-300 px-1 normal-case tracking-normal">Sample data</span>}
         </span>
         <div className="ticker-viewport overflow-hidden flex-1 h-9 flex items-center" tabIndex={0}>

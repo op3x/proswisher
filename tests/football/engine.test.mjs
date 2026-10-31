@@ -56,9 +56,22 @@ test("Monte Carlo calibrates to target points and returns the full summary", () 
   assert.ok(r.winProbability.home > 0.6 && r.winProbability.home < 0.85);
   assert.ok(Math.abs(r.winProbability.home + r.winProbability.away + r.winProbability.tie - 1) < 0.002);
   assert.ok(r.margin.p05 < r.margin.median && r.margin.median < r.margin.p95);
-  assert.equal(r.medianByQuarter.home.length, 4);
-  assert.ok(r.representative.plays.length > 50);
+  assert.equal(r.medianByPeriod.home.length, 4); assert.equal(r.byPeriod.away.length, 4);
+  assert.ok(r.representative.events.length > 50);
+  // generic play-log envelope
+  for (const e of r.representative.events) {
+    for (const k of ["seq", "t", "period", "clock", "score", "type", "text", "payload"]) assert.ok(k in e, k);
+  }
+  const ts = r.representative.events.map((e) => e.t); assert.ok(ts.every((t, i) => i === 0 || t >= ts[i - 1] - 1), "t non-decreasing");
   assert.equal(r.representative.final.home - r.representative.final.away > 0, r.margin.median > 0);
   const again = runMonteCarlo(NFL, { target: { H: 27.5, A: 20 }, n: 1500, seed: 7, curve, names: { H: "KC", A: "LV" } });
   assert.deepEqual(again.representative, r.representative);
+});
+
+
+test("SportModule registry: football registers nfl + ncaaf; a module missing a piece is rejected", async () => {
+  const { allLeagues, registerSport, sportForLeague } = await import("../../server/sports/index.mjs");
+  assert.deepEqual(allLeagues().map((l) => l.id).sort(), ["ncaaf", "nfl"]);
+  assert.equal(sportForLeague("NFL").id, "football");
+  assert.throws(() => registerSport({ id: "basketball", leagues: { nba: { rules: { periods: 4 } } } }), /missing/);
 });

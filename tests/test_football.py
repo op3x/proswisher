@@ -203,5 +203,22 @@ class Params(unittest.TestCase):
         self.assertLess(c["fieldGoal"]["a"], nfl["fieldGoal"]["a"]); self.assertEqual(nfl["league"], "nfl")
 
 
+
+class LinAlg(unittest.TestCase):
+    def test_ridge_and_logistic_recover_known_coefficients(self):
+        import random
+        from football import linalg as LA
+        rnd = random.Random(7)
+        X = [[1.0, rnd.gauss(0, 1)] for _ in range(4000)]
+        beta, _ = LA.ridge_sparse([([0, 1], x, 2 + 3 * x[1] + rnd.gauss(0, 1), 1.0) for x in X], 2, [0.0, 0.0])
+        self.assertAlmostEqual(beta[0], 2, delta=0.1); self.assertAlmostEqual(beta[1], 3, delta=0.1)
+        y = [1 if rnd.random() < LA._sig(0.3 + 1.2 * x[1]) else 0 for x in X]
+        f = LA.logistic_fit(X, y, l2=0.0)
+        self.assertAlmostEqual(f["coef"][1], 1.2, delta=0.15); self.assertGreater(f["se"][1], 0)
+        # a prior mean pulls the estimate toward it when the penalty is large
+        b2, _ = LA.ridge_sparse([([0, 1], x, 3 * x[1], 1.0) for x in X[:20]], 2, [0.0, 1e6], prior=[0.0, 1.0])
+        self.assertAlmostEqual(b2[1], 1.0, delta=0.01)
+
+
 if __name__ == "__main__":
     unittest.main()

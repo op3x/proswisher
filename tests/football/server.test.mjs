@@ -116,14 +116,14 @@ test("football API: teams, games, game sim with play log, custom and cross-era s
     assert.equal((await j("/api/football/teams?league=nba")).status, 400);
     assert.equal((await j("/api/football/games?league=nfl")).body.games.length, 2);
     const gs = await j("/api/football/games/2026_09_LV_KC/sim");
-    assert.equal(gs.status, 200); assert.ok(gs.body.winProbability.home > 0.5); assert.ok(gs.body.representative.plays.length > 50);
+    assert.equal(gs.status, 200); assert.ok(gs.body.winProbability.home > 0.5); assert.ok(gs.body.representative.events.length > 50);
     assert.equal(gs.body.label, undefined);
     const plays = await j("/api/football/games/2026_09_LV_KC/plays");
-    assert.equal(plays.status, 200); assert.ok(Array.isArray(plays.body.plays)); assert.ok(plays.body.fields);
+    assert.equal(plays.status, 200); assert.ok(Array.isArray(plays.body.events)); assert.ok(plays.body.fields);
     assert.equal((await j("/api/football/games/nope/sim")).status, 404);
     const c = await j("/api/football/sim?home=KC&away=LV&homeSeason=2022&neutral=1&n=100000&plays=0");
     assert.equal(c.status, 200); assert.equal(c.body.n, 800, "N capped"); assert.match(c.body.label, /entertainment only/);
-    assert.equal(c.body.representative.plays, undefined); assert.equal(c.body.teams.home.name, "2022 Kansas City Chiefs");
+    assert.equal(c.body.representative.events, undefined); assert.equal(c.body.teams.home.name, "2022 Kansas City Chiefs");
     assert.equal((await j("/api/football/sim?home=KC&away=XYZ")).status, 404);
     assert.equal((await j("/api/football/sim?home=KC")).status, 400);
     assert.equal((await j("/api/football/sim?home=KC&away=LV&homeSeason=22")).status, 400);
@@ -132,6 +132,16 @@ test("football API: teams, games, game sim with play log, custom and cross-era s
     const blob = JSON.stringify([teams.body, gs.body, plays.body, c.body]);
     assert.ok(!/passer|rusher|receiver|player_name|_player_|logo|helmet|espn/i.test(blob), "no player names, logos or ESPN fields");
     assert.ok(teams.body.teams.every((t) => /^[A-Z][a-z.]+( [A-Z][a-z.]+)* [A-Z0-9][A-Za-z0-9]+$/.test(t.name)), "City + Name");
+    // short aliases for the front end
+    const ps = await fetch(s.url + "/api/sim", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ league: "nfl", home: "KC", away: "LV", n: 500, plays: 0 }) });
+    const pb = await ps.json(); assert.equal(ps.status, 200, JSON.stringify(pb));
+    assert.equal(pb.n, 500); assert.ok(pb.margin.interval95 && pb.total.interval80 && pb.winProbabilitySE && pb.byPeriod.home.length === 4);
+    assert.ok(pb.margin.interval95[0] <= pb.margin.interval80[0] && pb.margin.interval80[1] <= pb.margin.interval95[1]);
+    assert.match(pb.disclaimer, /not affiliated/);
+    const sch = await j("/api/schedule?league=nfl"); assert.equal(sch.status, 200); assert.ok(Array.isArray(sch.body.games));
+    const lg = await j("/api/leagues"); assert.equal(lg.status, 200); assert.deepEqual(lg.body.leagues.map((l) => l.id).sort(), ["ncaaf", "nfl"]);
+    assert.equal(lg.body.leagues.find((l) => l.id === "nfl").ready, true);
+    const sc = await j("/api/scores"); assert.equal(sc.status, 200); assert.ok(Array.isArray(sc.body.games));
     const tk = await j("/api/football/ticker"); assert.equal(tk.status, 200); assert.ok(tk.body.games.length >= 1);
   } finally { s.close(); }
 });

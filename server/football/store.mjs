@@ -2,7 +2,7 @@
 // upcoming games and for fictional / cross-era / cross-level matchups. All numbers come from the daily refresh.
 import fs from "node:fs";
 import path from "node:path";
-import { prepare } from "../sim/engine.mjs";
+import { sportForLeague } from "../sports/index.mjs";
 import { buildCurve, runMonteCarlo } from "../sim/montecarlo.mjs";
 
 export const LEAGUES = ["nfl", "ncaaf"];
@@ -29,7 +29,7 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
       const x = { ratings: readJson(path.join(dir, "ratings.json")), schedule: readJson(path.join(dir, "schedule.json")), history: readJson(path.join(dir, "history.json")), params };
       if (params) {
         const sameParams = prev.params && prev.params.fittedAt === params.fittedAt;
-        x.S = sameParams ? prev.S : prepare(params, lg);
+        x.S = sameParams ? prev.S : (() => { const sp = sportForLeague(lg); const S = sp.prepare(params, lg); S.sim = sp.simulate; S.periods = sp.leagues[lg].rules.periods; S.periodName = "quarter"; return S; })();
         x.curve = sameParams ? prev.curve : null; // built lazily (about 1.3 s)
       }
       L[lg] = x;
@@ -84,7 +84,7 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
 
   function simulate(m, { n = 2000, seed = 20261031, playoff = false } = {}) {
     const lg = m.rules; if (!ready(lg)) return { error: `${lg} simulation parameters are not loaded yet` };
-    const res = runMonteCarlo(L[lg].S, { target: m.target, n, seed, playoff, curve: curveFor(lg), names: { H: m.home.team, A: m.away.team } });
+    const res = runMonteCarlo(L[lg].S, { target: m.target, n, seed, playoff, curve: curveFor(lg), names: { H: m.home.name || m.home.team, A: m.away.name || m.away.team } });
     return { ...res, teams: { home: { id: m.home.team, name: m.home.name, season: m.home.season }, away: { id: m.away.team, name: m.away.name, season: m.away.season } },
              neutral: m.neutral, rules: m.rules, expectedPoints: { home: Math.round(m.target.H * 10) / 10, away: Math.round(m.target.A * 10) / 10 },
              notes: m.notes, ...(m.entertainment ? { label: ENTERTAINMENT } : {}), attribution: ATTRIBUTION[m.rules] };
@@ -93,7 +93,7 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
   const games = (lg) => (L[lg]?.schedule?.games || []);
   const findGame = (id) => { for (const lg of LEAGUES) { const g = games(lg).find((x) => x.id === String(id)); if (g) return { lg, g }; } return null; };
 
-  function gameSim(id, n = Number(env.FOOTBALL_GAME_SIMS || 2000)) {
+  function gameSim(id, n = Number(env.FOOTBALL_GAME_SIMS || 10000)) {
     if (sims.has(id)) return sims.get(id);
     const f = findGame(id); if (!f) return null;
     const { lg, g } = f;

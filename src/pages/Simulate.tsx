@@ -7,6 +7,7 @@ import { ctDateTime, pct, signed } from "../sports/format";
 import type { League, ScoreGame, SimResult, Team } from "../sports/types";
 import GamePlayer from "../components/GamePlayer";
 import DataSources from "../components/DataSources";
+import { preloadRenderer } from "../renderers/registry";
 import { site } from "../config/site";
 
 const THIS_SEASON = 2026;
@@ -64,6 +65,7 @@ export default function Simulate() {
   const [schedule, setSchedule] = useState<Sourced<ScoreGame[]> | null>(null);
   const [result, setResult] = useState<SimResult | null>(null), [busy, setBusy] = useState(false), [err, setErr] = useState("");
 
+  useEffect(() => { for (const l of enabled) preloadRenderer(l.sport); }, [enabled]);
   // Sample fallbacks (server still refreshing data at startup) are retried until the live feed answers.
   const [retryTick, setRetryTick] = useState(0);
   const anySample = schedule?.source === "sample" || Object.values(teams).some((t) => t.source === "sample");

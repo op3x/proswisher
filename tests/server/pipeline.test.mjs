@@ -67,7 +67,7 @@ test("dry run end to end: game pages, /data and the member gate all render from 
   const p = createPipeline({ env, dirs, log: (m) => logs.push(m) });
   const r = await p.run();
   assert.equal(r.result, "ok", logs.join("\n"));
-  const app = await createApp({ env: { APP_ENV: "preview", PUBLIC_DATA_DIR: dirs.publicDir, PREDICTIONS_PRIVATE_DIR: dirs.privateDir }, geoLookup: null, log: () => {} });
+  const app = await createApp({ env: { APP_ENV: "preview", LEGACY_NBA_PAGES: "1", PUBLIC_DATA_DIR: dirs.publicDir, PREDICTIONS_PRIVATE_DIR: dirs.privateDir }, geoLookup: null, log: () => {} });
   const s = await serve(app);
   try {
     const pub = await (await fetch(s.url + "/data/games.json")).json();

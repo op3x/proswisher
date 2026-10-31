@@ -124,7 +124,6 @@ export const site = {
     ["Do you take bets?", "No. Simculus is not a sportsbook. Op3x LLC doesn't accept wagers, hold your money or pay out winnings. We sell predictions only."],
     ["What exactly is a Simculus prediction?", "For each game, our model gives a projected final score, a projected spread and its lean, meaning the side the numbers favor. It's information to consider, not advice to bet."],
     ["What's free, and what do members get?", "Every day, one featured game's full prediction is free on its game page, with no account or sign-up, plus the public track record. Members ($9/month) get every game on the slate.", true],
-    ["How have your predictions done?", "See our Track record page. Every prediction we've posted since launch is timestamped before kickoff and graded afterward, with nothing removed. No prediction is guaranteed, and past results do not guarantee future results."],
     // Laye asked Perry to confirm source wording: this is the accurate version for the shipped model.
     ["Where does the data come from?", "We build predictions from game results: schedules and final scores from a licensed sports-data provider, turned into team scoring-margin ratings. Market spreads, where shown, are the median across US books from a licensed odds provider, with the time we recorded them."],
     ["Are you affiliated with the league or any team?", "No. Simculus is independent. Not affiliated with, endorsed or sponsored by the NFL, NCAA or any team. Team names are used only to identify games, and simulated plays use position labels, never real player names."],
@@ -181,7 +180,6 @@ export const site = {
   nav: [
     { to: "/", label: "Games" },
     { to: "/simulate", label: "Simulate" },
-    { to: "/track-record", label: "Track record" },
     { to: "/how-it-works", label: "How it works" },
   ],
   // Footer, every page. Larry's canonical text (landing-page-copy.md `disclaimers.footer`), flat 21+,
@@ -194,7 +192,6 @@ export const site = {
   // Larry's order (disclaimer-footer.md §5): Track record · Terms · Privacy · Refunds* · Cancel subscription ·
   // Responsible gaming · Contact. *Refunds stays unshipped until support@ works (P11). FAQ kept at the end.
   footerLinks: [
-    { to: "/track-record", label: "Track record" },
     { to: "/terms", label: "Terms" },
     { to: "/privacy", label: "Privacy" },
     { to: "/account", label: "Cancel subscription" },

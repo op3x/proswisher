@@ -21,7 +21,7 @@ const mock = () => { const calls = []; return { calls, webhooks: new Stripe(TEST
   checkout: { sessions: { create: async (p) => { calls.push(p); return { id: "cs_test_x", url: "https://checkout.stripe.test/x" }; } } } }; };
 const post = (url, ip, body) => fetch(url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": ip },
   body: JSON.stringify({ consent: true, age21: true, ...body }) });
-const PUBLIC = ["/", "/track-record", "/how-it-works", "/terms", "/privacy", "/faq", "/responsible-gaming", "/contact", "/health"];
+const PUBLIC = ["/", "/simulate", "/how-it-works", "/terms", "/privacy", "/faq", "/responsible-gaming", "/contact", "/health"];
 
 test("XFF hardening: trusted hops from the right; too few entries or junk -> socket address; ::ffff: unmapped", () => {
   const req = (h, sock = "10.1.2.3") => ({ headers: h === null ? {} : { "x-forwarded-for": h }, socket: { remoteAddress: sock } });
@@ -148,12 +148,12 @@ test("/api/config has no internal notes; 404s for unknown routes, /refunds and p
   try {
     const cfg = await (await fetch(s.url + "/api/config")).json();
     assert.ok(!JSON.stringify(cfg).includes("_note"));
-    for (const p of ["/nope", "/refunds", "/game/placeholder", "/games/2026-01-01/foo-vs-bar", "/track-record/x"]) assert.equal((await fetch(s.url + p)).status, 404, p);
-    for (const p of ["/", "/track-record/", "/contact", "/account", "/subscribe"]) assert.equal((await fetch(s.url + p, { headers: { "x-forwarded-for": "192.0.2.50" } })).status, 200, p);
+    for (const p of ["/nope", "/refunds", "/game/placeholder", "/games/2026-01-01/foo-vs-bar", "/track-record/x", "/track-record"]) assert.equal((await fetch(s.url + p)).status, 404, p);
+    for (const p of ["/", "/simulate/", "/contact", "/account", "/subscribe"]) assert.equal((await fetch(s.url + p, { headers: { "x-forwarded-for": "192.0.2.50" } })).status, 200, p);
     const rb = await fetch(s.url + "/robots.txt"); assert.equal(rb.status, 200); assert.match(rb.headers.get("content-type"), /text\/plain/);
     assert.match(await rb.text(), /Disallow: \//); // preview is not indexable
     const sm = await fetch(s.url + "/sitemap.xml"); assert.equal(sm.status, 200);
-    const x = await sm.text(); assert.match(x, /<urlset/); assert.match(x, /\/track-record<\/loc>/); assert.ok(!x.includes("/account"));
+    const x = await sm.text(); assert.match(x, /<urlset/); assert.match(x, /\/simulate<\/loc>/); assert.ok(!x.includes("/track-record") && !x.includes("/games/")); assert.ok(!x.includes("/account"));
   } finally { s.close(); }
   const p = await serve(await createApp({ env: { APP_ENV: "production", PUBLIC_BASE_URL: "https://simculus.com" }, geoLookup: fresh(), log: quiet }));
   try {

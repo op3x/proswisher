@@ -4,8 +4,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./index.css";
 import Layout from "./components/Layout";
 import Home from "./pages/Home";
-import GameDetail from "./pages/GameDetail";
-import TrackRecord from "./pages/TrackRecord";
 import HowItWorks from "./pages/HowItWorks";
 import { Responsible, Terms, Privacy } from "./pages/Legal";
 import NotFound from "./pages/NotFound";
@@ -23,10 +21,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Home />} />
-          <Route path="game/:id" element={<GameDetail />} />
-          <Route path="games/:date/:slug" element={<GameDetail />} />
           <Route path="simulate" element={<Simulate />} />
-          <Route path="track-record" element={<TrackRecord />} />
+          {/* Legacy NBA Track record + game pages hidden for the football pivot (code kept in pages/TrackRecord, pages/GameDetail). */}
           <Route path="how-it-works" element={<HowItWorks />} />
           <Route path="responsible-gaming" element={<Responsible />} />
           <Route path="terms" element={<Terms />} />

@@ -93,14 +93,17 @@ export async function getScores(): Promise<Sourced<ScoreGame[]>> {
 
 export async function getSchedule(leagues: string[]): Promise<Sourced<ScoreGame[]>> {
   try {
-    const games = await firstOk<ScoreGame[]>(
-      async () => (await Promise.all(leagues.map(async (lg) =>
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (await getJson<{ games: any[] }>(`/api/schedule?league=${lg}&upcoming=1`)).games.map(fromFootballRow(lg))))).flat(),
-      async () => (await Promise.all(leagues.map(async (lg) =>
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (await getJson<{ games: any[] }>(`/api/football/games?league=${lg}&upcoming=1`)).games.map(fromFootballRow(lg))))).flat(),
+    // Per league, so one league still warming up (startup refresh) doesn't push the others to sample data.
+    const one = (lg: string) => firstOk<ScoreGame[]>(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async () => (await getJson<{ games: any[] }>(`/api/schedule?league=${lg}&upcoming=1`)).games.map(fromFootballRow(lg)),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async () => (await getJson<{ games: any[] }>(`/api/football/games?league=${lg}&upcoming=1`)).games.map(fromFootballRow(lg)),
     );
+    const settled = await Promise.allSettled(leagues.map(one));
+    const ok = settled.filter((r): r is PromiseFulfilledResult<ScoreGame[]> => r.status === "fulfilled");
+    if (!ok.length) throw new Error("no schedule");
+    const games = ok.flatMap((r) => r.value);
     const up = games.filter((g) => g.status !== "final" && g.start).sort((a, b) => a.start.localeCompare(b.start));
     if (!up.length && demoFallback) throw new Error("empty");
     return { data: up, source: "live" };

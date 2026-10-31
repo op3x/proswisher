@@ -1,7 +1,7 @@
 // Matchup page: league -> two teams (a real upcoming game or a fictional one) -> run -> results + animated game.
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useLeagues } from "../sports/hooks";
+import { useLeagues, SAMPLE_RETRY_MS } from "../sports/hooks";
 import { getSchedule, getTeams, runSim, Sourced } from "../sports/api";
 import { ctDateTime, pct, signed } from "../sports/format";
 import type { League, ScoreGame, SimResult, Team } from "../sports/types";
@@ -64,8 +64,12 @@ export default function Simulate() {
   const [schedule, setSchedule] = useState<Sourced<ScoreGame[]> | null>(null);
   const [result, setResult] = useState<SimResult | null>(null), [busy, setBusy] = useState(false), [err, setErr] = useState("");
 
-  useEffect(() => { for (const lg of new Set([league, homeLeague, awayLeague])) if (!teams[lg]) getTeams(lg).then((t) => setTeams((m) => ({ ...m, [lg]: t }))); }, [league, homeLeague, awayLeague]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (enabled.length) getSchedule(enabled.map((l) => l.id)).then(setSchedule); }, [enabled]);
+  // Sample fallbacks (server still refreshing data at startup) are retried until the live feed answers.
+  const [retryTick, setRetryTick] = useState(0);
+  const anySample = schedule?.source === "sample" || Object.values(teams).some((t) => t.source === "sample");
+  useEffect(() => { if (!anySample) return; const id = setTimeout(() => setRetryTick((x) => x + 1), SAMPLE_RETRY_MS); return () => clearTimeout(id); }, [anySample, retryTick]);
+  useEffect(() => { for (const lg of new Set([league, homeLeague, awayLeague])) if (!teams[lg] || teams[lg].source === "sample") getTeams(lg).then((t) => setTeams((m) => ({ ...m, [lg]: t }))); }, [league, homeLeague, awayLeague, retryTick]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (enabled.length && (!schedule || schedule.source === "sample")) getSchedule(enabled.map((l) => l.id)).then(setSchedule); }, [enabled, retryTick]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!fictional) { setHomeLeague(league); setAwayLeague(league); } }, [league, fictional]);
 
   const lgObj = (id: string) => leagues?.data.find((l) => l.id === id);

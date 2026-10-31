@@ -70,7 +70,7 @@ test("451 only on sign-up page and checkout creation; health and webhook never g
       const rj = await r.json(); assert.equal(rj.error, "geoblocked"); assert.equal(rj.help, undefined);
       assert.ok(!JSON.stringify(rj).includes("support@")); // Sal #3 / P11
       assert.equal((await fetch(s.url + "/", { headers: xff(ip) })).status, 200);
-      assert.equal((await fetch(s.url + "/track-record", { headers: xff(ip) })).status, 200);
+      assert.equal((await fetch(s.url + "/how-it-works", { headers: xff(ip) })).status, 200);
       assert.equal((await fetch(s.url + "/health", { headers: xff(ip) })).status, 200);
       const wh = await fetch(s.url + "/api/stripe/webhook", { method: "POST", headers: { "content-type": "application/json", "stripe-signature": "bad", ...xff(ip) }, body: "{}" });
       assert.equal(wh.status, 400); // reached signature check, not 451

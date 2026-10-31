@@ -20,7 +20,9 @@ function segments(events: PlayEvent[]): Seg[] {
       out.push({ from: s, to, poss: p.possession, kind: p.playType || "play" }); last = to;
     } else {
       const to = absX(p.yardline, p.possession) ?? last;
-      out.push({ from: last, to, poss: p.possession, kind: e.type }); last = to;
+      // Kickoffs start at the kicking team's 35 (the receiver's opponent), not wherever the last play ended.
+      const from = e.type === "kickoff" && p.possession ? (p.possession === "home" ? 65 : 35) : last;
+      out.push({ from, to, poss: p.possession, kind: e.type }); last = to;
     }
   }
   return out;

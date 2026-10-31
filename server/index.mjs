@@ -83,7 +83,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   const checkoutAvailable = () => bypass || geoStatus(state.geo).ok;
   const blockPage = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title} | ${appName(env)}</title>
 <style>body{margin:0;background:#0b0f17;color:#e2e8f0;font:16px/1.5 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}main{max-width:36rem;padding:2rem}a{color:#67e8f9;display:inline-block;padding:.6rem .25rem;text-decoration:underline}footer{max-width:36rem;padding:0 2rem 2rem;color:#cbd5e1;font-size:14px}footer p{margin:.5rem 0}</style></head>
-<body><main><h1>${title}</h1><p>${body}</p><p><a href="/">Browse predictions</a> · <a href="/track-record">Track record</a></p><p>${help}</p></main>
+<body><main><h1>${title}</h1><p>${body}</p><p><a href="/">Browse games</a> · <a href="/how-it-works">How it works</a></p><p>${help}</p></main>
 <footer><p>${disc.footer}</p></footer></body></html>`;
 
   // ---- never geo-checked ----
@@ -290,21 +290,23 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     if (!g) html = html.replace(/<title>[^<]*<\/title>/, `<title>Page not found | ${appName(env)}</title>`).replace("<head>", '<head><meta name="robots" content="noindex">');
     sendPage(res, html, g ? 200 : 404);
   };
-  app.get("/game/:id", gamePage);
-  app.get("/games/:date/:slug", gamePage);
+  // Legacy NBA pages (track record + game pages) are hidden for the football pivot: they 404 unless
+  // LEGACY_NBA_PAGES=1. The code stays so they can come back.
+  const legacyNba = env.LEGACY_NBA_PAGES === "1";
+  if (legacyNba) { app.get("/game/:id", gamePage); app.get("/games/:date/:slug", gamePage); }
   app.use("/data", (req, res, next) => (/^\/(games|predictions|stats|prior)\.json$/.test(req.path) ? next() : res.status(404).end()));
   if (publicDataDir) app.use("/data", express.static(publicDataDir, { maxAge: "1m" }));
   app.use(express.static(dist, { index: false, maxAge: "5m", setHeaders: (r, p) => { if (p.includes("/assets/")) r.setHeader("Cache-Control", "public, max-age=31536000, immutable"); } }));
   // Sal #9: only real SPA routes get 200; everything else (incl. /refunds, held per P11) is a 404 with the SPA's not-found view.
-  const SPA_ROUTES = new Set(["/", "/simulate", "/track-record", "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/account", "/contact"]);
-  const INDEXABLE = ["/", "/track-record", "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/contact"];
+  const SPA_ROUTES = new Set(["/", "/simulate", ...(legacyNba ? ["/track-record"] : []), "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/account", "/contact"]);
+  const INDEXABLE = ["/", "/simulate", ...(legacyNba ? ["/track-record"] : []), "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/contact"];
   const isProd = String(env.APP_ENV || "").toLowerCase() === "production";
   app.get("/robots.txt", (_req, res) => res.type("text/plain").set("Cache-Control", "public, max-age=3600").send(isProd
     ? `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin/\nDisallow: /account\nDisallow: /go/\n\nSitemap: ${base}/sitemap.xml\n`
     : "# Preview build: not public\nUser-agent: *\nDisallow: /\n"));
   app.get("/sitemap.xml", (_req, res) => {
     loadGames();
-    const urls = [...INDEXABLE, ...Object.values(games).map(gamePathOf)];
+    const urls = [...INDEXABLE, ...(legacyNba ? Object.values(games).map(gamePathOf) : [])];
     const body = urls.map((u) => `  <url><loc>${esc(base + u)}</loc></url>`).join("\n");
     res.type("application/xml").set("Cache-Control", "public, max-age=600").send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`);
   });

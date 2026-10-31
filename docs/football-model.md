@@ -9,7 +9,7 @@ No logos or league/team marks are used: teams appear as plain-text names only (t
 |---|---|---|---|
 | NFL | nflverse play-by-play + schedules (GitHub releases) | CC-BY 4.0. Attribution shown in the API: **"Data: nflverse (CC-BY 4.0)"** | nothing |
 | NCAAF | CollegeFootballData.com (CFBD) `/games`, `/ppa/games` | free tier, 1,000 calls/month; raw data is **not redistributed**, only derived ratings/sims are served | `CFBD_API_KEY` |
-| Live NFL ticker | balldontlie `/nfl/v1/games` (free, 5 req/min) | existing key | `BALLDONTLIE_API_KEY` (falls back to nflverse finals) |
+| Live NFL ticker | balldontlie `/nfl/v1/games` (free, 5 req/min). **TODO(Larry): OFF pending legal clearance** | existing key | `BALLDONTLIE_API_KEY` + `FOOTBALL_TICKER_LIVE_CLEARED=true` (default off: nflverse finals only) |
 | Live NCAAF ticker | CFBD `/games` for the current week, hourly | counts against the same 800-call self-cap | `CFBD_API_KEY` |
 
 Not used: Sportradar, Sports Reference, ESPN, and nflverse FTN/participation files (CC-BY-SA).
@@ -28,6 +28,8 @@ after resolving it. One league failing never stops the other.
   `history.json` (NFL), `status.json`. Raw data lives only in `$PREDICTIONS_PRIVATE_DIR/football/`.
 
 ### Live-score poll (ticker)
+**Legal (Larry, Oct 31):** no ESPN data anywhere; teams as plain-text City + Name; no player names in play logs or API; no logos. Every football API response carries a `disclaimer` (betting + not affiliated with the NFL, NCAA or any team). Source terms: `research/data-sources-terms.md` in the ProSwisher workspace.
+
 Only polls while a game is inside its window (kickoff −15 min to +5 h, not final). NFL: balldontlie every 120 s
 (`FOOTBALL_TICKER_NFL_SEC`) — at most 1 call per poll, under the 5/min limit, but **shared with the legacy NBA pipeline**
 (set `LEGACY_NBA_PIPELINE=false`). Without the key: nflverse `games.csv` with ETag every 10 min (final scores only).

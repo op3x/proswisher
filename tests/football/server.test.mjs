@@ -73,7 +73,7 @@ test("ticker: balldontlie scores mapped (WSH->WAS); 403 stops the source for goo
   const fetchImpl = async (url, o) => { calls.push({ url, auth: o.headers.Authorization }); return { status, ok: status === 200, headers: new Map(),
     json: async () => ({ data: [{ home_team: { abbreviation: "BUF" }, visitor_team: { abbreviation: "WSH" }, date: new Date().toISOString(), status: "3rd Quarter", status_state: "in_progress", home_team_score: 17, visitor_team_score: 10 }] }) }; };
   let t = Date.now(); const logs = [];
-  const tk = createTicker({ store, env: { BALLDONTLIE_API_KEY: "bdl" }, fetchImpl, log: (m) => logs.push(m), now: () => t });
+  const tk = createTicker({ store, env: { BALLDONTLIE_API_KEY: "bdl", FOOTBALL_TICKER_LIVE_CLEARED: "true" }, fetchImpl, log: (m) => logs.push(m), now: () => t });
   await tk.tick();
   assert.equal(calls.length, 1); assert.match(calls[0].url, /api\.balldontlie\.io\/nfl\/v1\/games\?dates\[\]=/);
   const g = tk.snapshot().games.find((x) => x.id === "2026_09_WAS_BUF");
@@ -84,6 +84,16 @@ test("ticker: balldontlie scores mapped (WSH->WAS); 403 stops the source for goo
   t += 3600e3; await tk.tick(); assert.equal(calls.length, 2, "never retried after a refusal");
   assert.ok(logs.some((l) => l.includes("STOPPED balldontlie")));
   assert.ok(!logs.join(" ").includes("bdl"));
+});
+
+test("ticker: live NFL source stays off until legal clears it (TODO Larry), even with a key", async () => {
+  const d = fixtureDir(); const store = createFootballStore({ publicDir: d, log: quiet }); store.load();
+  const urls = []; const fetchImpl = async (url) => { urls.push(url); return { status: 304, ok: false, headers: new Map() }; };
+  const tk = createTicker({ store, env: { BALLDONTLIE_API_KEY: "bdl" }, fetchImpl, log: quiet });
+  await tk.tick();
+  assert.ok(urls.every((u) => !u.includes("balldontlie")), urls.join());
+  assert.ok(urls.every((u) => !/espn/i.test(u)));
+  assert.match(tk.snapshot().notes.join(" "), /pending legal clearance/);
 });
 
 test("ticker: no live NCAAF without a key and no network at all when no game is in its window", async () => {
@@ -118,6 +128,10 @@ test("football API: teams, games, game sim with play log, custom and cross-era s
     assert.equal((await j("/api/football/sim?home=KC")).status, 400);
     assert.equal((await j("/api/football/sim?home=KC&away=LV&homeSeason=22")).status, 400);
     const st = await j("/api/football/status"); assert.equal(st.body.leagues.nfl.ready, true); assert.equal(st.body.leagues.ncaaf.ready, false);
+    assert.match(teams.body.disclaimer, /not affiliated with or endorsed by the NFL, the NCAA/); assert.match(gs.body.disclaimer, /1-800-GAMBLER/);
+    const blob = JSON.stringify([teams.body, gs.body, plays.body, c.body]);
+    assert.ok(!/passer|rusher|receiver|player_name|_player_|logo|helmet|espn/i.test(blob), "no player names, logos or ESPN fields");
+    assert.ok(teams.body.teams.every((t) => /^[A-Z][a-z.]+( [A-Z][a-z.]+)* [A-Z0-9][A-Za-z0-9]+$/.test(t.name)), "City + Name");
     const tk = await j("/api/football/ticker"); assert.equal(tk.status, 200); assert.ok(tk.body.games.length >= 1);
   } finally { s.close(); }
 });

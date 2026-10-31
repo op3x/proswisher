@@ -155,6 +155,10 @@ class CfbdProvider:
     def ppa_games(self, year, season_type="regular"):
         return self.get("/ppa/games", year=year, seasonType=season_type, excludeGarbageTime="true")
 
+    def teams(self, year):
+        # school + mascot, so the UI can show "City/School + Name" in plain text (Larry rule 1). Cached per season.
+        return self.get("/teams/fbs", year=year)
+
     def lines(self, year, season_type="regular"):
         return self.get("/lines", year=year, seasonType=season_type)
 

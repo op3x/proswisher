@@ -7,6 +7,12 @@ import { buildCurve, runMonteCarlo } from "../sim/montecarlo.mjs";
 
 export const LEAGUES = ["nfl", "ncaaf"];
 export const ATTRIBUTION = { nfl: "Data: nflverse (CC-BY 4.0)", ncaaf: "Data: CollegeFootballData.com" };
+// Larry's binding rules (Oct 31): betting disclaimers + non-affiliation line; teams as plain-text "City Name" only; no
+// player names/likenesses, logos, helmets or mascot art anywhere (UI, play logs, API).
+export const disclaimer = (name) => `${name} provides sports simulations and predictions for entertainment and informational purposes only. ` +
+  "It is not betting, financial or legal advice, and no outcome is guaranteed. Op3x LLC is not a sportsbook and does not accept wagers. " +
+  "You must be 21+ and located where sports betting is legal to place bets; check your local laws. If you or someone you know has a gambling problem, call 1-800-GAMBLER. " +
+  `${name} is not affiliated with or endorsed by the NFL, the NCAA, any conference or any team.`;
 export const ENTERTAINMENT = "For entertainment only: a hypothetical matchup that cannot be played, not a prediction of a real game.";
 const readJson = (p) => { try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return null; } };
 

@@ -5,10 +5,15 @@
 //  NCAAF: no free live source exists (CFBD /scoreboard is a paid tier; balldontlie NCAAF is paid). With CFBD_API_KEY we
 //        poll CFBD /games for the current week every FOOTBALL_TICKER_NCAAF_MIN (default 60) min, counted against the
 //        same monthly CFBD budget as the daily refresh. Scores there are final/near-final, not live.
+// TODO(Larry, legal clearance): the live NFL source (balldontlie) is NOT cleared yet. It stays OFF unless
+//   FOOTBALL_TICKER_LIVE_CLEARED=true, which must only be set after Larry signs off on
+//   /workspace/proswisher/research/data-sources-terms.md (balldontlie aggregates from undisclosed third-party sources;
+//   no ESPN data is allowed). Until then the NFL ticker shows nflverse finals only.
 // A 401/403, or a 429 twice in a row, STOPS that source until the next deploy. Never routed around.
 import fs from "node:fs";
 import path from "node:path";
 
+export const liveNflCleared = (env) => String(env.FOOTBALL_TICKER_LIVE_CLEARED || "").toLowerCase() === "true";
 export const BDL_ALIASES = { WSH: "WAS", LAR: "LA", JAC: "JAX", OAK: "LV", SD: "LAC", STL: "LA" };
 const WINDOW_BEFORE = 15 * 60e3, WINDOW_AFTER = 5 * 3600e3;
 
@@ -70,7 +75,7 @@ export function createTicker({ store, env = process.env, privateDir = "", fetchI
   }
 
   async function pollNfl(active) {
-    if (env.BALLDONTLIE_API_KEY) {
+    if (env.BALLDONTLIE_API_KEY && liveNflCleared(env)) {   // TODO(Larry): live source pending legal clearance
       if (!due("balldontlie")) return;
       src.balldontlie.last = now();
       const dates = [...new Set(active.map((g) => new Date(Date.parse(g.kickoff) - 5 * 3600e3).toISOString().slice(0, 10)))];
@@ -136,13 +141,13 @@ export function createTicker({ store, env = process.env, privateDir = "", fetchI
     }
     out.sort((a, b) => (a.kickoff < b.kickoff ? -1 : 1));
     return { games: out, sources: Object.fromEntries(Object.entries(src).map(([k, v]) => [k, { blocked: v.blocked, lastPoll: v.last ? new Date(Math.min(v.last, now())).toISOString() : null }])),
-             notes: ["NFL live scores need BALLDONTLIE_API_KEY; without it NFL shows finals from nflverse only.", "NCAAF: no free live source; scores update at most hourly from CFBD when CFBD_API_KEY is set."] };
+             notes: [liveNflCleared(env) && env.BALLDONTLIE_API_KEY ? "NFL live scores via balldontlie." : "NFL live scores are off pending legal clearance of the live source (TODO Larry); NFL shows finals from nflverse only.", "NCAAF: no free live source; scores update at most hourly from CFBD when CFBD_API_KEY is set."] };
   }
 
   function start() {
     if (/^(0|false|no|off)$/i.test(String(env.FOOTBALL_TICKER_ENABLED ?? "true"))) { log("[ticker] disabled (FOOTBALL_TICKER_ENABLED=false)"); return; }
     timer = setInterval(tick, 30e3); timer.unref?.();
-    log(`[ticker] on: NFL via ${env.BALLDONTLIE_API_KEY ? "balldontlie (live)" : "nflverse (finals only; set BALLDONTLIE_API_KEY for live)"}; NCAAF ${env.CFBD_API_KEY ? "via CFBD (hourly, not live)" : "off (no CFBD_API_KEY)"}`);
+    log(`[ticker] on: NFL via ${env.BALLDONTLIE_API_KEY && liveNflCleared(env) ? "balldontlie (live)" : "nflverse (finals only; live source pending legal clearance, TODO Larry)"}; NCAAF ${env.CFBD_API_KEY ? "via CFBD (hourly, not live)" : "off (no CFBD_API_KEY)"}`);
   }
   return { tick, snapshot, start, stop: () => clearInterval(timer), sources: src, live };
 }

@@ -1,11 +1,17 @@
 // Football JSON API. Read-only, no secrets. Custom sims are capped (N, concurrency) and cached.
 import { appName } from "../brand.mjs";
-import { LEAGUES, ATTRIBUTION } from "./store.mjs";
+import { LEAGUES, ATTRIBUTION, disclaimer } from "./store.mjs";
 
 export function registerFootballRoutes(app, { store, ticker, pipeline, env = process.env }) {
   const maxN = Number(env.FOOTBALL_SIM_MAX_N || 5000), maxConc = Number(env.FOOTBALL_SIM_CONCURRENCY || 2);
   const cache = new Map(), CACHE_MAX = 200;
   let inflight = 0;
+  // Every football JSON response carries the disclaimer (betting + not affiliated with the NFL/NCAA/teams).
+  app.use("/api/football", (_req, res, next) => {
+    const json = res.json.bind(res);
+    res.json = (b) => json(b && typeof b === "object" && !Array.isArray(b) ? { ...b, disclaimer: disclaimer(appName(env)) } : b);
+    next();
+  });
   const lg = (v) => (LEAGUES.includes(String(v || "").toLowerCase()) ? String(v).toLowerCase() : null);
   const noStore = (res) => res.set("Cache-Control", "no-store");
   const withPlays = (req, r) => (req.query.plays === "0" && r?.representative ? { ...r, representative: { ...r.representative, plays: undefined } } : r);

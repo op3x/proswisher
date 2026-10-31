@@ -180,11 +180,13 @@ class Refresh(unittest.TestCase):
             calls = 0
             def games(s, y, t): s.calls += 1; return games if y == 2025 else []
             def ppa_games(s, y, t): s.calls += 1; return pp if y == 2025 else []
+            def teams(s, y): s.calls += 1; return [{"school": "Georgia", "mascot": "Bulldogs"}, {"school": "Texas", "mascot": "Longhorns"}]
         f = FakeCfbd()
         res = RF.refresh_ncaaf(self.pub, self.priv, RF.Blocks(os.path.join(self.priv, "b.json")), datetime(2025, 10, 15, tzinfo=timezone.utc), prov=f)
-        self.assertTrue(res["ok"]); self.assertEqual(f.calls, 4)
+        self.assertTrue(res["ok"]); self.assertEqual(f.calls, 5)
         r = json.load(open(os.path.join(self.pub, "ncaaf", "ratings.json")))
         self.assertEqual(r["teams"][0]["team"], "Georgia")
+        self.assertEqual(r["teams"][0]["name"], "Georgia Bulldogs")             # school + mascot, plain text
         self.assertIn("FCS", [t["team"] for t in r["teams"]])                # FCS opponents pooled
         self.assertTrue(os.path.exists(os.path.join(self.priv, "raw", "cfbd", "games_2025.json.gz")))
         pub_text = "".join(open(os.path.join(self.pub, "ncaaf", f)).read() for f in os.listdir(os.path.join(self.pub, "ncaaf")))

@@ -313,6 +313,10 @@ def refresh_ncaaf(pub, priv, blocks, now, prov=None):
             if y == cur or not os.path.exists(pp):
                 wjson(pp, prov.ppa_games(y, "both"), gz=True)
             data[y] = (rjson(gp, []), rjson(pp, []))
+        tp = os.path.join(raw, f"teams_{cur}.json.gz")
+        if not os.path.exists(tp) and hasattr(prov, "teams"):
+            wjson(tp, prov.teams(cur), gz=True)
+        team_rows = rjson(tp, [])
     except SourceBlocked as e:
         blocks.block(src, str(e)); log(f"STOPPED {src}: {e}")
         return {"ok": False, "blocked": True, "newlyBlocked": True}
@@ -335,7 +339,8 @@ def refresh_ncaaf(pub, priv, blocks, now, prov=None):
     model = R.fit_points_model(asof_samples(obs, games, cfg))
     model["fittedOn"] = f"{cur - 1}-{cur} completed games involving FBS teams (ratings as of each game's week)"
     r = R.fit(obs, cur, at_week, cfg, teams=fbs | {"FCS"})
-    names = {t: t for t in fbs}; names["FCS"] = "Non-FBS opponent (pooled)"
+    mascot = {t.get("school"): (t.get("mascot") or "").strip() for t in team_rows if isinstance(t, dict)}
+    names = {t: (f"{t} {mascot[t]}" if mascot.get(t) else t) for t in fbs}; names["FCS"] = "Non-FBS opponent (pooled)"
     played = {}
     for g in done:
         played[g["home"]] = played.get(g["home"], 0) + 1; played[g["away"]] = played.get(g["away"], 0) + 1
@@ -344,6 +349,7 @@ def refresh_ncaaf(pub, priv, blocks, now, prov=None):
     lo, hi = iso(now - timedelta(days=8)), iso(now + timedelta(days=15))
     window = [g for g in cur_games if g["kickoff"] and lo <= g["kickoff"].replace(".000Z", "Z") <= hi]
     for g in window:
+        g["homeName"], g["awayName"] = names.get(g["home"], g["home"]), names.get(g["away"], g["away"])
         if g["status"] != "final":
             site = 0 if g["neutral"] else 1
             g["expected"] = {"home": round(R.expected_points(r, model, g["home"], g["away"], site), 2),

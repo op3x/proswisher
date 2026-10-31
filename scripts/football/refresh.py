@@ -26,6 +26,9 @@ NFL_FIRST_SEASON = 2019          # earliest season we keep ratings for (cross-er
 PARAM_SEASONS = 3                # play-level parameter fit window
 POINTS_SEASONS = 3               # points-model fit window (completed games)
 NCAAF_CFG = {"half_life": 12.0, "offseason_weeks": 16.0, "lambda": 500.0, "season_weeks": 22}
+NCAAF_ELO = {"k": 28, "hfa": 35, "keep": 0.6, "mean": 1500, "per_pt": 14}   # tuned on 2022 margin MAE (2021 burn-in), step 5
+NCAAF_ELO_WEIGHT = 0.55          # expected margin = 0.55 x Elo + 0.45 x EPA points model (weight chosen on 2023 only)
+NCAAF_PLAY_WEEKS = 15            # regular-season weeks fetched for the play-parameter fit (+1 postseason call)
 NCAAF_PLAYS_PER_GAME = 70        # CFBD gives per-game PPA averages; weight each game as ~70 plays
 
 
@@ -264,7 +267,8 @@ def refresh_nfl(pub, priv, blocks, now, prov=None):
         p = PR.fit_nfl(rows, krows)
         p["fittedAt"] = iso(now); p["seasons"] = psz; p["kickoffSeason"] = kick_season
         wjson(ppath, p)
-        wjson(os.path.join(pub, "ncaaf", "params.json"), {**PR.ncaaf_params(p), "fittedAt": iso(now)})
+        if not ncaaf_fitted_params(pub, priv, p, now):   # CFBD play fit (step 5) when we have one, else the documented NFL transfer
+            wjson(os.path.join(pub, "ncaaf", "params.json"), {**PR.ncaaf_params(p), "fittedAt": iso(now)})
         del rows, krows
         log(f"NFL sim params refit on {psz} (kickoffs {kick_season})")
     log(f"NFL ok: season {cur}, ratings as of week {at_week}, {len(cur_games)} games, model {model}")
@@ -309,6 +313,39 @@ def ncaaf_games(rows, fbs):
     return out
 
 
+def ncaaf_play_fit(prov, raw, priv, year):
+    """Fit NCAAF play-level parameters from one full CFBD season of plays (16 calls, once per season). The raw plays stay
+    in the private cache; only the fitted frequencies are kept (private fit file, then public params)."""
+    from football import cfbd_plays as CP
+    fp = os.path.join(priv, f"ncaaf_play_fit_{year}.json")
+    if os.path.exists(fp):
+        return rjson(fp)
+    if not hasattr(prov, "plays"):
+        return None
+    rows = []
+    for wk, st in [(w, "regular") for w in range(1, NCAAF_PLAY_WEEKS + 1)] + [(1, "postseason")]:
+        pth = os.path.join(raw, f"plays_{year}_{'w%02d' % wk if st == 'regular' else 'post'}.json.gz")
+        if not os.path.exists(pth):
+            wjson(pth, prov.plays(year, wk, st), gz=True)
+        rows += CP.to_rows(rjson(pth, []))                     # week by week keeps peak memory low
+    if len(rows) < 20000:
+        log(f"NCAAF play fit skipped: only {len(rows)} plays for {year}")
+        return None
+    fit = CP.fit_ncaaf(rows, label=f"CFBD play-by-play {year}"); fit["seasons"] = [year]
+    wjson(fp, fit)
+    return fit
+
+
+def ncaaf_fitted_params(pub, priv, nfl, now):
+    """Write public NCAAF sim params from the newest private CFBD play fit + the current NFL clock. False if no fit yet."""
+    from football import cfbd_plays as CP
+    fits = sorted(f for f in os.listdir(priv) if f.startswith("ncaaf_play_fit_")) if os.path.isdir(priv) else []
+    if not fits or not nfl:
+        return False
+    wjson(os.path.join(pub, "ncaaf", "params.json"), {**CP.ncaaf_params_from_fit(rjson(os.path.join(priv, fits[-1])), nfl), "fittedAt": iso(now)})
+    return True
+
+
 def refresh_ncaaf(pub, priv, blocks, now, prov=None):
     src = "cfbd"
     if not prov and not os.environ.get("CFBD_API_KEY"):
@@ -330,6 +367,11 @@ def refresh_ncaaf(pub, priv, blocks, now, prov=None):
             if y == cur or not os.path.exists(pp):
                 wjson(pp, prov.ppa_games(y, "both"), gz=True)
             data[y] = (rjson(gp, []), rjson(pp, []))
+        ep = os.path.join(raw, f"games_{cur - 2}.json.gz")        # Elo burn-in season (cached once)
+        if not os.path.exists(ep):
+            wjson(ep, prov.games(cur - 2, "both"), gz=True)
+        elo_raw = rjson(ep, [])
+        fit = ncaaf_play_fit(prov, raw, priv, cur - 1)            # last complete season's plays (step 5)
         tp = os.path.join(raw, f"teams_{cur}.json.gz")
         if not os.path.exists(tp) and hasattr(prov, "teams"):
             wjson(tp, prov.teams(cur), gz=True)
@@ -349,6 +391,10 @@ def refresh_ncaaf(pub, priv, blocks, now, prov=None):
     obs, games = [], []
     for y, (g, p) in sorted(data.items()):
         obs += ncaaf_obs(p, fbs); games += ncaaf_games(g, fbs)
+    elo_games = [g for g in ncaaf_games(elo_raw, fbs)] + games
+    elo_pre, _ = E.run_elo([{k: g[k] for k in ("id", "season", "kickoff", "home", "away", "neutral", "homeScore", "awayScore")} for g in elo_games], NCAAF_ELO)
+    if fit:
+        ncaaf_fitted_params(pub, priv, rjson(os.path.join(pub, "nfl", "params.json")), now)
     cfg = dict(NCAAF_CFG)
     cur_games = [g for g in games if g["season"] == cur]
     done = [g for g in cur_games if g["status"] == "final"]
@@ -369,13 +415,17 @@ def refresh_ncaaf(pub, priv, blocks, now, prov=None):
         g["homeName"], g["awayName"] = names.get(g["home"], g["home"]), names.get(g["away"], g["away"])
         if g["status"] != "final":
             site = 0 if g["neutral"] else 1
-            g["expected"] = {"home": round(R.expected_points(r, model, g["home"], g["away"], site), 2),
-                             "away": round(R.expected_points(r, model, g["away"], g["home"], -site), 2)}
+            eh, ea = R.expected_points(r, model, g["home"], g["away"], site), R.expected_points(r, model, g["away"], g["home"], -site)
+            mg = eh - ea
+            if g["id"] in elo_pre:                                  # step 5: Elo/EPA blend beat EPA alone in every test season
+                mg = NCAAF_ELO_WEIGHT * elo_pre[g["id"]]["spread"] + (1 - NCAAF_ELO_WEIGHT) * mg
+            h, a = E.split_points(eh + ea, mg)
+            g["expected"] = {"home": round(h, 2), "away": round(a, 2)}
     wjson(os.path.join(out, "schedule.json"), {"league": "ncaaf", "season": cur, "generatedAt": iso(now),
           "source": NCAAF_ATTRIBUTION, "games": window,
           "note": "Only a rolling window (8 days back, 15 ahead) is published."})
     log(f"NCAAF ok: season {cur}, ratings as of week {at_week}, {len(fbs)} FBS teams, model {model}")
-    return {"ok": True, "season": cur, "asOfWeek": at_week, "teams": len(fbs), "windowGames": len(window)}
+    return {"ok": True, "season": cur, "asOfWeek": at_week, "teams": len(fbs), "windowGames": len(window), "playFit": bool(fit)}
 
 
 # ------------------------------------------------------------------ main

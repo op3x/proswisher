@@ -68,7 +68,8 @@ export interface SimResult {
   margin: Dist;             // home minus away
   total: Dist;
   medianScore: { home: number; away: number };
-  periodScores: { home: number[]; away: number[] }; // median points per period
+  periodScores: { home: number[]; away: number[] }; // periodLine (sums to median final) or medianByPeriod fallback
+  periodKind: "line" | "median";
   entertainmentOnly: boolean;
   label?: string;
   representative: { final: { home: number; away: number }; periods: { home: number[]; away: number[] }; overtime: boolean; events: PlayEvent[] };

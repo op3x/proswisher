@@ -51,6 +51,8 @@ function Interval({ label, d, fmt = (x: number) => String(Math.round(x)) }: { la
   );
 }
 
+const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+
 export default function Simulate() {
   const [params, setParams] = useSearchParams();
   const leagues = useLeagues();
@@ -185,14 +187,14 @@ export default function Simulate() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm tabular-nums">
-                <caption className="text-left text-xs text-slate-400 pb-1">Median points by {(lr?.periods.label || "Quarter").toLowerCase()}</caption>
-                <thead><tr className="text-slate-400 text-xs"><th className="text-left font-normal p-1">Team</th>{r.periodScores.home.map((_, i) => <th key={i} className="p-1 font-normal">{lr?.periods.short || "Q"}{i + 1}</th>)}</tr></thead>
+                <caption className="text-left text-xs text-slate-400 pb-1">{r.periodKind === "line" ? "Projected points" : "Median points"} by {(lr?.periods.label || "Quarter").toLowerCase()}</caption>
+                <thead><tr className="text-slate-400 text-xs"><th className="text-left font-normal p-1">Team</th>{r.periodScores.home.map((_, i) => <th key={i} className="p-1 font-normal">{lr?.periods.short || "Q"}{i + 1}</th>)}{r.periodKind === "line" && <th className="p-1 font-normal">Final</th>}</tr></thead>
                 <tbody>
-                  <tr><td className="p-1 text-amber-300">{r.teams.away.name}</td>{r.periodScores.away.map((x, i) => <td key={i} className="p-1 text-center">{x}</td>)}</tr>
-                  <tr><td className="p-1 text-accent">{r.teams.home.name}</td>{r.periodScores.home.map((x, i) => <td key={i} className="p-1 text-center">{x}</td>)}</tr>
+                  <tr><td className="p-1 text-amber-300">{r.teams.away.name}</td>{r.periodScores.away.map((x, i) => <td key={i} className="p-1 text-center">{x}</td>)}{r.periodKind === "line" && <td className="p-1 text-center font-semibold">{sum(r.periodScores.away)}</td>}</tr>
+                  <tr><td className="p-1 text-accent">{r.teams.home.name}</td>{r.periodScores.home.map((x, i) => <td key={i} className="p-1 text-center">{x}</td>)}{r.periodKind === "line" && <td className="p-1 text-center font-semibold">{sum(r.periodScores.home)}</td>}</tr>
                 </tbody>
               </table>
-              <p className="text-[11px] text-slate-400 mt-1">Quarter scores show a typical scoring shape, not a precise forecast. Each quarter's median is taken on its own, so they needn't add up to the median final.</p>
+              <p className="text-[11px] text-slate-400 mt-1">Quarter scores show a typical scoring shape, not a precise forecast. {r.periodKind === "line" ? "They add up to the median final score; regular time only." : "Each quarter's median is taken on its own, so they needn't add up to the median final."}</p>
             </div>
             {r.label && <p className="text-xs text-fuchsia-200">{r.label}</p>}
             <p className="text-xs text-slate-400">{site.pickDisclaimer}</p>

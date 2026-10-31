@@ -85,7 +85,7 @@ export function mockSim(req: SimRequest, home: Team, away: Team): SimResult {
   return {
     league: req.league, sport: "football", n: req.n, sample: true,
     teams: { home, away }, winProbability: { home: pH, away: 1 - pH, tie: 0 },
-    margin: d(m, 13), total: d(tot, 13), medianScore: { ...score }, periodScores: q, entertainmentOnly: cross, ...(cross ? { label: "For entertainment only: a hypothetical matchup that cannot be played, not a prediction of a real game." } : {}),
+    margin: d(m, 13), total: d(tot, 13), medianScore: { ...score }, periodScores: q, periodKind: "line", entertainmentOnly: cross, ...(cross ? { label: "For entertainment only: a hypothetical matchup that cannot be played, not a prediction of a real game." } : {}),
     representative: { final: { ...score }, periods: q, overtime: false, events: ev },
   };
 }

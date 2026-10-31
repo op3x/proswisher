@@ -121,22 +121,27 @@ export const site = {
   // [question, answer, onlyWhenSelling?]. Entries flagged true are hidden while payments are off
   // (they describe checkout/cancel flows that don't exist yet).
   faq: [
-    ["Do you take bets?", "No. Simculus is not a sportsbook. Op3x LLC doesn't accept wagers, hold your money or pay out winnings. We sell predictions only."],
-    ["What exactly is a Simculus prediction?", "For each game, our model gives a projected final score, a projected spread and its lean, meaning the side the numbers favor. It's information to consider, not advice to bet."],
-    ["What's free, and what do members get?", "Every day, one featured game's full prediction is free on its game page, with no account or sign-up, plus the public track record. Members ($9/month) get every game on the slate.", true],
-    // Laye asked Perry to confirm source wording: this is the accurate version for the shipped model.
-    ["Where does the data come from?", "We build predictions from game results: schedules and final scores from a licensed sports-data provider, turned into team scoring-margin ratings. Market spreads, where shown, are the median across US books from a licensed odds provider, with the time we recorded them."],
-    ["Are you affiliated with the league or any team?", "No. Simculus is independent. Not affiliated with, endorsed or sponsored by the NFL, NCAA or any team. Team names are used only to identify games, and simulated plays use position labels, never real player names."],
-    ["What is a fictional or cross-era matchup?", "You can pit teams that will never meet, such as different seasons or a college team against an NFL team. Those results are labeled For entertainment only, because they can't be checked against a real game."],
-    ["Who can use Simculus?", "Adults 21 and older. Subscriptions aren't available in Washington, Hawaii, Utah or Japan, though anyone 21+ can browse our public pages, the featured free game and the track record."],
-    ["How much does it cost?", "The daily featured game costs nothing and needs no account. Membership is $9 a month plus applicable tax and renews monthly until you cancel. If the price or other terms ever change, we'll email you first, and changes apply from your first renewal at least 14 days after that email.", true],
+    // Simculus football FAQ (rewritten from NBA-era copy, 10/31). Memo 24 rules: never the word "official", no
+    // betting-edge or win-rate claims, cross-era/cross-level = "For entertainment only", no real player names.
+    ["What is Simculus?", "Simculus simulates football games. Pick an NFL or college matchup and we play it out snap by snap thousands of times, then show how often each team won, the typical score and margin, and one representative game you can watch on a drive chart."],
+    ["Do you take bets?", "No. Simculus is not a sportsbook. Op3x LLC doesn't accept wagers, hold your money or pay out winnings."],
+    ["How does a simulation work?", "Each simulated game is built play by play from team-level tendencies estimated from past seasons: how often a team runs or passes, how many yards plays tend to gain, and how drives end. We repeat the game thousands of times and summarize the results as ranges, not a single answer."],
+    ["What do the numbers on the results page mean?", "Win chance is the share of simulated games each team won. The score, margin and total show the middle of the simulated results with a range around them. Quarter scores show a typical scoring shape, not a precise forecast."],
+    ["Is the game I watch what will actually happen?", "No. The game on the drive chart is one simulated game picked because it lands close to the typical margin and total. It's an illustration of how a game like this can unfold, not a prediction of the actual plays."],
+    ["Why don't simulated plays name any players?", "Simulated plays use position labels only. We don't use real player names, likenesses, team logos or helmets."],
+    ["Which leagues do you cover?", "NFL and college football (FBS). Other sports are shown as coming soon and aren't available yet."],
+    ["Where does the data come from?", "NFL data comes from nflverse and college data from CollegeFootballData.com. The full credits are listed under Data sources at the bottom of every page. Data is refreshed daily."],
+    ["What does the scores bar show?", "Schedule & final scores: teams, score, quarter, clock and status. College games show final scores only."],
+    ["Are you affiliated with the league or any team?", "No. Simculus is independent. Not affiliated with, endorsed or sponsored by the NFL, NCAA or any team. Team names are used only to identify games."],
+    ["What is a fictional or cross-era matchup?", "You can pit teams that will never meet, such as teams from different seasons or a college team against an NFL team. Those results are labeled For entertainment only, because they can't be checked against a real game."],
+    ["Who can use Simculus?", "Adults 21 and older. Subscriptions won't be available in Washington, Hawaii, Utah or Japan, though anyone 21+ can browse the public pages."],
+    ["How much does it cost?", "The price and what it includes are shown on the Subscribe page before you pay, plus applicable tax. Membership renews monthly until you cancel. If the price or other terms ever change, we'll email you first, and changes apply from your first renewal at least 14 days after that email.", true],
     ["How do I cancel?", "Go to Account settings → Cancel subscription and confirm. It takes about a minute, with no call or email required. Your access continues through the end of your current billing period, and we email you a confirmation.", true],
     // HOLD (Larry 9:38): refund copy ships only once support@simculus.com works (site.supportEmailActive).
     ["Do you offer refunds?", "{refunds}", true],
     ["Do you run contests or giveaways?", "No. Simculus doesn't run contests, sweepstakes or prizes of any kind."],
-    ["Should I bet based on your predictions?", "That's your decision. Our predictions are for entertainment and information only and aren't betting advice. If you bet, set a budget, bet only what you can afford to lose, and never chase losses. If gambling stops being fun, call 1-800-GAMBLER."],
-    ["Do you send a daily email?", "Not yet. For now, find each day's predictions on the site."],
-    ["Can I subscribe today?", "Not yet. Subscriptions aren't open, so nothing is for sale today. Every prediction on the site is free to view for now.", false, true],
+    ["Should I bet based on a simulation?", "Simulations are for entertainment and information only and aren't betting advice. If you bet, set a budget, bet only what you can afford to lose, and never chase losses. If gambling stops being fun, call 1-800-GAMBLER."],
+    ["Can I subscribe today?", "Not yet. Subscriptions aren't open, so nothing is for sale today. Simulations on the site are free to run for now.", false, true],
   ] as ReadonlyArray<readonly [string, string, boolean?, boolean?]>,
   // Checkout / cancel copy (Laye). Rendered on /subscribe; the form is inactive while payments are disabled.
   checkout: {

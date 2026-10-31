@@ -128,7 +128,9 @@ function fromFootballSim(r: any, req: SimRequest): SimResult {
     league: r.league || req.league, sport: "football", n: r.n, sample: false,
     teams: { home: { id: homeId, name: r.teams?.home?.name || req.home, season: r.teams?.home?.season }, away: { id: String(r.teams?.away?.id ?? req.away), name: r.teams?.away?.name || req.away, season: r.teams?.away?.season } },
     winProbability: r.winProbability, margin: r.margin, total: r.total, medianScore: r.medianScore,
-    periodScores: r.periodScores || r.medianByPeriod || r.medianByQuarter, entertainmentOnly: !!(r.entertainmentOnly || r.label), label: r.label,
+    // periodLine: whole-point quarters that add up to the median final (9d5ef46). medianByPeriod only as fallback.
+    periodScores: r.periodLine?.home ? r.periodLine : (r.periodScores || r.medianByPeriod || r.medianByQuarter), periodKind: r.periodLine?.home ? "line" : "median",
+    entertainmentOnly: !!(r.entertainmentOnly || r.label), label: r.label,
     representative: { final: rep.final, periods: rep.periods || rep.quarters, overtime: !!rep.overtime, events },
   };
 }

@@ -304,3 +304,20 @@ class LinAlg(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class QuarterEval(unittest.TestCase):
+    def test_quarter_points_from_cumulative_pbp_scores_excluding_ot(self):
+        import gzip, tempfile
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts", "football"))
+        import quarter_eval as QE
+        d = tempfile.mkdtemp(); p = os.path.join(d, "pbp.csv.gz")
+        rows = [("g1", 1, 7, 0), ("g1", 1, 7, 3), ("g1", 2, 14, 3), ("g1", 3, 14, 3), ("g1", 4, 17, 10), ("g1", 5, 23, 10), ("g2", 1, 0, 0)]
+        with gzip.open(p, "wt") as f:
+            f.write("game_id,qtr,total_home_score,total_away_score\n")
+            for g, q, h, a in rows:
+                f.write(f"{g},{q},{h},{a}\n")
+        act = QE.actual_quarters([p], {"g1", "g2"})
+        self.assertEqual(act, {"g1": {"home": [7, 7, 0, 3], "away": [3, 0, 0, 7]}})   # OT (qtr 5) excluded; g2 incomplete dropped
+        res = QE.evaluate([{"id": "g1", "simQ": {"home": [8, 7, 0, 3], "away": [3, 0, 0, 7]}}], act)
+        self.assertEqual(res["Q1"]["biasTotal"], 1.0); self.assertEqual(res["Q2"]["maeTotal"], 0.0)

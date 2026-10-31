@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { prepare, simulateGame, mulberry32, RULES } from "../../server/sim/engine.mjs";
-import { buildCurve, runMonteCarlo } from "../../server/sim/montecarlo.mjs";
+import { buildCurve, runMonteCarlo, drawSeed } from "../../server/sim/montecarlo.mjs";
 
 const P = JSON.parse(fs.readFileSync(new URL("../fixtures/football/nfl-params.json", import.meta.url)));
 const PC = JSON.parse(fs.readFileSync(new URL("../fixtures/football/ncaaf-params.json", import.meta.url)));
@@ -74,4 +74,20 @@ test("SportModule registry: football registers nfl + ncaaf; a module missing a p
   assert.deepEqual(allLeagues().map((l) => l.id).sort(), ["ncaaf", "nfl"]);
   assert.equal(sportForLeague("NFL").id, "football");
   assert.throws(() => registerSport({ id: "basketball", leagues: { nba: { rules: { periods: 4 } } } }), /missing/);
+});
+
+test("rigor step 2: nearby seeds give independent draws; env shock widens totals and keeps the calibrated means", () => {
+  // the old scheme used seed + i, so seed 7 and seed 8 shared all but one draw
+  const a = new Set(Array.from({ length: 500 }, (_, i) => drawSeed(7, 0, i))), b = Array.from({ length: 500 }, (_, i) => drawSeed(8, 0, i));
+  assert.ok(b.filter((x) => a.has(x)).length <= 1);
+  assert.notEqual(drawSeed(7, 0, 3), drawSeed(7, 1, 3));
+  const curve = buildCurve(NFL, 500);
+  const base = runMonteCarlo(NFL, { target: { H: 26, A: 20 }, n: 3000, seed: 11, curve, pilot: 800 });
+  const wide = runMonteCarlo(NFL, { target: { H: 26, A: 20 }, n: 3000, seed: 11, curve, pilot: 800, envSd: 0.8 });
+  assert.ok(wide.total.sd > base.total.sd + 1, `${wide.total.sd} vs ${base.total.sd}`);
+  for (const r of [base, wide]) {
+    assert.ok(Math.abs(r.calibration.simMeanPoints.home - 26) < 0.9, JSON.stringify(r.calibration));
+    assert.ok(Math.abs(r.calibration.simMeanPoints.away - 20) < 0.9, JSON.stringify(r.calibration));
+  }
+  assert.equal(wide.calibration.envSd, 0.8);
 });

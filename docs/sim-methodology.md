@@ -1,4 +1,4 @@
-# Simculus football sim: methodology and honest validation (v1 + rigor step 1, 2026-10-31)
+# Simculus football sim: methodology and honest validation (v1 + rigor steps 1, 2, 4; 2026-10-31)
 
 Status: v1 slice. Everything below is what the code does today. Pending items are listed at the end.
 Numbers come from /workspace/proswisher/scratch/bt3 (rows.json, results.json) and research/backtest-nfl/report.json + calibration.png.
@@ -94,6 +94,63 @@ so per "blend with Elo where that helps out of sample" production uses **tuned E
 This takes the sim from 10.29 to 10.19 margin MAE and Brier 0.2273 to 0.2236, i.e. level with Elo, still clearly behind the closing line.
 Production: scripts/football/elo.py (stdlib), ratings.json `marginModel` + per-team `elo`; store.mjs uses it for same-season matchups; cross-era sims keep the EPA margin.
 
+## 5b. Rigor step 2: home bias and total intervals (2026-10-31)
+**Home bias: root cause found and fixed (server/sim/montecarlo.mjs).** The step-1 sim's mean margin ran +0.33 points above its own input
+(sim 2.01 vs expected 1.68; home +0.20, away -0.13 points). Cause: draw i used seed + i, so requests with nearby seeds (every consecutive
+backtest game) shared almost the same pilot games, and one pilot's sampling error became a systematic bias. Fix: independent per-draw seeds
+(murmur3 fmix32 of seed, stream, i), and calibration on a fixed pilot set of 1,500 games (common random numbers) with up to 4 Newton/secant
+passes, which also iterates out the cross-effect of one side's tilt on the other side's points. Check: 30 seeds x 3 targets, mean error
+within +/-0.1 point per side; backtest bias +0.33 -> -0.02.
+
+**Total intervals.** Added a game-environment random effect: each simulated game draws one shared shock u ~ N(0, envSd) on both offenses' tilt
+(pace, weather, game script). The calibration passes include it, so means still match. envSd was chosen on the 2023 season only:
+
+| envSd (2023 only) | total 80% | total 95% | margin 80% | margin 95% | Brier |
+|---|---|---|---|---|---|
+| 0 (bias fix only) | 71.6% | 90.5% | 77.2% | 94.0% | 0.2317 |
+| 0.4 | 73.0% | 90.9% | 76.1% | 93.3% | 0.2307 |
+| 0.6 | 75.1% | 92.6% | 77.2% | 93.0% | 0.2302 |
+| **0.8 (chosen)** | 79.6% | 94.4% | 77.2% | 92.6% | 0.2306 |
+| 0.8 + per-team shock 0.3 | 80.4% | 95.8% | 78.2% | 93.7% | 0.2308 |
+| 0.8 + per-team shock 0.5 | 80.7% | 96.1% | 80.0% | 95.1% | 0.2320 |
+
+The per-team shock helped margin coverage but worsened Brier and log loss, so it was dropped (teamSd 0). NCAAF gets no shock until step 5.
+
+**Step-2 result, all 963 test games** (same harness and games as section 5 and 5a; the step-2 sim row is the production configuration)
+
+| model | Brier | log loss | margin MAE | margin RMSE | winner % |
+|---|---|---|---|---|---|
+| v1 sim | 0.2273 | 0.647 | 10.29 | 13.28 | 62.6% |
+| step-1 sim (tuned Elo margin + EPA total) | 0.2236 | 0.638 | 10.19 | 13.14 | 64.4% |
+| **step-2 sim (+ bias fix, envSd 0.8)** | **0.2230** | **0.6376** | 10.17 | 13.14 | 63.1% |
+| tuned Elo expected margin (no sim) | 0.2234 | 0.6386 | **10.16** | 13.15 | 63.6% |
+| Elo baseline (538 defaults) | 0.2231 | 0.6380 | 10.18 | 13.14 | 63.6% |
+| closing line | 0.2128 | 0.6151 | 9.74 | 12.64 | 67.5% |
+
+- Coverage (nominal 80/95): margin 78.6% / 94.6% (step 1: 79.2 / 94.8); **total 81.9% / 95.1%** (step 1: 75.3 / 91.9). Fixed.
+- Mean predicted home WP 0.550 vs realised 0.543 (step 1: 0.561; v1: 0.574). Mean sim margin = input margin to within 0.02 points.
+- Remaining miscalibration: the 0.4-0.5 WP bin (n=221) predicts 0.450, realised 0.385; the 0.6-0.9 bins are slightly under-confident.
+  A walk-forward Platt recalibration is the obvious next fix but needs out-of-sample sim rows to fit on; not done.
+- By season Brier (sim / Elo / line): 2023 0.231/0.233/0.217; 2024 0.213/0.211/0.204; 2025 0.222/0.222/0.211; 2026 0.232/0.232/0.229.
+- Total MAE 10.64 vs closing total 10.16; still no betting edge.
+- Honest read: the sim now matches or slightly beats both Elo baselines on Brier and log loss, and is about level on margin MAE, with
+  correctly sized intervals. It is still about 0.01 Brier / 0.43 points MAE behind the closing line.
+- Cost: calibration now runs up to 6,000 pilot games per request (about +0.6 s at n=10,000).
+
+## 5c. Rigor step 4: per-quarter error vs actual quarter scores
+scripts/football/quarter_eval.py (actual quarter points from nflverse pbp cumulative scores; OT excluded). Step-2 sim, 963 games:
+
+| quarter | sim mean total | actual mean total | bias | MAE | MAE of a constant (test mean, optimistic) |
+|---|---|---|---|---|---|
+| Q1 | 9.89 | 8.83 | +1.06 | 4.60 | 4.40 |
+| Q2 | 12.61 | 13.93 | -1.33 | 5.38 | 5.40 |
+| Q3 | 9.89 | 9.30 | +0.60 | 4.74 | 4.76 |
+| Q4 | 12.80 | 12.98 | -0.18 | 6.03 | 5.97 |
+
+Finding: game totals are right, but the engine moves about 1.1 points of scoring from Q2 (end-of-half two-minute drives) into Q1/Q3, and per-quarter
+predictions are no better than a constant per-quarter mean. Quarter-level outputs should be read as a shape, not a forecast. Fix candidates:
+end-of-half pace/aggressiveness from pbp, or a fitted per-quarter scoring-rate term; not done yet.
+
 ## 6. Pending from the rigor brief
 1. (Done 5a; not adopted, Elo won.) Ridge regression per pass and run unit (EPA ~ off + def + HFA + situation) with exponential decay / Kalman recency and a Bayesian prior
    regressed to preseason, weight chosen by rolling CV. scripts/football/linalg.py has the pure-Python solvers (weighted ridge with prior mean, logistic Newton with SEs,
@@ -101,12 +158,14 @@ Production: scripts/football/elo.py (stdlib), ratings.json `marginModel` + per-t
 2. Fitted logistic/multinomial play sub-models (play call, completion, sack, INT, fumble, FG by distance, 4th-down choice) evaluated by out-of-sample log loss against the
    current bucket tables. The bucket tables stay unless they are beaten.
 3. Optional market calibration (keep raw + calibrated outputs).
-4. Per-quarter error vs actual quarter scores (sim per-period means are already in rows.json; actual quarter scores still need extracting from pbp).
-5. Sensitivity analysis (half-life, lambda, n sims, HFA), and fixing the home overstatement and the narrow total intervals.
+4. (Done 5c; error measured, Q2 under-scoring found, not fixed yet.) Per-quarter error vs actual quarter scores.
+5. (Done 5b: home bias root-caused and fixed; total intervals fixed.) Sensitivity analysis (half-life, lambda covered in 5a; n sims, HFA pending).
 6. NCAAF: its own engine parameters, a CFBD walk-forward backtest, and an HFA check.
 7. Generic backtest harness keyed by SportModule (today backtest.mjs is football-specific; the MC runner, API and scheduler hook are generic).
 
 ## Reproduce
+BT_SEASONS=2023 BT_ENV_SD=0.8 node scripts/football/backtest.mjs <dir> 1000   # step 2 (shard by season, merge rows.json)
+python3 scripts/football/quarter_eval.py <dir>/rows.json <out.json> play_by_play_202{3,4,5,6}.csv.gz   # step 4
 cd scripts && python3 -m football.rigor <obs.pkl> <games.csv> <outdir> [--use unit|old] [--old-obs old_obs.pkl]   # step 1 CV + test table
 node scripts/football/backtest.mjs <dir> 1000   # needs games.json/params.json from scripts/football/backtest.py
 python3 scripts/football/bt_report.py <dir> <nflverse games.csv> <outdir>

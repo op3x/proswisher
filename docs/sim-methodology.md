@@ -1,4 +1,4 @@
-# Simculus football sim: methodology and honest validation (v1 + rigor steps 1, 2, 4, 5, Q2 fix; 2026-10-31)
+# Simculus football sim: methodology and honest validation (v1 + rigor steps 1, 2, 4, 5, Q2 fix, NCAAF; 2026-10-31)
 
 Status: v1 slice. Everything below is what the code does today. Pending items are listed at the end.
 Numbers come from /workspace/proswisher/scratch/bt3 (rows.json, results.json) and research/backtest-nfl/report.json + calibration.png.
@@ -195,6 +195,53 @@ map fitted on 2010-2022 Elo margins). Step-2 rows, Brier / log loss:
 
 No method improves consistently out of sample (the one 2024+ gain is 0.0005 and it loses on all games), so the raw sim WP stays.
 
+## 5f. Rigor step 5: NCAAF fit and walk-forward backtest (2026-10-31)
+Data: CFBD (FBS games, lines and plays), raw data private and out of git. Test = 2024, 2025 and 2026 through week 9 (2,442 FBS-vs-FBS games;
+2,427 with a closing spread). Every choice below was made on earlier seasons only:
+- **Ratings:** the NCAAF EPA ratings as of each game's week (half-life 12 weeks, lambda 500), points model refitted each week on the
+  3 prior seasons; its home edge is fitted inside that model each week (3.0-3.5 points in 2023, rising to about 5 by 2026).
+- **Elo:** tuned on 2022 margin MAE (2021 burn-in): K 28, home edge 35 Elo points (= 2.5 points), offseason keep 0.6, 14 Elo points per point.
+- **Expected margin:** 0.55 x Elo + 0.45 x EPA, weight chosen on 2023. Expected total from the EPA points model.
+- **Play parameters:** fitted on the 154k CFBD 2023 FBS plays (sack 0.061, interception 0.026, completion 0.626, mean run 5.63 yards,
+  FG make logistic a 4.605, b -0.0908 per yard, XP 0.979; NFL clock model). Tempo 0.95 matches the 2023 152.1 snaps per game with the Q2/timeout engine.
+- **Game shock:** envSd chosen on 2023 only (n=600 sims per game):
+
+| envSd (2023) | Brier | log loss | total 80% | total 95% | margin 80% | margin 95% |
+|---|---|---|---|---|---|---|
+| 0 | 0.1655 | 0.4991 | 71.5% | 90.2% | 72.6% | 90.5% |
+| **0.8 (chosen)** | 0.1655 | **0.4973** | 77.4% | 93.6% | 71.5% | 90.9% |
+| 1.6 | 0.1658 | 0.4975 | 87.7% | 97.1% | 71.5% | 90.8% |
+
+**Test result, 2024-2026** (n=1,000 sims per game; "Phi" rows turn a margin into a win probability with the residual SD fitted on 2023: blend 17.04, EPA 17.37;
+the closing line uses SD 15.18, also fitted on 2023)
+
+| model | Brier | log loss | margin MAE | margin RMSE | winner % |
+|---|---|---|---|---|---|
+| **Simculus NCAAF sim (blend margin, envSd 0.8)** | **0.1687** | **0.5064** | **13.41** | **16.97** | 74.1% |
+| blend margin only (Phi) | 0.1699 | 0.5066 | 13.42 | 16.98 | 73.8% |
+| EPA ratings only (Phi) | 0.1745 | 0.5192 | 13.63 | 17.32 | 73.0% |
+| tuned Elo (its own WP) | 0.1731 | 0.5142 | 13.67 | 17.23 | 73.8% |
+| closing line (2,427 games) | 0.1552 | 0.4623 | 11.86 | 15.05 | 76.4% |
+
+- On the 2,427 games with a line the sim scores Brier 0.1697, log loss 0.5094, margin MAE 13.40: **about 0.015 Brier and 1.5 points of margin MAE behind the line.**
+- Total MAE 12.97 (13.01 vs the line's 12.43 on line games). Mean sim total 53.50 vs actual 53.37; mean WP 0.650 vs realised 0.652.
+- Coverage (nominal 80/95): **total 78.1% / 93.2%** (good); **margin 73.3% / 89.6% (too narrow)**. College margins have more spread than the
+  shared game shock adds; see the per-team shock check below.
+- Home margin: sim mean +8.67 vs realised +9.63 (expected +8.72). The sim reproduces its input; the input is about 1 point short of the realised home
+  margin in these seasons, consistent with the rising home edge.
+- By season, Brier (sim / blend / Elo / line): 2024 0.1757/0.1766/0.1798/0.1648; 2025 0.1639/0.1659/0.1684/0.1563; 2026 0.1652/0.1660/0.1700/0.1387.
+  Margin MAE (sim / line): 2024 13.52/11.97, 2025 13.12/11.88, 2026 13.68/11.65.
+
+**Honest read:** with its own fit, the NCAAF sim beats Elo-only and EPA-only out of sample and is level with or slightly better than the blended margin
+it is built on: better Brier in every test season, but log loss is worse than the blend in 2024 and 2026 (a few overconfident misses), level overall. It is clearly behind the closing line, by more than the NFL gap. No betting edge is claimed.
+Production (scripts/football/refresh.py): the NCAAF refresh now runs Elo with a burn-in season, uses the 0.55/0.45 blend for the expected margin,
+and fits play parameters from the previous season's CFBD plays (16 calls, once per season, cached privately); store.mjs NCAAF envSd 0.8.
+
+**Per-team shock check (rejected).** Adding a per-team shock of 0.4 on top of envSd 0.8 widened margin coverage on 2023 only slightly
+(71.5/90.9 -> 74.2/91.2) and made Brier and log loss worse (0.1655 -> 0.1672, 0.4973 -> 0.5033), so teamSd stays 0 (same result as the NFL in 5b).
+For the record, on the test seasons it gave Brier 0.1687, log loss 0.5072, margin coverage 75.2/90.8: no better. Too-narrow NCAAF margin intervals
+remain an open item (candidates: heavier-tailed team-strength uncertainty early in the season, or a mismatch blowout term).
+
 ## 6. Pending from the rigor brief
 1. (Done 5a; not adopted, Elo won.) Ridge regression per pass and run unit (EPA ~ off + def + HFA + situation) with exponential decay / Kalman recency and a Bayesian prior
    regressed to preseason, weight chosen by rolling CV. scripts/football/linalg.py has the pure-Python solvers (weighted ridge with prior mean, logistic Newton with SEs,
@@ -204,10 +251,11 @@ No method improves consistently out of sample (the one 2024+ gain is 0.0005 and 
 3. Optional market calibration (keep raw + calibrated outputs). Statistical WP recalibration tested in 5e, not adopted.
 4. (Done 5c + 5d: Q2 under-scoring fixed with end-of-half hurry and timeouts.) Per-quarter error vs actual quarter scores.
 5. (Done 5b: home bias root-caused and fixed; total intervals fixed.) Sensitivity analysis (half-life, lambda covered in 5a; n sims, HFA pending).
-6. NCAAF: its own engine parameters, a CFBD walk-forward backtest, and an HFA check.
+6. (Done 5f.) NCAAF: its own engine parameters, a CFBD walk-forward backtest, and an HFA check. Open: NCAAF margin intervals too narrow (73/90).
 7. Generic backtest harness keyed by SportModule (today backtest.mjs is football-specific; the MC runner, API and scheduler hook are generic).
 
 ## Reproduce
+python3 scripts/football/backtest_ncaaf.py --raw <cfbd raw dir> --test 2024-2026 --out <dir>; BT_LEAGUE=ncaaf BT_SEASONS=2024 BT_ENV_SD=0.8 BT_LINE_SD=15.18 node scripts/football/backtest.mjs <dir> 1000   # step 5 NCAAF
 BT_SEASONS=2023 BT_ENV_SD=0.8 node scripts/football/backtest.mjs <dir> 1000   # step 2 (shard by season, merge rows.json)
 python3 scripts/football/quarter_eval.py <dir>/rows.json <out.json> play_by_play_202{3,4,5,6}.csv.gz   # step 4
 cd scripts && python3 -m football.rigor <obs.pkl> <games.csv> <outdir> [--use unit|old] [--old-obs old_obs.pkl]   # step 1 CV + test table

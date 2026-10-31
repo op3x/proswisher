@@ -51,8 +51,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const S = prepare(JSON.parse(fs.readFileSync(path.join(dir, "params.json"), "utf8")), "nfl");
   const curve = buildCurve(S);
   const rows = []; const t0 = Date.now();
-  for (const g of games) {
-    const r = runMonteCarlo(S, { target: { H: Math.max(3, g.expected.home), A: Math.max(3, g.expected.away) }, n, seed: 1000 + rows.length, curve, playoff: g.playoff, pilot: 300 });
+  // BT_SEASONS=2023,2024 shards by season; BT_ENV_SD sets the game-environment shock; BT_PILOT / BT_PASSES the calibration effort.
+  const only = process.env.BT_SEASONS ? new Set(process.env.BT_SEASONS.split(",").map(Number)) : null;
+  const envSd = process.env.BT_ENV_SD != null ? Number(process.env.BT_ENV_SD) : undefined;
+  const teamSd = process.env.BT_TEAM_SD != null ? Number(process.env.BT_TEAM_SD) : undefined;
+  const pilot = Number(process.env.BT_PILOT || 1000), passes = Number(process.env.BT_PASSES || 4);
+  for (const [gi, g] of games.entries()) {
+    if (only && !only.has(g.season)) continue;
+    const r = runMonteCarlo(S, { target: { H: Math.max(3, g.expected.home), A: Math.max(3, g.expected.away) }, n, seed: 1000 + gi, curve, playoff: g.playoff, pilot, passes, envSd, teamSd });
     rows.push({ season: g.season, id: g.id, margin: g.homeScore - g.awayScore, total: g.homeScore + g.awayScore, expMargin: g.expected.home - g.expected.away,
       simMarginMedian: r.margin.median, simMarginMean: r.margin.mean, simTotalMedian: r.total.median, simTotalMean: r.total.mean, wpHome: r.winProbability.home + r.winProbability.tie / 2,
       spreadLine: g.spreadLine, totalLine: g.totalLine, home: g.home, away: g.away, week: g.week,

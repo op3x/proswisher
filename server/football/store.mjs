@@ -17,6 +17,11 @@ export const disclaimer = (name) => `${name} provides sports simulations and pre
 export const ENTERTAINMENT = "For entertainment only: a hypothetical matchup that cannot be played, not a prediction of a real game.";
 const readJson = (p) => { try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return null; } };
 
+// Rigor step 2 (docs/sim-methodology.md 5b): game-environment shock, chosen on the 2023 test season only (envSd 0.6/0.8 compared;
+// 0.8 brought total 80/95% coverage to 79.6/94.4 there and 81.9/95.1 across 2023-2026). A per-team shock (teamSd) was tried and dropped:
+// it helped margin coverage but worsened Brier and log loss. NCAAF is not fitted yet (step 5), so it gets no shock.
+export const SIM_UNCERTAINTY = { nfl: { envSd: 0.8, teamSd: 0 }, ncaaf: { envSd: 0, teamSd: 0 } };
+
 export function createFootballStore({ publicDir, env = process.env, log = console.log } = {}) {
   const levelGap = Number(env.FOOTBALL_LEVEL_GAP_POINTS || 30);
   const L = {}; // league -> { ratings, schedule, history, params, S, curve }
@@ -91,7 +96,7 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
 
   function simulate(m, { n = 2000, seed = 20261031, playoff = false } = {}) {
     const lg = m.rules; if (!ready(lg)) return { error: `${lg} simulation parameters are not loaded yet` };
-    const res = runMonteCarlo(L[lg].S, { target: m.target, n, seed, playoff, curve: curveFor(lg), names: { H: m.home.name || m.home.team, A: m.away.name || m.away.team } });
+    const res = runMonteCarlo(L[lg].S, { target: m.target, n, seed, playoff, curve: curveFor(lg), ...SIM_UNCERTAINTY[lg], names: { H: m.home.name || m.home.team, A: m.away.name || m.away.team } });
     return { ...res, teams: { home: { id: m.home.team, name: m.home.name, season: m.home.season }, away: { id: m.away.team, name: m.away.name, season: m.away.season } },
              neutral: m.neutral, rules: m.rules, expectedPoints: { home: Math.round(m.target.H * 10) / 10, away: Math.round(m.target.A * 10) / 10 },
              notes: m.notes, ...(m.entertainment ? { label: ENTERTAINMENT } : {}), attribution: ATTRIBUTION[m.rules] };

@@ -30,6 +30,17 @@ function slopeAt(curve, tv) {
   return Math.max(0.5, (pts[i] - pts[i - 1]) / (t[i] - t[i - 1]));
 }
 
+/**
+ * Independent per-draw seed (murmur3 fmix32 of seed, stream, i). Before rigor step 2 draw i used seed + i, so requests with nearby
+ * seeds (e.g. consecutive backtest games) shared almost all of their random streams, including the pilot used for calibration,
+ * which turned one pilot's sampling error into a systematic home/away bias across a whole backtest.
+ */
+export function drawSeed(seed, stream, i) {
+  let h = (Math.imul(seed >>> 0, 0x9e3779b1) ^ Math.imul(stream + 1, 0x85ebca77) ^ Math.imul(i + 1, 0xc2b2ae3d)) >>> 0;
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
+  return h >>> 0;
+}
+
 const q = (sorted, p) => { const i = (sorted.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo); };
 const med = (a) => q([...a].sort((x, y) => x - y), 0.5);
 const r1 = (x) => Math.round(x * 10) / 10;
@@ -56,17 +67,35 @@ export function runMonteCarlo(S, opts) {
   const seed = (opts.seed ?? 12345) >>> 0;
   const curve = opts.curve; const target = opts.target;
   const tilt = { H: invert(curve, target.H), A: invert(curve, target.A) };
-  const pilot = opts.pilot ?? 600;
-  for (let pass = 0; pass < 2 && pilot > 0; pass++) {
-    let sH = 0, sA = 0;
-    for (let i = 0; i < pilot; i++) { const g = simOf(S)(S, { rng: mulberry32(seed + 7777777 * (pass + 1) + i), tilt, playoff: opts.playoff }); sH += g.H; sA += g.A; }
-    tilt.H += (target.H - sH / pilot) / slopeAt(curve, tilt.H);
-    tilt.A += (target.A - sA / pilot) / slopeAt(curve, tilt.A);
+  // Calibration: Newton/secant passes on a FIXED pilot set (common random numbers), so passes compare like with like and the
+  // cross-effect (one side's tilt moves the other side's points) is iterated out. Residual error ~ sd/sqrt(pilot) per side.
+  const pilot = opts.pilot ?? 1500, passes = opts.passes ?? 4;
+  // Game-environment random effect (rigor step 2): each simulated game draws one shared shock u ~ N(0, envSd) added to BOTH offenses'
+  // tilts (pace, weather, officiating, game script the ratings cannot see). It widens the total distribution, which was too narrow
+  // in the backtest; the calibration passes below include it, so mean points still match the targets.
+  // teamSd: optional independent per-side shock (form/injury uncertainty), which widens the margin as well.
+  const envSd = opts.envSd ?? S.envSd ?? 0, teamSd = opts.teamSd ?? S.teamSd ?? 0;
+  const tiltAt = (tl, stream, i) => {
+    if (!envSd && !teamSd) return tl;
+    const r = mulberry32(drawSeed(seed, stream, i)), z = () => Math.sqrt(-2 * Math.log(Math.max(r(), 1e-12))) * Math.cos(2 * Math.PI * r());
+    const u = envSd * z(), h = teamSd * z(), a = teamSd * z();
+    return { H: tl.H + u + h, A: tl.A + u + a };
+  };
+  const pilotMean = (tl) => { let sH = 0, sA = 0; for (let i = 0; i < pilot; i++) { const g = simOf(S)(S, { rng: mulberry32(drawSeed(seed, 1, i)), tilt: tiltAt(tl, 3, i), playoff: opts.playoff }); sH += g.H; sA += g.A; } return { H: sH / pilot, A: sA / pilot }; };
+  let prev = null;
+  for (let pass = 0; pass < passes && pilot > 0; pass++) {
+    const m = pilotMean(tilt), eH = target.H - m.H, eA = target.A - m.A;
+    if (Math.abs(eH) < 0.03 && Math.abs(eA) < 0.03) break;
+    const sl = (k, e) => { const c = slopeAt(curve, tilt[k]); if (!prev || Math.abs(tilt[k] - prev.t[k]) < 1e-3) return c;
+      const sec = (m[k] - prev.m[k]) / (tilt[k] - prev.t[k]); return sec > 0.25 * c && sec < 4 * c ? sec : c; };
+    const dH = eH / sl("H", eH), dA = eA / sl("A", eA);
+    prev = { t: { ...tilt }, m };
+    tilt.H += dH; tilt.A += dA;
   }
   const P = nPeriods(S), H = new Int16Array(n), A = new Int16Array(n), QH = Array.from({ length: P }, () => []), QA = Array.from({ length: P }, () => []);
   let hw = 0, aw = 0, ties = 0, ots = 0;
   for (let i = 0; i < n; i++) {
-    const g = simOf(S)(S, { rng: mulberry32(seed + i), tilt, playoff: opts.playoff });
+    const g = simOf(S)(S, { rng: mulberry32(drawSeed(seed, 0, i)), tilt: tiltAt(tilt, 2, i), playoff: opts.playoff });
     H[i] = g.H; A[i] = g.A; if (g.H > g.A) hw++; else if (g.A > g.H) aw++; else ties++; ots += g.ot ? 1 : 0;
     for (let k = 0; k < P; k++) { QH[k].push(g.periods.H[k]); QA[k].push(g.periods.A[k]); }
   }
@@ -80,7 +109,7 @@ export function runMonteCarlo(S, opts) {
     const d = ((margins[i] - m.median) / mSd) ** 2 + ((totals[i] - t.median) / tSd) ** 2 + (Math.sign(margins[i]) !== Math.sign(m.median) && m.median !== 0 ? 10 : 0);
     if (d < bestD) { bestD = d; best = i; }
   }
-  const rep = simOf(S)(S, { rng: mulberry32(seed + best), tilt, playoff: opts.playoff, record: true, names: opts.names });
+  const rep = simOf(S)(S, { rng: mulberry32(drawSeed(seed, 0, best)), tilt: tiltAt(tilt, 2, best), playoff: opts.playoff, record: true, names: opts.names });
   const names = opts.names || { H: "HOME", A: "AWAY" };
   return {
     n, seed, league: S.league,
@@ -94,8 +123,8 @@ export function runMonteCarlo(S, opts) {
     byPeriod: { home: QH.map(qStats), away: QA.map(qStats), note: "points scored in each period (quarter): mean with Monte Carlo SE, median, 80% and 95% simulation intervals (overtime excluded)" },
     medianByPeriod: { home: QH.map(med), away: QA.map(med), note: "median points in each period, taken period by period (overtime excluded), so the medians need not add up to the median final" },
     calibration: { targetPoints: { home: r1(target.H), away: r1(target.A) }, simMeanPoints: { home: r1(H.reduce((a, b) => a + b, 0) / n), away: r1(A.reduce((a, b) => a + b, 0) / n) },
-                   tilt: { home: Math.round(tilt.H * 1000) / 1000, away: Math.round(tilt.A * 1000) / 1000 } },
+                   tilt: { home: Math.round(tilt.H * 1000) / 1000, away: Math.round(tilt.A * 1000) / 1000 }, envSd, teamSd },
     playLogFields: "generic envelope: seq, t (elapsed game seconds), period, clock, score (after the event), type, text, payload (sport-specific; football: poss, down, togo, yl = yards to the opponent goal line, at the snap for type 'play', after the event otherwise)",
-    representative: { index: best, seed: seed + best, names: { home: names.H, away: names.A }, final: { home: rep.H, away: rep.A }, periods: { home: rep.periods.H, away: rep.periods.A }, overtime: rep.ot, events: rep.events },
+    representative: { index: best, seed: drawSeed(seed, 0, best), names: { home: names.H, away: names.A }, final: { home: rep.H, away: rep.A }, periods: { home: rep.periods.H, away: rep.periods.A }, overtime: rep.ot, events: rep.events },
   };
 }

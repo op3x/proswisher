@@ -3,3 +3,9 @@
 @tailwind utilities;
 html { color-scheme: dark; }
 .prose-legal p { @apply text-slate-300 leading-relaxed; }
+
+/* Scores ticker: continuous scroll, pauses on hover/focus, static + scrollable with reduced motion */
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ticker-track { animation: ticker linear infinite; width: max-content; }
+.ticker-viewport:hover .ticker-track, .ticker-viewport:focus-within .ticker-track, .ticker-viewport:focus .ticker-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } .ticker-viewport { overflow-x: auto; } }

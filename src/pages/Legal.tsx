@@ -10,7 +10,7 @@ const fill = (t: string, effective = "Effective on launch") => t
   .replace(/Effective: \{EFFECTIVE\}/g, /^Effective/.test(effective) ? effective : `Effective: ${effective}`)
   .replace(/\{CONTACT\}/g, site.supportEmailActive ? `Questions about privacy? Email ${site.supportEmail}.` : `${site.company} · ${site.mailingAddress}`)
   .replace(/\{SUPPORT\}/g, SUPPORT)
-  .replace(/support@proswisher\.com/g, SUPPORT); // Larry P11: never show the alias while it's inactive
+  .replace(/support@(?:proswisher|simculus)\.com/g, SUPPORT); // Larry P11: never show the alias while it's inactive
 
 function Shell({ title, children }: { title?: string; children: React.ReactNode }) {
   return (

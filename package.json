@@ -17,7 +17,7 @@
     "data": "python3 scripts/update_data.py",
     "data:dry-run": "PUBLIC_DATA_DIR=/tmp/proswisher-dryrun/public PREDICTIONS_PRIVATE_DIR=/tmp/proswisher-dryrun/private python3 scripts/update_data.py --dry-run",
     "test:server": "node --test tests/server/",
-    "test": "node --test tests/server/ && python3 -m unittest discover -s tests -p \"test_*.py\"",
+    "test": "node --test tests/server/*.test.mjs && python3 -m unittest discover -s tests -p \"test_*.py\"",
     "geoip": "node scripts/fetch-geoip.mjs",
     "purge:consent": "node server/consent-purge.mjs",
     "consent:sessions-with-ip": "node server/consent-purge.mjs --sessions-with-ip"

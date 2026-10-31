@@ -1,7 +1,7 @@
-**ProSwisher Privacy Policy**
+**Simculus Privacy Policy**
 Effective: {EFFECTIVE} · Version: privacy-b1
 
-ProSwisher is operated by Op3x LLC. This policy explains how **Op3x LLC** ("we," "us"), an Illinois limited liability company, collects and uses personal information through ProSwisher (proswisher.com).
+Simculus is operated by Op3x LLC. This policy explains how **Op3x LLC** ("we," "us"), an Illinois limited liability company, collects and uses personal information through Simculus (simculus.com).
 
 **1. What we collect**
 - **Visitors (no account needed).**
@@ -12,7 +12,7 @@ ProSwisher is operated by Op3x LLC. This policy explains how **Op3x LLC** ("we,"
   - *From Stripe:* your name, email address, billing address, the last 4 digits and brand of your card, and your subscription status and dates. Stripe, Inc. collects your card details directly, and we never see or store your full card number.
   - *Membership reference:* after checkout, your browser stores your Stripe checkout reference in local storage on your device, so the site can recognize your membership. It isn't a cookie, and clearing your browser storage removes it.
   - *Consent record,* made when you subscribe: the date and time, **your IP address**, the version of the checkout text you agreed to, the price shown, your confirmation that you're 21 or older, the billing country and state you entered, and the country and state estimated from your IP address. It's stored with your subscription at Stripe and in our records.
-- **Support.** What you send us when you email support@proswisher.com.
+- **Support.** What you send us when you email support@simculus.com.
 
 **2. How we use it**
 - **To run and improve the site.** We use server logs to operate, debug and secure the site, and aggregate visit totals to understand how many people use it and which of our marketing links work. We don't use them to profile you or target ads, and we don't try to re-identify anyone from the totals.
@@ -25,7 +25,7 @@ ProSwisher is operated by Op3x LLC. This policy explains how **Op3x LLC** ("we,"
 We don't use your information to build advertising profiles. We don't sell it or share it for targeted advertising. We don't use AI to process your personal information.
 
 **3. Service providers**
-We share personal information only with providers that help us run ProSwisher, under terms that limit how they use it:
+We share personal information only with providers that help us run Simculus, under terms that limit how they use it:
 - **Stripe, Inc.**: payment processing, subscription billing, tax calculation, fraud prevention and disputes. Stripe also uses some payment data as its own controller under its own privacy policy.
 - **Railway Corp.**: hosting and server logs.
 - **[Email provider, e.g. Resend / Google Workspace: name the one actually used]**: account email delivery and our support inbox.
@@ -50,7 +50,7 @@ Depending on where you live, including California (CCPA/CPRA) and other U.S. sta
 
 Visit totals are aggregate and de-identified. We maintain them in that form and don't attempt to re-identify them, so they aren't tied to any individual request.
 
-We won't treat you differently for using these rights. To make a request, email support@proswisher.com from the email on your account. We'll confirm your identity and respond within 45 days. An authorized agent may make a request for you with your signed permission. If we deny your request, you can appeal by replying to our answer, and we'll respond within the time your state's law requires.
+We won't treat you differently for using these rights. To make a request, email support@simculus.com from the email on your account. We'll confirm your identity and respond within 45 days. An authorized agent may make a request for you with your signed permission. If we deny your request, you can appeal by replying to our answer, and we'll respond within the time your state's law requires.
 
 California notice at collection: we collect the categories listed in §1 for the purposes in §2 and keep them as described in §5. We don't sell or share personal information, and we don't use or disclose sensitive personal information except to provide the service. Your card details are handled by Stripe.
 
@@ -58,7 +58,7 @@ California notice at collection: we collect the categories listed in §1 for the
 We use reasonable safeguards: HTTPS, restricted access, a dedicated restricted payment key, and no card numbers on our servers. No system is perfectly secure.
 
 **8. Adults only**
-ProSwisher is only for adults **21 and older**. We don't knowingly collect information from anyone under 21. If we learn we have, we delete it and close the account.
+Simculus is only for adults **21 and older**. We don't knowingly collect information from anyone under 21. If we learn we have, we delete it and close the account.
 
 **9. Changes**
 If we change this policy, we'll post the new version with its effective date. If the change is material, we'll email members before it takes effect.

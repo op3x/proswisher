@@ -2,6 +2,7 @@ import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { site, legal, LEGAL_DRAFT } from "../config/site";
 import { countView } from "../lib/runtime";
+import Ticker from "./Ticker";
 
 export default function Layout() {
   const { pathname, search, hash, key } = useLocation();
@@ -18,18 +19,19 @@ export default function Layout() {
     <div className="min-h-screen flex flex-col">
       {/* Sal #10: skip link, first focusable element */}
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-accent focus:text-ink focus:px-4 focus:py-3 focus:font-semibold">Skip to content</a>
-      <header className="sticky top-0 z-20 bg-ink/90 backdrop-blur border-b border-line">
+      <header className="sm:sticky top-0 z-20 bg-ink/90 backdrop-blur border-b border-line">
         {/* Sal #12: the preview banner lives inside the header landmark */}
         {__APP_ENV__ !== "production" && (
           <p className="bg-amber-500/10 text-amber-300 text-xs text-center py-1 border-b border-amber-500/20">
             Preview build: not public
           </p>
         )}
+        <Ticker />
         {/* Sal #7: logo and nav stack on narrow screens instead of clipping */}
         <div className="max-w-5xl mx-auto px-4 py-1 sm:py-0 sm:h-14 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2">
-          <Link to="/" className="flex items-center gap-2 min-h-11 font-extrabold tracking-tight text-base sm:text-lg shrink-0">
-            <span className="inline-block h-6 w-6 rounded-full bg-gradient-to-br from-accent to-sky-600" />
-            {site.name}
+          {/* Text wordmark only until Ryan picks a logo concept */}
+          <Link to="/" className="flex items-center min-h-11 font-black tracking-tight text-lg sm:text-xl shrink-0" aria-label={`${site.name} home`}>
+            <span className="text-white">{site.name.slice(0, 3)}</span><span className="text-accent">{site.name.slice(3)}</span>
           </Link>
           <nav aria-label="Main" className="flex w-full sm:w-auto gap-1 text-sm overflow-x-auto -mx-1 px-1">
             {site.nav.map((n) => (

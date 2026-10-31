@@ -1,4 +1,4 @@
-// ProSwisher server: serves the static build, /health, cookieless counting, and (only when fully configured)
+// Simculus server: serves the static build, /health, cookieless counting, and (only when fully configured)
 // Stripe Billing test-mode checkout. Runs with NO keys at all: payments then report disabled.
 import express from "express";
 import crypto from "node:crypto";
@@ -76,7 +76,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     return d;
   };
   const checkoutAvailable = () => bypass || geoStatus(state.geo).ok;
-  const blockPage = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title} | ProSwisher</title>
+  const blockPage = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title} | Simculus</title>
 <style>body{margin:0;background:#0b0f17;color:#e2e8f0;font:16px/1.5 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}main{max-width:36rem;padding:2rem}a{color:#67e8f9;display:inline-block;padding:.6rem .25rem;text-decoration:underline}footer{max-width:36rem;padding:0 2rem 2rem;color:#cbd5e1;font-size:14px}footer p{margin:.5rem 0}</style></head>
 <body><main><h1>${title}</h1><p>${body}</p><p><a href="/">Browse predictions</a> · <a href="/track-record">Track record</a></p><p>${help}</p></main>
 <footer><p>${disc.footer}</p></footer></body></html>`;
@@ -249,7 +249,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   });
 
   // ---- pages ----
-  const indexHtml = () => { try { return fs.readFileSync(path.join(dist, "index.html"), "utf8"); } catch { return "<!doctype html><title>ProSwisher</title>"; } };
+  const indexHtml = () => { try { return fs.readFileSync(path.join(dist, "index.html"), "utf8"); } catch { return "<!doctype html><title>Simculus</title>"; } };
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const sendPage = (res, html, status = 200) => res.status(status).set("Cache-Control", "no-cache").type("html").send(html);
   // paid sign-up page: the ONLY page that is geo-gated
@@ -274,7 +274,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
       html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(t)}</title>`).replace(/(<meta name="description" content=")[^"]*/, `$1${esc(d)}`);
     }
     // Sal #9: unknown/placeholder game URLs are real 404s (the SPA still renders its not-found view).
-    if (!g) html = html.replace(/<title>[^<]*<\/title>/, "<title>Page not found | ProSwisher</title>").replace("<head>", '<head><meta name="robots" content="noindex">');
+    if (!g) html = html.replace(/<title>[^<]*<\/title>/, "<title>Page not found | Simculus</title>").replace("<head>", '<head><meta name="robots" content="noindex">');
     sendPage(res, html, g ? 200 : 404);
   };
   app.get("/game/:id", gamePage);
@@ -283,7 +283,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   if (publicDataDir) app.use("/data", express.static(publicDataDir, { maxAge: "1m" }));
   app.use(express.static(dist, { index: false, maxAge: "5m", setHeaders: (r, p) => { if (p.includes("/assets/")) r.setHeader("Cache-Control", "public, max-age=31536000, immutable"); } }));
   // Sal #9: only real SPA routes get 200; everything else (incl. /refunds, held per P11) is a 404 with the SPA's not-found view.
-  const SPA_ROUTES = new Set(["/", "/track-record", "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/account", "/contact"]);
+  const SPA_ROUTES = new Set(["/", "/track-record", "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/account", "/contact", "/simulate"]);
   const INDEXABLE = ["/", "/track-record", "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/contact"];
   const isProd = String(env.APP_ENV || "").toLowerCase() === "production";
   app.get("/robots.txt", (_req, res) => res.type("text/plain").set("Cache-Control", "public, max-age=3600").send(isProd
@@ -298,7 +298,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   app.get(/.*/, (req, res) => {
     const p = req.path.length > 1 ? req.path.replace(/\/+$/, "") : req.path;
     if (SPA_ROUTES.has(p)) return sendPage(res, indexHtml());
-    sendPage(res, indexHtml().replace(/<title>[^<]*<\/title>/, "<title>Page not found | ProSwisher</title>").replace("<head>", '<head><meta name="robots" content="noindex">'), 404);
+    sendPage(res, indexHtml().replace(/<title>[^<]*<\/title>/, "<title>Page not found | Simculus</title>").replace("<head>", '<head><meta name="robots" content="noindex">'), 404);
   });
   Object.assign(app.locals, { counter, state, mode: () => mode, stripe, reloadGames: () => { gamesAt = 0; } });
   return app;

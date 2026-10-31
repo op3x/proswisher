@@ -155,10 +155,10 @@ test("/api/config has no internal notes; 404s for unknown routes, /refunds and p
     const sm = await fetch(s.url + "/sitemap.xml"); assert.equal(sm.status, 200);
     const x = await sm.text(); assert.match(x, /<urlset/); assert.match(x, /\/track-record<\/loc>/); assert.ok(!x.includes("/account"));
   } finally { s.close(); }
-  const p = await serve(await createApp({ env: { APP_ENV: "production", PUBLIC_BASE_URL: "https://proswisher.com" }, geoLookup: fresh(), log: quiet }));
+  const p = await serve(await createApp({ env: { APP_ENV: "production", PUBLIC_BASE_URL: "https://simculus.com" }, geoLookup: fresh(), log: quiet }));
   try {
     const t = await (await fetch(p.url + "/robots.txt")).text();
-    assert.match(t, /Sitemap: https:\/\/proswisher.com\/sitemap.xml/); assert.match(t, /Disallow: \/api\//);
+    assert.match(t, /Sitemap: https:\/\/simculus.com\/sitemap.xml/); assert.match(t, /Disallow: \/api\//);
   } finally { p.close(); }
 });
 

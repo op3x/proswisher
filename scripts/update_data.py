@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ProSwisher data pipeline (stdlib only).
+"""Simculus data pipeline (stdlib only).
 
 1. Pulls the current season's schedule + final scores from a licensed ScheduleProvider (scripts/providers.py;
    default balldontlie Free tier, key in BALLDONTLIE_API_KEY). Larry memo 20: licensed sources only.

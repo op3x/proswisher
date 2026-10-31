@@ -14,6 +14,7 @@ import AgeGate from "./components/AgeGate";
 import SubscribePage from "./pages/Subscribe";
 import Account from "./pages/Account";
 import Contact from "./pages/Contact";
+import Simulate from "./pages/Simulate";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -24,6 +25,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route index element={<Home />} />
           <Route path="game/:id" element={<GameDetail />} />
           <Route path="games/:date/:slug" element={<GameDetail />} />
+          <Route path="simulate" element={<Simulate />} />
           <Route path="track-record" element={<TrackRecord />} />
           <Route path="how-it-works" element={<HowItWorks />} />
           <Route path="responsible-gaming" element={<Responsible />} />

@@ -22,7 +22,7 @@ export default function GameDetail() {
   const g0 = games.data?.games[id];
   useEffect(() => {
     if (!g0) return;
-    // Larry 9:36 format: "Lakers vs. Celtics Prediction, Oct 27 | NBA | ProSwisher" (plain text, never "Official")
+    // Larry 9:36 format: "Lakers vs. Celtics Prediction, Oct 27 | NBA | Simculus" (plain text, never "Official")
     const date = new Date(g0.date).toLocaleDateString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric" });
     document.title = site.meta.gamePageTitle.replace("{Away}", g0.away.short).replace("{Home}", g0.home.short).replace("{date}", date);
     const md = document.querySelector('meta[name="description"]');

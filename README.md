@@ -1,9 +1,32 @@
-# ProSwisher
+# Simculus
 
-Transparent pro basketball game predictions with a public, append-only track record.
-ProSwisher is operated by Op3x LLC.
-Web-only (no app-store packaging). Vite + React + TypeScript + Tailwind, served as static files.
+NFL and college football game simulations and predictions: pick two teams, play the game snap by snap thousands of times,
+watch a representative game on an animated field.
+Simculus is operated by Op3x LLC.
+Web-only. Vite + React + TypeScript + Tailwind,
+served by a small Node (express) server. Sport-agnostic UI: NBA and NCAAB slot in later.
 
+## Brand
+- The product name comes from `APP_NAME` (default `Simculus`). It's injected at build time (`__APP_NAME__` in the client
+  and `%APP_NAME%` in `index.html`); the server reads it too. Text wordmark only until a logo concept is picked
+  (`/workspace/simculus/brand/`). Legal and disclaimer copy keeps the literal name (Larry's approved wording).
+
+## UI and API contract (`src/sports/`)
+| Endpoint | Used by | Shape (see `src/sports/types.ts`) |
+|---|---|---|
+| `GET /api/leagues` | league picker, ticker | `League[]` `{id, name, sport, periods:{count,label,short}, enabled}` |
+| `GET /api/teams?league=` | matchup page | `Team[]` `{id, name}` (city + name, plain text) |
+| `GET /api/scores` | top ticker (30 s poll) | `ScoreGame[]` (live, final, scheduled) |
+| `GET /api/schedule?league=` | home page, quick picks | `ScoreGame[]` |
+| `POST /api/sim` `{league, home, away, n, homeSeason?, awaySeason?, homeLeague?, awayLeague?}` | matchup page | `SimResult` |
+
+Each call falls back to the engine's `/api/football/*` routes, then to the local fixtures in `src/mock/fixtures.ts`.
+Fixture data is always labeled "Sample data" in the UI. Play-log events use a generic envelope
+`{t, period, clock, score, type, text, payload}`, and football puts `{possession, down, distance, yardline, playType, yards}`
+in `payload`. Visuals are pluggable per sport (`src/renderers/registry.ts`): `football` is the SVG field drive chart.
+To add a sport, register a renderer and enable its league. All times are shown in Central Time.
+
+## Legacy NBA pipeline (kept for the track record; not used by the football pages)
 ## How it works
 - Data sources sit behind a small interface in `scripts/providers.py` (Kiko, Larry memo 20): `ScheduleProvider`
   (`balldontlie-free`: balldontlie Free tier games endpoint, `BALLDONTLIE_API_KEY`) and `OddsProvider`

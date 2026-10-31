@@ -33,6 +33,6 @@ test("dayLabel matches tipTime's day across the DST change (CST)", () => {
 test("data.ts re-exports the CT formatters and Home groups by the CT day key", () => {
   assert.match(fs.readFileSync(path.join(ROOT, "src/lib/data.ts"), "utf8"), /export \{ tipTime, dayLabel, ctDayKey \} from "\.\/time"/);
   const home = fs.readFileSync(path.join(ROOT, "src/pages/Home.tsx"), "utf8");
-  assert.match(home, /ctDayKey\(g\.date\)/);
+  assert.match(home, /ctDayKey\(g\.(date|start)\)/); // football Home uses ScoreGame.start
   assert.doesNotMatch(home, /toDateString\(\)/);
 });

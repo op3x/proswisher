@@ -14,7 +14,7 @@ Rules (memo 20):
 import json, os, time, urllib.error, urllib.parse, urllib.request
 from datetime import datetime, timedelta, timezone
 
-UA = {"User-Agent": "proswisher-data/2.0 (+https://proswisher.com)"}
+UA = {"User-Agent": "proswisher-data/2.0 (+https://simculus.com)"}
 
 
 class SourceBlocked(RuntimeError):

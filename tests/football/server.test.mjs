@@ -159,3 +159,22 @@ test("product name comes from APP_NAME with a single default (working name, no l
     .filter((f) => fs.readFileSync(new URL("../../server/" + f, import.meta.url), "utf8").includes("Simculus"));
   assert.deepEqual(hits, ["brand.mjs"]);
 });
+
+test("startup refresh runs when data is stale, or when NCAAF is missing but a CFBD key is present", async () => {
+  const { createFootballPipeline } = await import("../../server/football/scheduler.mjs");
+  const fsm = await import("node:fs"), os = await import("node:os"), pth = await import("node:path");
+  const pub = fsm.mkdtempSync(pth.join(os.tmpdir(), "fbsched-"));
+  fsm.mkdirSync(pth.join(pub, "football"), { recursive: true });
+  const now = new Date("2026-10-31T22:00:00Z");
+  const write = (s) => fsm.writeFileSync(pth.join(pub, "football", "status.json"), JSON.stringify(s));
+  const runs = (env) => { let n = 0; const fake = () => { n++; const ee = { on: (ev, cb) => { if (ev === "exit") setImmediate(() => cb(0)); return ee; } }; return ee; };
+    const p = createFootballPipeline({ env, dirs: { publicDir: pub, privateDir: pub }, spawn: fake, log: () => {}, now: () => now });
+    return p.start().then(() => { p.stop(); return n; }); };
+  write({ generatedAt: "2026-10-31T20:00:00Z", nfl: { ok: true }, ncaaf: { ok: true } });
+  assert.equal(await runs({}), 0);
+  write({ generatedAt: "2026-10-31T20:00:00Z", nfl: { ok: true }, ncaaf: { ok: false } });
+  assert.equal(await runs({}), 0);
+  assert.equal(await runs({ CFBD_API_KEY: "test-placeholder" }), 1);
+  write({ generatedAt: "2026-10-29T20:00:00Z", nfl: { ok: true }, ncaaf: { ok: true } });
+  assert.equal(await runs({}), 1);
+});

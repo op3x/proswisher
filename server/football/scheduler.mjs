@@ -82,7 +82,10 @@ export function createFootballPipeline({ env = process.env, dirs, log = console.
   function stale() {
     try {
       const s = JSON.parse(fs.readFileSync(path.join(dirs.publicDir, "football", "status.json"), "utf8"));
-      return !(s.generatedAt && now().getTime() - Date.parse(s.generatedAt) < 20 * 3600e3);
+      if (!(s.generatedAt && now().getTime() - Date.parse(s.generatedAt) < 20 * 3600e3)) return true;
+      // A league whose credentials were just added (e.g. CFBD_API_KEY for NCAAF) counts as missing even if NFL is fresh.
+      if (env.CFBD_API_KEY && !s.ncaaf?.ok) return true;
+      return false;
     } catch { return true; }
   }
 

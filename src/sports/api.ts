@@ -1,6 +1,6 @@
 // Typed client. Order per call: the agreed endpoint (/api/leagues, /api/scores, /api/schedule, POST /api/sim),
 // then the football worker's current endpoints (/api/football/*), then the local SAMPLE fixture (labeled in the UI).
-import type { League, Team, ScoreGame, ScoresResponse, SimRequest, SimResult, PlayEvent, FootballPayload, Source, GameStatus } from "./types";
+import type { League, Team, ScoreGame, SimRequest, SimResult, PlayEvent, FootballPayload, Source, GameStatus } from "./types";
 import { MOCK_LEAGUES, MOCK_TEAMS, mockScores, mockSim } from "../mock/fixtures";
 
 export interface Sourced<T> { data: T; source: Source }
@@ -26,16 +26,31 @@ const normStatus = (s: unknown): GameStatus => {
 
 // /api/football/ticker and /api/football/games rows -> ScoreGame
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const fromFootballRow = (lg: string) => (g: any): ScoreGame => ({
+const fromFootballRow = (lg: string) => (g: any): ScoreGame => (g.home && typeof g.home === "object" ? { ...g, league: g.league || lg, status: normStatus(g.status) } : {
   id: String(g.id), league: g.league || lg, start: g.kickoff || g.start, status: normStatus(g.status),
   home: { id: String(g.home), name: g.homeName || String(g.home) }, away: { id: String(g.away), name: g.awayName || String(g.away) },
-  homeScore: g.homeScore ?? null, awayScore: g.awayScore ?? null, period: g.period ?? null, clock: g.clock ?? null, detail: g.detail ?? null,
+  homeScore: g.homeScore ?? null, awayScore: g.awayScore ?? null, period: g.period ?? g.quarter ?? null, clock: g.clock ?? null, detail: g.detail ?? null,
 });
+// Outside production, an empty live feed shows the labeled sample so the preview still demonstrates the UI.
+const demoFallback = __APP_ENV__ !== "production";
 
+// /api/leagues rows: either League-shaped or the engine's SportModule rows {id, sport, name, rules:{periods}, ready}.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const fromLeagueRow = (l: any): League => {
+  const mock = MOCK_LEAGUES.find((m) => m.id === l.id);
+  const count = l.periods?.count ?? l.rules?.periods ?? mock?.periods.count ?? 4;
+  return { id: String(l.id), sport: l.sport, name: mock?.name || String(l.name || l.id).toUpperCase(),
+    periods: l.periods?.label ? l.periods : { count, label: count === 2 ? "Half" : "Quarter", short: count === 2 ? "H" : "Q" },
+    enabled: l.enabled ?? true };
+};
 export async function getLeagues(): Promise<Sourced<League[]>> {
   try {
-    const j = await getJson<League[] | { leagues: League[] }>("/api/leagues");
-    return { data: Array.isArray(j) ? j : j.leagues, source: "live" };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const j = await getJson<any>("/api/leagues");
+    const live: League[] = (Array.isArray(j) ? j : j.leagues).map(fromLeagueRow);
+    if (!live.length) throw new Error("no leagues");
+    // Sports the server doesn't serve yet stay visible as "coming soon".
+    return { data: [...live, ...MOCK_LEAGUES.filter((m) => !m.enabled && !live.some((l) => l.id === m.id))], source: "live" };
   } catch { return { data: MOCK_LEAGUES, source: "sample" }; }
 }
 
@@ -54,10 +69,12 @@ export async function getTeams(league: string): Promise<Sourced<Team[]>> {
 export async function getScores(): Promise<Sourced<ScoreGame[]>> {
   try {
     const games = await firstOk<ScoreGame[]>(
-      async () => (await getJson<ScoresResponse>("/api/scores")).games,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async () => (await getJson<{ games: any[] }>("/api/scores")).games.map(fromFootballRow("nfl")),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       async () => (await getJson<{ games: any[] }>("/api/football/ticker")).games.map(fromFootballRow("nfl")),
     );
+    if (!games.length && demoFallback) throw new Error("empty");
     return { data: games, source: "live" };
   } catch { return { data: mockScores(), source: "sample" }; }
 }
@@ -65,12 +82,16 @@ export async function getScores(): Promise<Sourced<ScoreGame[]>> {
 export async function getSchedule(leagues: string[]): Promise<Sourced<ScoreGame[]>> {
   try {
     const games = await firstOk<ScoreGame[]>(
-      async () => (await getJson<ScoresResponse>("/api/schedule")).games,
+      async () => (await Promise.all(leagues.map(async (lg) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (await getJson<{ games: any[] }>(`/api/schedule?league=${lg}&upcoming=1`)).games.map(fromFootballRow(lg))))).flat(),
       async () => (await Promise.all(leagues.map(async (lg) =>
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (await getJson<{ games: any[] }>(`/api/football/games?league=${lg}&upcoming=1`)).games.map(fromFootballRow(lg))))).flat(),
     );
-    return { data: games.filter((g) => g.status !== "final").sort((a, b) => a.start.localeCompare(b.start)), source: "live" };
+    const up = games.filter((g) => g.status !== "final" && g.start).sort((a, b) => a.start.localeCompare(b.start));
+    if (!up.length && demoFallback) throw new Error("empty");
+    return { data: up, source: "live" };
   } catch { return { data: mockScores().filter((g) => g.status === "scheduled"), source: "sample" }; }
 }
 
@@ -79,16 +100,21 @@ function fromFootballSim(r: any, req: SimRequest): SimResult {
   const homeId = String(r.teams?.home?.id ?? req.home);
   const rep = r.representative || {};
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const events: PlayEvent<FootballPayload>[] = (rep.plays || rep.events || []).map((p: any, i: number) => p.payload ? { ...p, t: p.t ?? i } : ({
-    t: i, period: p.q ?? p.period, clock: p.clock, score: p.score, type: p.type, text: p.text,
-    payload: { possession: p.poss == null ? null : String(p.poss) === homeId || p.poss === rep.names?.home ? "home" : "away",
-               down: p.down ?? null, distance: p.togo ?? null, yardline: p.yl ?? null, playType: p.playType ?? null, yards: p.yards ?? null },
-  }));
+  const homeName = r.teams?.home?.name ?? rep.names?.home;
+  // Engine envelope: {seq, t (elapsed game seconds), period, clock, score, type, text, payload:{poss, down, togo, yl, playType, yards}}
+  // (older shape: flat {q, poss, ...}). UI envelope: t = event index, payload in UI field names.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const events: PlayEvent<FootballPayload>[] = (rep.events || rep.plays || []).map((e: any, i: number) => {
+    const p = e.payload || e, poss = p.poss ?? p.possession;
+    return { t: i, period: e.period ?? e.q, clock: e.clock, score: e.score, type: e.type, text: e.text,
+      payload: { possession: poss == null ? null : poss === "home" || String(poss) === homeId || poss === homeName ? "home" : "away",
+                 down: p.down ?? null, distance: p.togo ?? p.distance ?? null, yardline: p.yl ?? p.yardline ?? null, playType: p.playType ?? null, yards: p.yards ?? null } };
+  });
   return {
     league: r.league || req.league, sport: "football", n: r.n, sample: false,
     teams: { home: { id: homeId, name: r.teams?.home?.name || req.home, season: r.teams?.home?.season }, away: { id: String(r.teams?.away?.id ?? req.away), name: r.teams?.away?.name || req.away, season: r.teams?.away?.season } },
     winProbability: r.winProbability, margin: r.margin, total: r.total, medianScore: r.medianScore,
-    periodScores: r.periodScores || r.medianByQuarter, entertainmentOnly: !!(r.entertainmentOnly || r.label), label: r.label,
+    periodScores: r.periodScores || r.medianByPeriod || r.medianByQuarter, entertainmentOnly: !!(r.entertainmentOnly || r.label), label: r.label,
     representative: { final: rep.final, periods: rep.periods || rep.quarters, overtime: !!rep.overtime, events },
   };
 }

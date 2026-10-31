@@ -190,3 +190,8 @@ Do **not** set `PIPELINE_DRY_RUN` on Railway. Saving the variables redeploys the
 - the X-PS-Session header; the consent-IP purge; the no-raw-IP logging guard;
 - no IP in Checkout Session metadata, plus the Session audit; `text_version` matching the page versions; effective dates;
 - the pipeline runner (/tmp fallback, no keys, no python3, refusal stop, minimal child env) and the dry run rendering game pages.
+
+## Football simulation (pivot, Phase 1)
+NFL + NCAAF snap-by-snap simulator with a daily 04:00 America/Chicago hard-data refresh. See
+[docs/football-model.md](docs/football-model.md) for sources, method, API and the backtest. Data: nflverse (CC-BY 4.0);
+NCAAF needs `CFBD_API_KEY`. Product name comes from `APP_NAME`.

@@ -34,16 +34,15 @@ const fromFootballRow = (lg: string) => (g: any): ScoreGame => (g.home && typeof
 // Outside production, an empty live feed shows the labeled sample so the preview still demonstrates the UI.
 const demoFallback = __APP_ENV__ !== "production";
 
-// Larry memo 24: required data-source credits. The API's attribution field wins once it carries the full text;
-// until then (the engine currently sends a short "Data: ..." form) we show the memo's exact wording.
+// Larry memo 24: data-source credits come from /api/leagues `attribution`. This copy of the memo wording is only
+// used when the API can't be reached (sample mode), so the footer never drops the credit.
 export const REQUIRED_ATTRIBUTION: Record<string, string> = {
   nfl: "NFL data: nflverse (github.com/nflverse/nflverse-data), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Modified by Op3x LLC (aggregated, modeled and simulated). Not affiliated with or endorsed by the NFL or nflverse.",
   ncaaf: "Data provided by CollegeFootballData.com.",
 };
 export function attributionFor(id: string, api?: string): string | undefined {
   const req = REQUIRED_ATTRIBUTION[id];
-  if (api && (!req || api.length >= req.length)) return api;
-  return req || api;
+  return api || req;
 }
 
 // /api/leagues rows: either League-shaped or the engine's SportModule rows {id, sport, name, rules:{periods}, ready}.

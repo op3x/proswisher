@@ -22,7 +22,7 @@ function Item({ g, lg }: { g: ScoreGame; lg?: League }) {
 
 export default function Ticker() {
   const leagues = useLeagues();
-  const s = usePoll(getScores, 30000);
+  const s = usePoll(getScores, 60000); // /api/scores allows 30 req/min per client; 1/min (sample retry 1 per 10s) stays well under
   const byId = new Map((leagues?.data || []).map((l) => [l.id, l]));
   const order = { live: 0, scheduled: 1, postponed: 2, final: 3 } as const;
   const games = [...(s?.data || [])].sort((a, b) => order[a.status] - order[b.status] || a.start.localeCompare(b.start)).slice(0, 30);

@@ -153,7 +153,13 @@ export default function Simulate() {
         </div>
       </section>
 
-      {r && fav && (
+      {busy && (
+        <section className="rounded-xl bg-panel border border-line p-6 flex items-center gap-3" role="status" aria-live="polite">
+          <span className="inline-block h-5 w-5 rounded-full border-2 border-accent border-t-transparent animate-spin" aria-hidden="true" />
+          <span className="text-sm text-slate-300">Simulating {n.toLocaleString()} games snap by snap… this takes a few seconds.</span>
+        </section>
+      )}
+      {r && fav && !busy && (
         <section className="space-y-4" aria-live="polite">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-bold">{r.teams.away.name} at {r.teams.home.name}</h2>
@@ -186,7 +192,7 @@ export default function Simulate() {
                   <tr><td className="p-1 text-accent">{r.teams.home.name}</td>{r.periodScores.home.map((x, i) => <td key={i} className="p-1 text-center">{x}</td>)}</tr>
                 </tbody>
               </table>
-              <p className="text-[11px] text-slate-400 mt-1">Each quarter's median is taken on its own, so they needn't add up to the median final.</p>
+              <p className="text-[11px] text-slate-400 mt-1">Quarter scores show a typical scoring shape, not a precise forecast. Each quarter's median is taken on its own, so they needn't add up to the median final.</p>
             </div>
             {r.label && <p className="text-xs text-fuchsia-200">{r.label}</p>}
             <p className="text-xs text-slate-400">{site.pickDisclaimer}</p>

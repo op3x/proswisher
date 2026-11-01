@@ -10,7 +10,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const walk = (d) => fs.readdirSync(path.join(ROOT, d), { withFileTypes: true }).flatMap((e) =>
   e.isDirectory() ? walk(path.join(d, e.name)) : /\.(md|ts|tsx|json|mjs|html)$/.test(e.name) ? [path.join(d, e.name)] : []);
 const files = [...walk("src"), ...walk("server"), "README.md", "index.html"];
-const OK = ["Simculus is operated by Op3x LLC.", "Op3x LLC, which operates Simculus"];
+const OK = ["Simculus is operated by Op3x LLC.", "Op3x LLC, which operates Simculus", "Simculus Sports is operated by Op3x LLC."];
 const REL = /operated by|which operates|operator of|run by|owned by|a (product|service|brand) of|operates Simculus/gi;
 
 test("relationship wording is exactly Larry's (memo 23 §6)", () => {
@@ -26,7 +26,7 @@ test("relationship wording is exactly Larry's (memo 23 §6)", () => {
 });
 
 test("the sentence appears in the footer, contact page, terms and privacy, and README", () => {
-  assert.match(fs.readFileSync(path.join(ROOT, "src/config/site.ts"), "utf8"), /operatedBy: "Simculus is operated by Op3x LLC\."/);
+  assert.match(fs.readFileSync(path.join(ROOT, "src/config/site.ts"), "utf8"), /operatedBy: "Simculus Sports is operated by Op3x LLC\."/);
   for (const f of ["src/components/Layout.tsx", "src/pages/Contact.tsx"]) assert.match(fs.readFileSync(path.join(ROOT, f), "utf8"), /site\.operatedBy/, f);
   for (const f of ["src/content/terms-v1.md", "src/content/privacy-a.md", "src/content/privacy-b.md", "README.md"])
     assert.ok(fs.readFileSync(path.join(ROOT, f), "utf8").includes(OK[0]), f);

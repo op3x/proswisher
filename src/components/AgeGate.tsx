@@ -41,7 +41,7 @@ export default function AgeGate({ children }: { children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 bg-ink flex items-center justify-center p-4">
       <div ref={box} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="agegate-title" className="max-w-md w-full rounded-2xl bg-panel border border-line p-6 space-y-4 focus:outline-none">
-        <div className="font-extrabold text-lg">{site.name}</div>
+        <img src="/brand/simculus-sports-logo-dark-nobg.svg" alt={site.brandTM} width={749} height={200} className="h-10 w-auto" />
         {state === "denied" ? (
           <h1 id="agegate-title" className="text-slate-200 text-base font-normal">{g.deniedMessage}</h1>
         ) : (

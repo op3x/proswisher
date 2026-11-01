@@ -82,7 +82,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   };
   const checkoutAvailable = () => bypass || geoStatus(state.geo).ok;
   const blockPage = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title} | ${appName(env)}</title>
-<style>body{margin:0;background:#0b0f17;color:#e2e8f0;font:16px/1.5 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}main{max-width:36rem;padding:2rem}a{color:#67e8f9;display:inline-block;padding:.6rem .25rem;text-decoration:underline}footer{max-width:36rem;padding:0 2rem 2rem;color:#cbd5e1;font-size:14px}footer p{margin:.5rem 0}</style></head>
+<style>body{margin:0;background:#0A0F1F;color:#e2e8f0;font:16px/1.5 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}main{max-width:36rem;padding:2rem}a{color:#67e8f9;display:inline-block;padding:.6rem .25rem;text-decoration:underline}footer{max-width:36rem;padding:0 2rem 2rem;color:#cbd5e1;font-size:14px}footer p{margin:.5rem 0}</style></head>
 <body><main><h1>${title}</h1><p>${body}</p><p><a href="/">Browse games</a> · <a href="/how-it-works">How it works</a></p><p>${help}</p></main>
 <footer><p>${disc.footer}</p></footer></body></html>`;
 

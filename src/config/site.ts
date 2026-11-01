@@ -36,10 +36,12 @@ const framings = {
 } as const;
 
 export const site = {
-  name: __APP_NAME__, // APP_NAME env at build time, default "Simculus" (vite.config.ts)
+  name: __APP_NAME__, // APP_NAME env at build time, default "Simculus Sports" (vite.config.ts)
+  // BRAND.md (Larry): one ™ right after Simculus at the first/prominent use. Never ®, never Sportsbook/Bet/Network.
+  brandTM: "Simculus™ Sports",
   company: "Op3x LLC",
-  // Larry memo 23 §6: the ONLY relationship wording. Phrase form: "Op3x LLC, which operates Simculus".
-  operatedBy: "Simculus is operated by Op3x LLC.",
+  // Larry memo 23 §6 + BRAND.md (10/31): the ONLY relationship wording. Phrase form: "Op3x LLC, which operates Simculus".
+  operatedBy: "Simculus Sports is operated by Op3x LLC.",
   year: 2026,
   // ── Placeholders: clearly marked, must be filled before launch ──
   supportEmail: __CONTACT_EMAIL__, // CONTACT_EMAIL env (build time), default support@simculus.com. Contact is email only.
@@ -51,14 +53,14 @@ export const site = {
   repo: "op3x/proswisher",
   logBranch: "rebuild/lean-v1",
   meta: {
-    title: `${__APP_NAME__}: NFL & College Football Game Simulations`,
+    title: `NFL & College Football Game Simulations | ${__APP_NAME__}`,
     // Laye's description mentions "$9/month"; the price-free variant is used while nothing is for sale (payments off).
     description: "Simulate any NFL or college football matchup: win probability, margin, total and score by quarter, plus a play-by-play drive chart. Entertainment only. 21+.",
     descriptionWhenSelling: "Simulate any NFL or college football matchup. One featured game free every day; more sims with Pro. Entertainment only. 21+.",
     // Larry 9:36 (approved): "NBA" as plain text in game-page SEO titles, exactly this format. Never "Official", no logos.
     gamePageTitle: commerce.gamePageTitle,
     gamePageDescription: commerce.gamePageDescription,
-    ogTitle: `${__APP_NAME__}: Play the game before it's played.`,
+    ogTitle: `Play the game before it's played. | ${__APP_NAME__}`,
   },
   heroCta: "Run a simulation",
   heroCtaSecondary: "How it works",

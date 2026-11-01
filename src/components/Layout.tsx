@@ -5,8 +5,19 @@ import { countView } from "../lib/runtime";
 import DataSources from "./DataSources";
 import Ticker from "./Ticker";
 
+const ROUTE_TITLES: Record<string, string> = {
+  "/simulate": "Simulate a Game", "/how-it-works": "How It Works", "/faq": "FAQ", "/contact": "Contact",
+  "/terms": "Terms of Service", "/privacy": "Privacy Policy", "/responsible-gaming": "Responsible Gaming",
+};
+
 export default function Layout() {
   const { pathname, search, hash, key } = useLocation();
+  useEffect(() => {
+    // Titles: "… | Simculus Sports". Game pages set their own (GameDetail).
+    // Parent effects run after children, so only touch known routes and leave other pages' own titles alone.
+    if (pathname === "/") document.title = site.meta.title;
+    else if (ROUTE_TITLES[pathname]) document.title = `${ROUTE_TITLES[pathname]} | ${site.name}`;
+  }, [pathname]);
   useEffect(() => {
     countView(pathname, search);
     if (!hash) { window.scrollTo(0, 0); return; }
@@ -30,9 +41,9 @@ export default function Layout() {
         <Ticker />
         {/* Sal #7: logo and nav stack on narrow screens instead of clipping */}
         <div className="max-w-5xl mx-auto px-4 py-1 sm:py-0 sm:h-14 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-2">
-          {/* Text wordmark only until Ryan picks a logo concept */}
-          <Link to="/" className="flex items-center min-h-11 font-black tracking-tight text-lg sm:text-xl shrink-0" aria-label={`${site.name} home`}>
-            <span className="text-white">{site.name.slice(0, 3)}</span><span className="text-accent">{site.name.slice(3)}</span>
+          {/* Final logo (Ryan 10/31): horizontal dark-theme lockup; the ™ is in the artwork */}
+          <Link to="/" className="flex items-center min-h-11 shrink-0" aria-label={`${site.name} home`}>
+            <img src="/brand/simculus-sports-logo-dark-nobg.svg" alt={site.brandTM} width={749} height={200} className="h-9 sm:h-10 w-auto" />
           </Link>
           <nav aria-label="Main" className="flex w-full sm:w-auto gap-1 text-sm overflow-x-auto -mx-1 px-1">
             {site.nav.map((n) => (
@@ -47,6 +58,11 @@ export default function Layout() {
       <main id="main" tabIndex={-1} className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 focus:outline-none"><Outlet /></main>
       <footer className="border-t border-line mt-10">
         <div className="max-w-5xl mx-auto px-4 py-8 text-sm text-slate-400 space-y-3">
+          {/* Brand lockup: stacked on mobile, horizontal on wider screens */}
+          <Link to="/" aria-label={`${site.name} home`} className="inline-block">
+            <img src="/brand/simculus-sports-stacked-dark-nobg.svg" alt={site.brandTM} width={542} height={392} loading="lazy" className="sm:hidden h-20 w-auto" />
+            <img src="/brand/simculus-sports-logo-dark-nobg.svg" alt={site.brandTM} width={749} height={200} loading="lazy" className="hidden sm:block h-10 w-auto" />
+          </Link>
           {LEGAL_DRAFT && <p className="text-[11px] uppercase tracking-wider text-amber-400">{legal.draftNotice}</p>}
           <p className="text-slate-300">{site.footerDisclaimer}</p>
           <p className="text-xs">{site.dataCredit}</p>

@@ -43,20 +43,20 @@ export default function FootballField({ teams, events, index, progress }: Render
   const dir = seg.poss === "home" ? 1 : -1;
   const los = cur.type === "play" ? seg.from : null;
   const fd = cur.type === "play" && p.distance != null && p.yardline != null && p.distance < p.yardline ? seg.from + dir * p.distance : null;
-  const color = (s: FootballPayload["possession"]) => (s === "home" ? "#22d3ee" : "#fbbf24");
+  const color = (s: FootballPayload["possession"]) => (s === "home" ? "#22E1FF" : "#fbbf24");
   const offName = seg.poss === "home" ? teams.home.name : seg.poss === "away" ? teams.away.name : "";
   const spot = (a: number) => (a === 50 ? "50" : a < 50 ? `${teams.home.name.split(" ").slice(-1)} ${Math.round(a)}` : `${teams.away.name.split(" ").slice(-1)} ${Math.round(100 - a)}`);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto rounded-lg select-none" role="img"
       aria-label={`Simulated drive chart. ${cur.text}`}>
       <defs>
-        <marker id="arrow-home" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="3" markerHeight="3" orient="auto"><path d="M0,0L6,3L0,6z" fill="#22d3ee" /></marker>
+        <marker id="arrow-home" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="3" markerHeight="3" orient="auto"><path d="M0,0L6,3L0,6z" fill="#22E1FF" /></marker>
         <marker id="arrow-away" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="3" markerHeight="3" orient="auto"><path d="M0,0L6,3L0,6z" fill="#fbbf24" /></marker>
       </defs>
       <rect x="0" y="0" width={W} height={H} fill="#14532d" />
       {Array.from({ length: 10 }, (_, i) => <rect key={i} x={X(i * 10)} y="0" width="10" height={H} fill={i % 2 ? "#166534" : "#15803d"} opacity="0.55" />)}
       <rect x="0" y="0" width="10" height={H} fill="#0f3d24" /><rect x="110" y="0" width="10" height={H} fill="#0f3d24" />
-      <text x="5" y={H / 2} fill="#22d3ee" fontSize="3" fontWeight="700" textAnchor="middle" transform={`rotate(-90 5 ${H / 2})`}>{teams.home.name.toUpperCase()}</text>
+      <text x="5" y={H / 2} fill="#22E1FF" fontSize="3" fontWeight="700" textAnchor="middle" transform={`rotate(-90 5 ${H / 2})`}>{teams.home.name.toUpperCase()}</text>
       <text x="115" y={H / 2} fill="#fbbf24" fontSize="3" fontWeight="700" textAnchor="middle" transform={`rotate(90 115 ${H / 2})`}>{teams.away.name.toUpperCase()}</text>
       {Array.from({ length: 21 }, (_, i) => <line key={i} x1={X(i * 5)} x2={X(i * 5)} y1="0" y2={H} stroke="#fff" strokeOpacity={i % 2 ? 0.25 : 0.5} strokeWidth="0.25" />)}
       {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((a) => <text key={a} x={X(a)} y={H - 4} fill="#fff" fillOpacity="0.6" fontSize="3.2" textAnchor="middle">{a <= 50 ? a : 100 - a}</text>)}

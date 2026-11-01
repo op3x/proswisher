@@ -151,9 +151,9 @@ test("football API: teams, games, game sim with play log, custom and cross-era s
   } finally { s.close(); }
 });
 
-test("product name comes from APP_NAME with a single default (working name, no logo)", async () => {
-  assert.equal(DEFAULT_APP_NAME, "Simculus");
-  assert.equal(appName({}), "Simculus"); assert.equal(appName({ APP_NAME: "  " }), "Simculus"); assert.equal(appName({ APP_NAME: "Other" }), "Other");
+test("product name comes from APP_NAME with a single default (final: Simculus Sports)", async () => {
+  assert.equal(DEFAULT_APP_NAME, "Simculus Sports");
+  assert.equal(appName({}), "Simculus Sports"); assert.equal(appName({ APP_NAME: "  " }), "Simculus Sports"); assert.equal(appName({ APP_NAME: "Other" }), "Other");
   const app = await createApp({ env: { APP_ENV: "preview", APP_NAME: "Renamed", PUBLIC_DATA_DIR: fixtureDir() }, geoLookup: null, counter: createCounter({ enabled: false }), log: quiet });
   const s = await serve(app);
   try {

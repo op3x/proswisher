@@ -313,7 +313,7 @@ export const legal = {
     "We may update these Terms. Changes apply from your first renewal at least 14 days after we email you about them.",
   ],
   // Larry P4: privacy text now comes from src/content/privacy-a.md (always) and privacy-b.md (only when payments are on).
-  // Counting disclosure lives in privacy-a.md / privacy-b.md (Larry memo 21 §5.1/§5.2, versions privacy-a2/b2).
+  // Counting disclosure lives in privacy-a.md / privacy-b.md (Larry memo 21 §5.1/§5.2, versions privacy-a3/b1).
 
 
 };

@@ -43,10 +43,10 @@ test("ruling 3: IP goes to Subscription metadata + consent.jsonl, never to Check
     }
     // text_version must equal the version strings printed on the pages (same src/content files)
     const onPage = [read("terms-v2.md"), read("privacy-a.md"), read("privacy-b.md")].map(docVersion);
-    assert.deepEqual(onPage, ["terms-v2", "privacy-a2", "privacy-b1"]);
+    assert.deepEqual(onPage, ["terms-v2", "privacy-a3", "privacy-b1"]);
     for (const m of [rec, p.metadata, p.subscription_data.metadata]) assert.equal(m.text_version, onPage.join(","));
     const cfg = await (await fetch(s.url + "/api/config")).json();
-    assert.deepEqual(cfg.legal.versions, { terms: "terms-v2", privacyA: "privacy-a2", privacyB: "privacy-b1" });
+    assert.deepEqual(cfg.legal.versions, { terms: "terms-v2", privacyA: "privacy-a3", privacyB: "privacy-b1" });
   } finally { s.close(); fs.rmSync(dir, { recursive: true }); }
 });
 
@@ -74,12 +74,16 @@ test("effective dates: release-time env in production only; preview says 'Effect
     assert.match(t, /Effective: \{EFFECTIVE\}/, f);
     assert.ok(!/\[DATE\]|20\d\d-\d\d-\d\d|(January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}, 20\d\d/.test(t.split("\n")[1]), f);
   }
-  assert.deepEqual(legalVersions(), { terms: "terms-v2", privacyA: "privacy-a2", privacyB: "privacy-b1" });
+  assert.deepEqual(legalVersions(), { terms: "terms-v2", privacyA: "privacy-a3", privacyB: "privacy-b1" });
 });
 
 test("Larry copy rulings 1 and 2 match the build", () => {
   const a = read("privacy-a.md"), b = read("privacy-b.md");
-  assert.ok(a.includes("Our Track record links to our public prediction log on this site."));
+  // Larry 10/31 10:55 PM (privacy-a3) replaces ruling 1's "Links" sentence; the old text is archived in legal/archive/privacy-a2.md.
+  assert.ok(a.includes("We don't publish a public prediction log yet. If we add one, it will show only our predictions and how they were graded, never information about you."));
+  assert.ok(!/Track record links|public prediction log on this site/.test(a));
+  assert.ok(fs.readFileSync(new URL("../../legal/archive/privacy-a2.md", import.meta.url), "utf8").includes("Version: privacy-a2\n"));
+  assert.ok(fs.readFileSync(new URL("../../legal/archive/privacy-a2.md", import.meta.url), "utf8").includes("Our Track record links to our public prediction log on this site."));
   assert.ok(!/GitHub/.test(a));
   assert.ok(b.includes("To provide the membership:** process your payment through Stripe and recognize your membership in your browser using your Stripe checkout reference."));
   assert.ok(!/Sign-in|sign-in|password/.test(a + b));

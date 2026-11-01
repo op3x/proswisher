@@ -100,10 +100,13 @@ test("release checks: production refuses empty/invalid effective date and paymen
   assert.deepEqual(releaseProblems({ APP_ENV: "preview" }), []);
   assert.deepEqual(releaseProblems({}), []);
   const p0 = releaseProblems({ APP_ENV: "production" });
-  assert.equal(p0.length, 1); assert.match(p0[0], /LEGAL_EFFECTIVE_TERMS is empty/);
+  assert.equal(p0.length, 2); assert.match(p0[0], /LEGAL_EFFECTIVE_TERMS is empty/); assert.match(p0[1], /LEGAL_EFFECTIVE_PRIVACY_A is empty/);
   assert.match(releaseProblems({ APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "Nov 1" })[0], /not a YYYY-MM-DD/);
-  assert.deepEqual(releaseProblems({ APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01" }), []); // payments off: link not required
-  const live = { APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01", STRIPE_SECRET_KEY: LIVE_KEY, STRIPE_WEBHOOK_SECRET: "x", STRIPE_PRICE_ID: "price_x", STRIPE_LIVE_ENABLED: "true" };
+  // Larry 10:55 PM: privacy-a3 gets the same release check
+  assert.deepEqual(releaseProblems({ APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01" }).map((x) => x.split(" ")[0]), ["LEGAL_EFFECTIVE_PRIVACY_A"]);
+  assert.match(releaseProblems({ APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01", LEGAL_EFFECTIVE_PRIVACY_A: "Nov 1" })[0], /LEGAL_EFFECTIVE_PRIVACY_A is not a YYYY-MM-DD/);
+  assert.deepEqual(releaseProblems({ APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01", LEGAL_EFFECTIVE_PRIVACY_A: "2026-11-01" }), []); // payments off: link not required
+  const live = { APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01", LEGAL_EFFECTIVE_PRIVACY_A: "2026-11-01", STRIPE_SECRET_KEY: LIVE_KEY, STRIPE_WEBHOOK_SECRET: "x", STRIPE_PRICE_ID: "price_x", STRIPE_LIVE_ENABLED: "true" };
   assert.match(releaseProblems(live).join(), /STRIPE_PORTAL_LOGIN_URL/);
   assert.deepEqual(releaseProblems({ ...live, STRIPE_PORTAL_LOGIN_URL: LOGIN }), []);
   // startup refuses
@@ -111,15 +114,17 @@ test("release checks: production refuses empty/invalid effective date and paymen
   // build/start guard refuses (prebuild + prestart run scripts/guard.mjs); values never printed
   const g = spawnSync(process.execPath, [path.join(ROOT, "scripts/guard.mjs")], { env: { PATH: process.env.PATH, APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "" }, encoding: "utf8" });
   assert.equal(g.status, 1); assert.match(g.stdout + g.stderr, /LEGAL_EFFECTIVE_TERMS/);
-  const ok = spawnSync(process.execPath, [path.join(ROOT, "scripts/guard.mjs")], { env: { PATH: process.env.PATH, APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01" }, encoding: "utf8" });
+  const gp = spawnSync(process.execPath, [path.join(ROOT, "scripts/guard.mjs")], { env: { PATH: process.env.PATH, APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01" }, encoding: "utf8" });
+  assert.equal(gp.status, 1); assert.match(gp.stdout + gp.stderr, /LEGAL_EFFECTIVE_PRIVACY_A/);
+  const ok = spawnSync(process.execPath, [path.join(ROOT, "scripts/guard.mjs")], { env: { PATH: process.env.PATH, APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01", LEGAL_EFFECTIVE_PRIVACY_A: "2026-11-01" }, encoding: "utf8" });
   assert.equal(ok.status, 0, ok.stdout + ok.stderr);
   const pv = spawnSync(process.execPath, [path.join(ROOT, "scripts/guard.mjs")], { env: { PATH: process.env.PATH, APP_ENV: "preview" }, encoding: "utf8" });
   assert.equal(pv.status, 0, pv.stdout + pv.stderr);
 });
 
-test("consent record stores the Terms effective date with terms-v2 (jsonl + both Stripe metadata)", async () => {
+test("consent record stores the Terms and Privacy versions + effective dates (jsonl + both Stripe metadata)", async () => {
   for (const [env, want] of [[{ ...payEnv }, ON_LAUNCH],
-    [{ ...payEnv, APP_ENV: "production", STRIPE_SECRET_KEY: LIVE_KEY, STRIPE_LIVE_ENABLED: "true", LEGAL_EFFECTIVE_TERMS: "2026-11-01", STRIPE_PORTAL_LOGIN_URL: LOGIN }, "November 1, 2026"]]) {
+    [{ ...payEnv, APP_ENV: "production", STRIPE_SECRET_KEY: LIVE_KEY, STRIPE_LIVE_ENABLED: "true", LEGAL_EFFECTIVE_TERMS: "2026-11-01", LEGAL_EFFECTIVE_PRIVACY_A: "2026-11-01", STRIPE_PORTAL_LOGIN_URL: LOGIN }, "November 1, 2026"]]) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "psw-eff-")); const calls = [];
     const stripe = { webhooks: new Stripe(TEST_KEY).webhooks, checkout: { sessions: { create: async (p) => { calls.push(p); return { id: "cs_test_eff", url: "https://checkout.stripe.test/x" }; } } } };
     const s = await serve(await createApp({ env: { ...env, CONSENT_DIR: dir }, stripe, geoLookup: (ip) => (ip === "192.0.2.77" ? { country: "US", region: "TX" } : null), log: quiet }));
@@ -127,7 +132,7 @@ test("consent record stores the Terms effective date with terms-v2 (jsonl + both
       const r = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "192.0.2.77" }, body: JSON.stringify({ consent: true, age21: true, country: "US", state: "TX" }) });
       assert.equal(r.status, 200, env.APP_ENV);
       const rec = JSON.parse(fs.readFileSync(path.join(dir, "consent.jsonl"), "utf8").trim());
-      for (const m of [rec, calls[0].metadata, calls[0].subscription_data.metadata]) { assert.equal(m.terms_version, "terms-v2"); assert.equal(m.terms_effective, want); }
+      for (const m of [rec, calls[0].metadata, calls[0].subscription_data.metadata]) { assert.equal(m.terms_version, "terms-v2"); assert.equal(m.terms_effective, want); assert.equal(m.privacy_version, "privacy-a3"); assert.equal(m.privacy_effective, want); }
     } finally { s.close(); fs.rmSync(dir, { recursive: true }); }
   }
 });

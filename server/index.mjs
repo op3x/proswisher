@@ -202,6 +202,8 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     const consent = {
       consent_at: acceptedAt, consent_ip: clientIp(req), consent_version: commerce.consentVersion,
       terms_version: versions.terms, terms_effective: legalEffective(env).terms, terms_accepted_at: acceptedAt,
+      // Larry 10:55 PM: the Privacy Policy version and effective date the same way (privacy-a3; release-time LEGAL_EFFECTIVE_PRIVACY_A).
+      privacy_version: versions.privacyA, privacy_effective: legalEffective(env).privacyA,
       price_shown: commerce.priceShown, age_21_confirmed: "true",
       // Larry: must equal the on-page version strings (read from the same src/content files the pages render).
       text_version: `${versions.terms},${versions.privacyA},${versions.privacyB}`,

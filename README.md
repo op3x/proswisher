@@ -138,13 +138,14 @@ First-party and cookieless, with no third-party analytics, trackers or pixels. I
 - **R4(d):** consent records keep the raw IP for the subscription's life plus 4 years. `server/consent-purge.mjs` runs daily inside the server (when `CONSENT_DIR` is set and payments are on), or on demand with `npm run purge:consent`. After the retention period it sets `consent_ip` to null in `consent.jsonl` and to `""` on the Subscription's metadata (`subscriptions.update`).
 - **Larry ruling 3:** the IP is written only to the Subscription's metadata and `consent.jsonl`, never to the Checkout Session's metadata. A completed Session's metadata can't be edited, so it could never be purged there.
 - **Manual cleanup step (purge runbook):** Sessions created by builds before this rule may still carry `consent_ip`. Run `railway run npm run consent:sessions-with-ip` (read-only; it uses `checkout.sessions.list` and needs *Checkout Sessions: Read* on the restricted key). It prints only Session ids and dates, never the IP. If it lists any, ask Stripe support to redact that metadata, and record the request next to `consent.jsonl`. Run it once now, and again after any rollback to an older build.
-- **Consent text version:** every consent record (`consent.jsonl`, Session and Subscription metadata) carries `text_version` = `terms-v1,privacy-a2,privacy-b1`. That value is read from the `Version:` lines of the same `src/content` files the pages render, and a test enforces it.
+- **Consent text version:** every consent record (`consent.jsonl`, Session and Subscription metadata) carries `text_version` = `terms-v2,privacy-a3,privacy-b1`, plus `terms_version`/`terms_effective` and `privacy_version`/`privacy_effective` (the dates exactly as the pages show them). That value is read from the `Version:` lines of the same `src/content` files the pages render, and a test enforces it.
 
 ## Legal effective dates (Larry's date rule)
 - The pages show `Effective: {date}` only in production. The date comes from release-time Railway variables, in `YYYY-MM-DD` form: `LEGAL_EFFECTIVE_TERMS`, `LEGAL_EFFECTIVE_PRIVACY_A`, `LEGAL_EFFECTIVE_PRIVACY_B` and `LEGAL_EFFECTIVE_REFUND`. It is rendered as "October 26, 2026" (US Central calendar day).
 - Set each variable on the day that version first goes live in production. If a variable is unset, or the app runs in preview, the page says **"Effective on launch"**. Nothing is hard-coded.
 - Privacy §B and the refund page stay unpublished: §B renders only when payments are on, and there is no refund page yet. They get their own dates on the day checkout opens.
-- Version strings: terms-v1, privacy-a2, privacy-b1. Superseded texts are kept in `legal/archive/`.
+- Release check: a production build or start refuses to run if `LEGAL_EFFECTIVE_TERMS` or `LEGAL_EFFECTIVE_PRIVACY_A` is empty or not `YYYY-MM-DD` (scripts/guard.mjs + createApp).
+- Version strings: terms-v2, privacy-a3, privacy-b1. Superseded texts are kept in `legal/archive/`.
 
 ## First data run (runbook)
 The image ships python3 (`railpack.json` adds Python 3.12 to the Node build). On every start the server logs `[pipeline] python3 available: Python 3.12.x`, then runs `scripts/update_data.py`, and repeats every `PIPELINE_INTERVAL_MIN` minutes (default 60).

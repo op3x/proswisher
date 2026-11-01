@@ -1,6 +1,7 @@
 # Superseded legal texts (Larry's date rule)
 Each file is a version that was replaced on the branch. None of them was ever live in production, so none has an effective date.
 - `privacy-a1.md`: §A before memo 21. It was superseded by privacy-a2 (src/content/privacy-a.md) at commit afd97a3.
+- `privacy-a2.md`: §A as of cdfd751, on the branch Oct 25 to Oct 31, 2026 (US Central; afd97a3 to round 5), preview only, never live in production. Superseded by privacy-a3 (src/content/privacy-a.md): the "Links" line no longer points to a public prediction log, which doesn't exist yet (Larry 10/31 10:55 PM).
 - `terms-v1.md`: Terms v1 as of 92471e5 (preview only, never live in production). Superseded by terms-v2 (src/content/terms-v2.md): football wording, "game start", the real cancel URL (Larry 10/31 10:23 PM).
 
 When a published version is replaced:

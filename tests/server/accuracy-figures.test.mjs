@@ -74,6 +74,10 @@ test("Terms §9 is Larry's 10:44 PM text; the winner/pushes grading text is gone
   assert.ok(!/Pushes|pushes|Winner:|graded once|Grades are never|add it to our public Track record/.test(t));
   assert.ok(t.includes("and you'll see a confirmation on screen.\n"));
   assert.ok(read("src/pages/Account.tsx").includes("Your subscription is canceled."), "/account?canceled=1 confirmation");
+  // round 5: §10 no longer mentions market spreads or a track-record compilation
+  assert.ok(t.includes("That includes our predictions, simulations and any compilations of them, model outputs, write-ups, software, design and the Simculus name and logo."));
+  assert.ok(t.includes("Game schedules and scores are facts we get from third-party sources.\n"));
+  assert.ok(!/market spread|track-record compilation/i.test(t));
 });
 
 test("scrubMarket drops line/odds keys and keeps our own projections", () => {

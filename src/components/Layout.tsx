@@ -71,8 +71,8 @@ export default function Layout() {
           <nav aria-label="Footer" className="flex flex-wrap gap-x-4">
             {site.footerLinks.map((l) => <Link key={l.to} to={l.to} className="inline-flex items-center min-h-11 text-slate-300 underline underline-offset-4 hover:text-white">{l.label}</Link>)}
           </nav>
-          {/* Contact is email only, no physical address (Ryan 10/31). Larry P11: the email stays hidden until it works. */}
-          {site.supportEmailActive && <p className="text-xs">Support: {site.supportEmail}</p>}
+          {/* Ryan 10/31 9:47 PM: business address next to the support email. Larry P11: email hidden until it works. */}
+          <p className="text-xs">{site.company} · {site.businessAddress}{site.supportEmailActive && <> · {site.supportEmail}</>}</p>
           <p className="text-xs text-slate-400">{site.geoCredit}</p>
           <p className="text-xs">{site.operatedBy} © {site.year} {site.company}</p>
         </div>

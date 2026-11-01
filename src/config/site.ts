@@ -44,7 +44,14 @@ export const site = {
   operatedBy: "Simculus Sports is operated by Op3x LLC.",
   year: 2026,
   // ── Placeholders: clearly marked, must be filled before launch ──
-  supportEmail: __CONTACT_EMAIL__, // CONTACT_EMAIL env (build time), default support@simculus.com. Contact is email only.
+  // Ryan 10/31 9:47 PM: Anytime Mailbox (E State St location). The ONLY street address allowed on the site
+  // (tests/server/no-address.test.mjs). Box format is "#<box>" after the street, never Unit/Suite.
+  // TODO(box-number): replace #XXX with the real box number once Ryan buys the mailbox. scripts/guard.mjs fails
+  // any APP_ENV=production build/start while it still reads #XXX (preview builds are fine).
+  businessAddress: "5970 E State St #XXX, Rockford, IL 61108",
+  // Larry 10/31, exact text: Terms + paid checkout disclosure.
+  caComplaintNotice: "California users: The Complaint Assistance Unit of the Division of Consumer Services of the California Department of Consumer Affairs may be contacted in writing at 1625 North Market Blvd., Suite N 112, Sacramento, CA 95834, or by telephone at (916) 445-1254 or (800) 952-5210.",
+  supportEmail: __CONTACT_EMAIL__, // CONTACT_EMAIL env (build time), default support@simculus.com.
   supportEmailActive: commerce.supportEmailActive === true, // Larry P11: support@ is HIDDEN everywhere until it works (commerce.json)
   // refund text: see legal.refunds (Larry's exact wording, 9:36)
   cancelUrl: "[CANCEL_URL TBD]",

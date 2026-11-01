@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 const appName = (process.env.APP_NAME || "").trim() || "Simculus Sports";
-// Contact is email only (Ryan 10/31): no physical address anywhere on the site.
+// Contact email; the one allowed street address is site.businessAddress (src/config/site.ts).
 const contactEmail = (process.env.CONTACT_EMAIL || "").trim() || "support@simculus.com";
 const appEnv = (process.env.APP_ENV || "preview").toLowerCase();
 

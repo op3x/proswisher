@@ -9,6 +9,7 @@ const SUPPORT = site.supportEmailActive ? site.supportEmail : "[support contact:
 const fill = (t: string, effective = "Effective on launch") => t
   .replace(/Effective: \{EFFECTIVE\}/g, /^Effective/.test(effective) ? effective : `Effective: ${effective}`)
   .replace(/\{CONTACT\}/g, site.supportEmailActive ? `Questions about privacy? Email ${site.supportEmail}.` : `${site.company} · ${SUPPORT}`)
+  .replace(/\{ADDRESS\}/g, site.businessAddress)
   .replace(/\{SUPPORT\}/g, SUPPORT)
   .replace(/support@(?:proswisher|simculus)\.com/g, SUPPORT); // (SUPPORT = CONTACT_EMAIL once active) // Larry P11: never show the alias while it's inactive
 

@@ -1,5 +1,5 @@
 {
-  "_checkoutGate": "Larry 10/31: paid checkout must stay OFF (payments disabled, checkout gate closed) until (1) a private-mailbox business address and (2) the California consumer-complaint notice are added to the site and legal pages. Do not enable Stripe or set STRIPE_* keys before both land and Larry signs off.",
+  "_checkoutGate": "Larry 10/31: paid checkout must stay OFF (payments disabled, checkout gate closed) until the private-mailbox business address has its real box number (site.businessAddress, TODO(box-number)) and the California consumer-complaint notice is on the site and in the checkout disclosure (added 10/31). Do not enable Stripe or set STRIPE_* keys before Larry signs off.",
   "_note": "Shared by the site (src/config/site.ts) and the server (server/*.mjs). Copy: Laye, landing-page-copy.md 9:42 AM CT. Price is config only; Stripe prices are created by Ryan, never by code.",
   "price": "$9",
   "unitAmount": 900,

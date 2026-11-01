@@ -87,6 +87,8 @@ We may update these Terms. We'll post the new version with its effective date, a
 These Terms, the Privacy Policy and the refund policy are the whole agreement. If a provision is unenforceable, the rest still applies. Not enforcing a provision isn't a waiver. You can't transfer these Terms. We may transfer them to a successor to the Service, with notice.
 
 ### 20. Contact
-Op3x LLC · support@simculus.com
+Op3x LLC · {ADDRESS} · support@simculus.com
+
+California users: The Complaint Assistance Unit of the Division of Consumer Services of the California Department of Consumer Affairs may be contacted in writing at 1625 North Market Blvd., Suite N 112, Sacramento, CA 95834, or by telephone at (916) 445-1254 or (800) 952-5210.
 
 Gambling problem? Call 1-800-GAMBLER.

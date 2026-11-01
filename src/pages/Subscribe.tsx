@@ -42,6 +42,9 @@ export default function SubscribePage() {
         <p className="font-semibold">{c.summary.replace("{price}", price)}</p>
         <p className="text-slate-300">{c.renewalDisclosure}</p>
         <p className="text-slate-400">{c.whatItIs}</p>
+        {/* Paid checkout disclosure (stays OFF while payments are disabled): business address + email, Larry's CA notice */}
+        <p className="text-xs text-slate-400">{site.company} · {site.businessAddress}{site.supportEmailActive && <> · {site.supportEmail}</>}</p>
+        <p className="text-xs text-slate-400">{site.caComplaintNotice}</p>
       </div>
       {!selling ? (
         <p className="rounded-xl border border-line bg-panel p-4 text-sm text-slate-300">{payments && geoOk === false ? site.geoBlockCopy.unavailable : site.pricing.unavailable}</p>

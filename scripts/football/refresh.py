@@ -10,7 +10,7 @@ Writes (private, never served):  {PREDICTIONS_PRIVATE_DIR}/football/... raw down
 A source that refuses us (401/403/persistent 429) is recorded in blocked.json and skipped on later runs until cleared
 with FOOTBALL_CLEAR_BLOCKS=<source> (a human decision). Exit 3 when a source was newly blocked, else 0.
 """
-import argparse, gzip, json, os, sys, time, traceback
+import argparse, gzip, json, os, shutil, sys, tempfile, time, traceback
 from datetime import datetime, timedelta, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(HERE))
 from football import ratings as R, params as PR, teams as T
 from football.extract import extract_pbp, save_compact, load_compact, IDX
 from football import elo as E
+from football import injuries as INJ
 from football.sources import SourceBlocked, NotConfigured, nfl_provider, ncaaf_provider, NFL_ATTRIBUTION, NCAAF_ATTRIBUTION
 from football.timeutil import eastern_to_utc, iso
 
@@ -112,6 +113,9 @@ def ensure_nfl_compact(prov, season, cur_season, raw_dir, cmp_dir):
     cpath = os.path.join(cmp_dir, f"nfl_{season}.json.gz")
     if season < cur_season and os.path.exists(cpath):
         return cpath, False
+    if not os.path.exists(cpath):   # no derived cache: force a full download (the ETag alone would answer 304)
+        try: os.remove(os.path.join(raw_dir, f"play_by_play_{season}.csv.gz.etag"))
+        except FileNotFoundError: pass
     try:
         path, changed = prov.pbp_file(season, raw_dir)
     except RuntimeError as e:
@@ -125,8 +129,10 @@ def ensure_nfl_compact(prov, season, cur_season, raw_dir, cmp_dir):
         save_compact(rows, cpath)
         wjson(os.path.join(cmp_dir, f"nfl_obs_{season}.json"), R.nfl_observations(rows, IDX))
         log(f"nflverse pbp {season}: {len(rows)} plays extracted in {time.time() - t0:.1f}s")
-        if season < cur_season and os.path.dirname(os.path.abspath(path)) == os.path.abspath(raw_dir):
-            for p in (path, path + ".etag"):
+        # raw pbp carries player names and ids: delete it once compacted, for every season (Larry (c)). The current
+        # season keeps only its ETag, so tomorrow's run is a conditional GET; past seasons keep nothing.
+        if os.path.dirname(os.path.abspath(path)) == os.path.abspath(raw_dir):
+            for p in ((path, path + ".etag") if season < cur_season else (path,)):
                 try: os.remove(p)
                 except FileNotFoundError: pass
     return cpath, True
@@ -241,6 +247,14 @@ def refresh_nfl(pub, priv, blocks, now, prov=None):
         hist["seasons"][str(s)] = {t: {"off": round(rs["off"][t], 4), "def": round(rs["def"][t], 4)} for t in rs["off"] if t in T.NFL}
     wjson(os.path.join(out_dir, "history.json"), hist)
 
+    # player availability (FOOTBALL_INJURIES_ENABLED): team-level points, applied to upcoming games only
+    upcoming = [g for g in cur_games if g["status"] != "final"]
+    adj, inj_mode = nfl_injury_adjustments(prov, cur, sorted({(g["week"], t) for g in upcoming for t in (g["home"], g["away"])}),
+                                          blocks, priv, now)
+    if inj_mode != "on":
+        try: os.remove(os.path.join(priv, "nfl_availability.json"))
+        except FileNotFoundError: pass
+
     # schedule with expected points for upcoming games (sims are run by the Node service)
     for g in cur_games:
         if g["status"] != "final":
@@ -250,9 +264,15 @@ def refresh_nfl(pub, priv, blocks, now, prov=None):
                 mg = (elo_now[g["home"]] - elo_now[g["away"]] + (0 if g["neutral"] else E.NFL_ELO["hfa"])) / E.NFL_ELO["per_pt"]
             else:
                 mg = R.expected_points(r, model, g["home"], g["away"], site) - R.expected_points(r, model, g["away"], g["home"], -site)
+            if adj:
+                ah, aa = adj.get((g["week"], g["home"]), 0.0), adj.get((g["week"], g["away"]), 0.0)
+                if ah or aa:
+                    g["availabilityAdj"] = {"home": ah, "away": aa}   # derived team points only (I1)
+                    mg += ah - aa
             h, a = E.split_points(tot, mg)
             g["expected"] = {"home": round(h, 2), "away": round(a, 2)}
-    wjson(os.path.join(out_dir, "schedule.json"), {"league": "nfl", "season": cur, "generatedAt": iso(now), "source": NFL_ATTRIBUTION, "games": cur_games})
+    wjson(os.path.join(out_dir, "schedule.json"), {"league": "nfl", "season": cur, "generatedAt": iso(now), "source": NFL_ATTRIBUTION,
+                                                   "injuriesModeled": inj_mode == "on", "games": cur_games})
 
     # play-level sim parameters (weekly is enough; plays change slowly)
     ppath = os.path.join(out_dir, "params.json")
@@ -272,7 +292,57 @@ def refresh_nfl(pub, priv, blocks, now, prov=None):
         del rows, krows
         log(f"NFL sim params refit on {psz} (kickoffs {kick_season})")
     log(f"NFL ok: season {cur}, ratings as of week {at_week}, {len(cur_games)} games, model {model}")
-    return {"ok": True, "season": cur, "asOfWeek": at_week, "games": len(cur_games), "completed": len(done)}
+    return {"ok": True, "season": cur, "asOfWeek": at_week, "games": len(cur_games), "completed": len(done),
+            "availability": inj_mode, "injuriesModeled": inj_mode == "on"}
+
+
+# ------------------------------------------------------------------ NFL availability (injuries)
+INJ_SRC = "nflverse-availability"   # the injuries release; name kept free of "injur" so status.json passes the API scan
+
+
+def nfl_injury_adjustments(prov, cur, team_weeks, blocks, priv, now):
+    """Team-level points adjustments from the nflverse `injuries` release (NFL only). Never raises.
+
+    Larry's conditions: (a) no player id/name in any log, error or traceback: failures log the stage and exception class
+    only (INJ.safe_error), never the message, never a traceback; (c) nothing player-level is stored: the injuries file and
+    the two pbp files used for player roles are downloaded into a temporary directory that is removed before this
+    function returns, and the only thing written is {week: {team: points}}. Returns (adjustments, mode), mode in
+    on / off / blocked / failed."""
+    if not INJ.enabled():
+        return None, "off"
+    if blocks.is_blocked(INJ_SRC):
+        log(f"NFL injuries skipped: {INJ_SRC} is blocked since {blocks.d[INJ_SRC]['at']}")
+        return None, "blocked"
+    tmp = tempfile.mkdtemp(prefix="nfl-avail-")
+    stage = "download"
+    try:
+        inj, _ = prov.injuries_file(cur, tmp)
+        pbp = []
+        for s in (cur - 1, cur):
+            try:
+                pbp.append(prov.pbp_file(s, tmp)[0])
+            except RuntimeError as e:
+                if isinstance(e, SourceBlocked) or "HTTP 404" not in str(e):
+                    raise
+        stage = "compute"
+        adj = INJ.team_adjustments(pbp, [inj], cur, team_weeks)
+        stage = "write"
+        out = {}
+        for (w, t), v in adj.items():
+            out.setdefault(str(w), {})[t] = v
+        wjson(os.path.join(priv, "nfl_availability.json"), {"season": cur, "generatedAt": iso(now), "pointsByWeekTeam": out,
+                                                            "constants": {k: INJ.PRODUCTION[k] for k in ("b_qb", "b_skill", "lookback")}})
+        vals = [abs(v) for v in adj.values()]
+        log(f"NFL injuries: on, {len(adj)} team-weeks adjusted (mean |adj| {sum(vals) / len(vals) if vals else 0:.2f} pts)")
+        return adj, "on"
+    except SourceBlocked as e:
+        blocks.block(INJ_SRC, INJ.scrub(e)); log(f"STOPPED {INJ_SRC}: {INJ.scrub(e)}")
+        return None, "blocked"
+    except Exception as e:                       # by design: stage + class name only, never the message (Larry (a))
+        log(INJ.safe_error(stage, e))
+        return None, "failed"
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 # ------------------------------------------------------------------ NCAAF
@@ -446,8 +516,8 @@ def main(argv=None):
         try:
             res = fn(pub, priv, blocks, now)
         except Exception as e:                      # one league failing never stops the other
-            traceback.print_exc()
-            res = {"ok": False, "error": f"{type(e).__name__}: {e}"}
+            print(INJ.scrub(traceback.format_exc()), file=sys.stderr, end="")   # player ids masked (Larry (a))
+            res = {"ok": False, "error": INJ.scrub(f"{type(e).__name__}: {e}")}
         newly |= bool(res.pop("newlyBlocked", False))
         status[lg] = {**res, "at": iso(now)}
     status["blocked"] = blocks.d

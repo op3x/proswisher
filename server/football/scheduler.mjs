@@ -8,7 +8,8 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const FOOTBALL_CHILD_ENV = ["PATH", "HOME", "LANG", "TZ", "APP_ENV", "APP_NAME", "CFBD_API_KEY", "CFBD_MONTHLY_BUDGET",
-  "NFL_DATA_PROVIDER", "NCAAF_DATA_PROVIDER", "NFL_LOCAL_DIR", "FOOTBALL_CLEAR_BLOCKS", "FOOTBALL_REFIT_PARAMS"];
+  "NFL_DATA_PROVIDER", "NCAAF_DATA_PROVIDER", "NFL_LOCAL_DIR", "FOOTBALL_CLEAR_BLOCKS", "FOOTBALL_REFIT_PARAMS",
+  "FOOTBALL_INJURIES_ENABLED"];   // NFL player availability (Larry-cleared, NFL only); set to true to turn on
 
 /** Wall-clock parts of `date` in `timeZone`. */
 function zoned(date, timeZone) {
@@ -85,6 +86,10 @@ export function createFootballPipeline({ env = process.env, dirs, log = console.
       if (!(s.generatedAt && now().getTime() - Date.parse(s.generatedAt) < 20 * 3600e3)) return true;
       // A league whose credentials were just added (e.g. CFBD_API_KEY for NCAAF) counts as missing even if NFL is fresh.
       if (env.CFBD_API_KEY && !s.ncaaf?.ok) return true;
+      // FOOTBALL_INJURIES_ENABLED flipped since the last run: refresh now so the adjustment (and injuriesModeled) follows it.
+      const injOn = /^(1|true|yes)$/i.test(String(env.FOOTBALL_INJURIES_ENABLED ?? ""));
+      const injWas = s.nfl?.availability ?? "off";
+      if (injOn ? injWas === "off" : injWas !== "off") return true;
       return false;
     } catch { return true; }
   }

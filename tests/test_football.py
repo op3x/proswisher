@@ -12,22 +12,43 @@ from football.timeutil import eastern_to_utc, iso
 TEAMS = ["KC", "LV", "BUF", "MIA"]
 
 
+PCOLS = ["qb_dropback", "pass_attempt", "rush_attempt", "passer_player_id", "passer_player_name", "rusher_player_id",
+         "rusher_player_name", "receiver_player_id", "receiver_player_name"]
+# planted player-level strings: none of these may ever reach a public file, the private dir, a log or an API response
+PLANTED = {"qb": "00-0099999", "qb_name": "Zzyzx Testplayer", "wr": "00-0088888", "wr_name": "Qwerty Receiverman",
+           "rb": "00-0077777", "rb_name": "Plughk Runningback", "body": "Hamstring-Zq"}
+
+
 def synth_pbp(path, season=2025, weeks=4):
-    """Tiny nflverse-shaped pbp: KC's offense is clearly the best (+0.3 EPA/play)."""
+    """Tiny nflverse-shaped pbp: KC's offense is clearly the best (+0.3 EPA/play). Player columns carry planted ids/names."""
     with gzip.open(path, "wt", newline="", encoding="utf-8") as f:
-        w = csv.writer(f); w.writerow(X.COLS + ["extra_col"])
+        w = csv.writer(f); w.writerow(X.COLS + PCOLS + ["extra_col"])
         for wk in range(1, weeks + 1):
             pairs = [("KC", "LV"), ("BUF", "MIA")] if wk % 2 else [("KC", "BUF"), ("LV", "MIA")]
             for h, a in pairs:
                 gid = f"{season}_{wk:02d}_{a}_{h}"
                 for off, de in ((h, a), (a, h)):
+                    kc = off == "KC"
+                    qb, wr, rb = ((PLANTED["qb"], PLANTED["qb_name"]), (PLANTED["wr"], PLANTED["wr_name"]), (PLANTED["rb"], PLANTED["rb_name"])) if kc \
+                        else ((f"00-001{off}", "Other Qb"), (f"00-002{off}", "Other Wr"), (f"00-003{off}", "Other Rb"))
                     for i in range(60):
                         row = {c: "NA" for c in X.COLS}
                         row.update(game_id=gid, season=season, week=wk, season_type="REG", home_team=h, away_team=a, posteam=off, defteam=de,
                                    qtr=1 + i // 15, down=1, ydstogo=10, yardline_100=60, play_type="pass" if i % 2 else "run",
-                                   epa=0.3 if off == "KC" else -0.05, wp=0.5, two_point_attempt=0, yards_gained=5)
-                        w.writerow([row[c] for c in X.COLS] + ["x"])
-                    w.writerow([gid if c == "game_id" else ("" if c == "play_type" else "NA") for c in X.COLS] + ["x"])  # END QUARTER row
+                                   epa=0.3 if kc else -0.05, wp=0.5, two_point_attempt=0, yards_gained=5)
+                        pc = ["1", "1", "0", qb[0], qb[1], "NA", "NA", wr[0], wr[1]] if i % 2 else ["0", "0", "1", "NA", "NA", rb[0], rb[1], "NA", "NA"]
+                        w.writerow([row[c] for c in X.COLS] + pc + ["x"])
+                    w.writerow([gid if c == "game_id" else ("" if c == "play_type" else "NA") for c in X.COLS] + ["NA"] * len(PCOLS) + ["x"])  # END QUARTER row
+
+
+def synth_injuries(path, season=2025, week=7):
+    """nflverse-shaped injury report: KC's QB is Out in `week` (all the columns Larry's I1 keeps out of the API)."""
+    hdr = ["season", "season_type", "game_type", "team", "week", "gsis_id", "position", "full_name", "first_name", "last_name",
+           "report_primary_injury", "report_secondary_injury", "report_status", "practice_primary_injury", "practice_secondary_injury", "practice_status"]
+    with gzip.open(path, "wt", newline="", encoding="utf-8") as f:
+        w = csv.writer(f); w.writerow(hdr)
+        w.writerow([season, "REG", "REG", "KC", week, PLANTED["qb"], "QB", PLANTED["qb_name"], "Zzyzx", "Testplayer", PLANTED["body"], "", "Out",
+                    PLANTED["body"], "", "Did Not Participate In Practice"])
 
 
 class Extract(unittest.TestCase):
@@ -188,6 +209,11 @@ class FakeNfl(SRC.NflDataProvider):
     def pbp_file(self, season, dest):
         if self.blocked: raise SRC.SourceBlocked("nflverse pbp: HTTP 403 (refused)")
         p = os.path.join(self.d, f"play_by_play_{season}.csv.gz")
+        if not os.path.exists(p): raise RuntimeError("nflverse: HTTP 404")
+        return p, True
+    def injuries_file(self, season, dest):
+        if not os.environ.get("FOOTBALL_INJURIES_ENABLED"): raise RuntimeError("injuries are off")
+        p = os.path.join(self.d, f"injuries_{season}.csv.gz")
         if not os.path.exists(p): raise RuntimeError("nflverse: HTTP 404")
         return p, True
     def schedule_rows(self, dest):
@@ -357,12 +383,14 @@ class InjuriesPrototype(unittest.TestCase):
                 SRC.Nflverse().injuries_file(2026, "/tmp/never")
             u.assert_not_called()
 
-    def test_refresh_and_server_do_not_use_injuries(self):
+    def test_college_and_ticker_do_not_use_injuries(self):
+        # Larry: NFL only. College availability is not cleared; the ticker never touches it.
+        import inspect
+        for fn in (RF.refresh_ncaaf, RF.ncaaf_play_fit, RF.ncaaf_fitted_params):
+            src = inspect.getsource(fn).lower()
+            self.assertNotIn("injur", src); self.assertNotIn("inj.", src); self.assertNotIn("availability", src)
         root = os.path.join(os.path.dirname(__file__), "..")
-        for f in ("scripts/football/refresh.py", "server/football/routes.mjs", "server/football/scheduler.mjs",
-                  "server/football/store.mjs", "server/football/ticker.mjs"):
-            p = os.path.join(root, f)
-            self.assertNotIn("injur", open(p, encoding="utf-8").read().lower(), f)
+        self.assertNotIn("injur", open(os.path.join(root, "server/football/ticker.mjs"), encoding="utf-8").read().lower())
 
     def test_roles_use_only_earlier_games(self):
         from football import injuries as INJ
@@ -382,6 +410,136 @@ class InjuriesPrototype(unittest.TestCase):
         rows = [(-(3 * q + 6 * k), q, k) for q, k in ((1, 0), (0, 1), (0.5, 0.2), (-1, 0.3), (0.2, -0.7))]
         bq, bk = INJ.fit_coefs(rows)
         self.assertAlmostEqual(bq, 3, places=6); self.assertAlmostEqual(bk, 6, places=6)
+
+
+class InjuriesWired(unittest.TestCase):
+    """Larry's must-haves for NFL injuries: (a) no player id/name in logs or error text, (c) nothing player-level stored."""
+    def setUp(self):
+        self.d = tempfile.mkdtemp(); synth_pbp(os.path.join(self.d, "play_by_play_2025.csv.gz"), weeks=6)
+        synth_injuries(os.path.join(self.d, "injuries_2025.csv.gz"))
+        self.pub, self.priv = os.path.join(self.d, "pub"), os.path.join(self.d, "priv")
+        os.makedirs(os.path.join(self.pub, "nfl"))
+        with open(os.path.join(HERE, "fixtures", "football", "nfl-params.json")) as f: p = json.load(f)
+        p["fittedAt"] = "2999-01-01T00:00:00Z"
+        with open(os.path.join(self.pub, "nfl", "params.json"), "w") as f: json.dump(p, f)
+        self.now = datetime(2025, 10, 9, 12, tzinfo=timezone.utc)
+
+    def run_refresh(self, flag, prov=None):
+        import contextlib
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.dict(os.environ, {"FOOTBALL_INJURIES_ENABLED": flag}), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            res = RF.refresh_nfl(self.pub, self.priv, RF.Blocks(os.path.join(self.priv, "blocked.json")), self.now, prov=prov or FakeNfl(self.d))
+        return res, out.getvalue() + err.getvalue(), json.load(open(os.path.join(self.pub, "nfl", "schedule.json")))
+
+    def assert_no_player_strings(self, text, where):
+        for k, v in PLANTED.items():
+            self.assertNotIn(v, text, f"{k} leaked into {where}")
+        for k in ("Zzyzx", "Testplayer", "gsis", "full_name", "report_status", "practice_status", "Did Not Participate", '"Out"', "Questionable", "Doubtful"):
+            self.assertNotIn(k, text, f"{k} leaked into {where}")
+
+    def stored_text(self):
+        blob = []
+        for root in (self.pub, self.priv):
+            for dp, _, fs in os.walk(root):
+                for f in fs:
+                    p = os.path.join(dp, f)
+                    raw = open(p, "rb").read()
+                    if p.endswith(".gz"): raw = gzip.decompress(raw)
+                    blob.append(raw.decode("utf-8", "replace"))
+        return "\n".join(blob)
+
+    def test_flag_on_adjusts_kc_and_stores_nothing_player_level(self):
+        tmps = []
+        real = tempfile.mkdtemp
+        def spy(*a, **k):
+            p = real(*a, **k); tmps.append(p); return p
+        _, _, off = self.run_refresh("")
+        with mock.patch.object(RF.tempfile, "mkdtemp", side_effect=spy):
+            res, logs, on = self.run_refresh("true")
+        self.assertEqual(res["availability"], "on"); self.assertTrue(res["injuriesModeled"]); self.assertTrue(on["injuriesModeled"]); self.assertFalse(off["injuriesModeled"])
+        g_off = {g["id"]: g for g in off["games"] if g["status"] == "scheduled"}
+        kc = [g for g in on["games"] if g["status"] == "scheduled" and "KC" in (g["home"], g["away"])][0]
+        side = "home" if kc["home"] == "KC" else "away"
+        self.assertLess(kc["availabilityAdj"][side], -2.0)                          # starting QB out costs points
+        mg = lambda g: (g["expected"]["home"] - g["expected"]["away"]) * (1 if side == "home" else -1)
+        self.assertLess(mg(kc), mg(g_off[kc["id"]]) - 2.0)
+        other = [g for g in on["games"] if g["status"] == "scheduled" and "KC" not in (g["home"], g["away"])][0]
+        self.assertNotIn("availabilityAdj", other); self.assertEqual(other["expected"], g_off[other["id"]]["expected"])
+        # (c) temporary download dir removed; nothing player-level in public or private files; (a) nor in the logs
+        self.assertTrue(tmps); self.assertFalse(any(os.path.exists(p) for p in tmps))
+        self.assert_no_player_strings(self.stored_text(), "stored files")
+        self.assert_no_player_strings(logs, "logs")
+        av = json.load(open(os.path.join(self.priv, "nfl_availability.json")))
+        self.assertEqual(set(av["pointsByWeekTeam"]["7"]), {"KC"})
+        # flag off again: adjustment and private file go away
+        _, _, off2 = self.run_refresh("")
+        self.assertFalse(off2["injuriesModeled"]); self.assertFalse(any("availabilityAdj" in g for g in off2["games"]))
+        self.assertFalse(os.path.exists(os.path.join(self.priv, "nfl_availability.json")))
+
+    def test_errors_never_carry_player_text(self):
+        from football import injuries as INJ
+        boom = KeyError(f"{PLANTED['qb']} {PLANTED['qb_name']} Questionable")
+        with mock.patch.object(INJ, "pbp_usage", side_effect=boom):
+            res, logs, sched = self.run_refresh("true")
+        self.assertTrue(res["ok"]); self.assertEqual(res["availability"], "failed"); self.assertFalse(sched["injuriesModeled"])
+        self.assertIn("KeyError", logs); self.assert_no_player_strings(logs, "error log")
+        self.assert_no_player_strings(json.dumps(res), "status")
+        self.assertNotIn("Traceback", logs)
+
+    def test_league_failure_text_is_scrubbed(self):
+        # anything else that fails in the NFL refresh: traceback and status.json error mask player ids
+        with mock.patch.object(RF, "refresh_nfl", side_effect=ValueError(f"bad row {PLANTED['qb']}")), \
+             mock.patch.object(RF, "refresh_ncaaf", return_value={"ok": False}), \
+             mock.patch.dict(os.environ, {"PUBLIC_DATA_DIR": self.pub, "PREDICTIONS_PRIVATE_DIR": self.priv}):
+            import contextlib
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+                RF.main(["--league", "nfl"])
+        st = open(os.path.join(self.pub, "football", "status.json")).read()
+        self.assertNotIn(PLANTED["qb"], err.getvalue()); self.assertNotIn(PLANTED["qb"], st); self.assertIn("[id]", st)
+
+    def test_blocked_injuries_source_is_stopped_without_touching_pbp(self):
+        class Refusing(FakeNfl):
+            def injuries_file(s, season, dest): raise SRC.SourceBlocked("nflverse injuries 2025: HTTP 403 (refused)")
+        res, logs, sched = self.run_refresh("true", Refusing(self.d))
+        self.assertTrue(res["ok"]); self.assertEqual(res["availability"], "blocked")
+        b = RF.Blocks(os.path.join(self.priv, "blocked.json"))
+        self.assertIn(RF.INJ_SRC, b.d); self.assertNotIn("nflverse", b.d)
+        calls = []
+        class Spy(FakeNfl):
+            def injuries_file(s, season, dest): calls.append(1); return super().injuries_file(season, dest)
+        res2, _, _ = self.run_refresh("true", Spy(self.d))
+        self.assertEqual(res2["availability"], "blocked"); self.assertEqual(calls, [])
+
+    def test_flag_off_never_fetches(self):
+        calls = []
+        class Spy(FakeNfl):
+            def injuries_file(s, season, dest): calls.append(1); return super().injuries_file(season, dest)
+        res, _, sched = self.run_refresh("", Spy(self.d))
+        self.assertEqual(res["availability"], "off"); self.assertEqual(calls, []); self.assertFalse(sched["injuriesModeled"])
+
+    def test_raw_pbp_with_player_columns_is_not_kept_after_compaction(self):
+        import shutil
+        class Downloading(FakeNfl):
+            def pbp_file(s, season, dest):
+                p, _ = super().pbp_file(season, dest); os.makedirs(dest, exist_ok=True)
+                q = os.path.join(dest, os.path.basename(p)); shutil.copy(p, q)
+                open(q + ".etag", "w").write('"e1"'); return q, True
+        res, _, _ = self.run_refresh("", Downloading(self.d))
+        self.assertTrue(res["ok"])
+        raw = os.path.join(self.priv, "raw", "nflverse")
+        self.assertFalse(os.path.exists(os.path.join(raw, "play_by_play_2025.csv.gz")))       # current season too
+        self.assertTrue(os.path.exists(os.path.join(raw, "play_by_play_2025.csv.gz.etag")))   # ETag kept for a conditional GET
+        self.assert_no_player_strings(self.stored_text(), "stored files")
+
+    def test_nflverse_pbp_conditional_get_with_etag_only(self):
+        d = tempfile.mkdtemp(); open(os.path.join(d, "play_by_play_2025.csv.gz.etag"), "w").write('"e1"')
+        seen = {}
+        def fake_open(url, headers, what, **k):
+            seen.update(headers); raise urllib.error.HTTPError(url, 304, "nm", {}, None)
+        with mock.patch.object(SRC, "_open", side_effect=fake_open):
+            p, changed = SRC.Nflverse().pbp_file(2025, d)
+        self.assertEqual(seen.get("If-None-Match"), '"e1"'); self.assertFalse(changed)
 
 
 if __name__ == "__main__":

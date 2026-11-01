@@ -1,4 +1,4 @@
-// ProSwisher server: serves the static build, /health, cookieless counting, and (only when fully configured)
+// Server (product name comes from APP_NAME, see brand.mjs): serves the static build, /health, cookieless counting, and (only when fully configured)
 // Stripe Billing test-mode checkout. Runs with NO keys at all: payments then report disabled.
 import express from "express";
 import crypto from "node:crypto";
@@ -12,6 +12,11 @@ import { purgeConsent } from "./consent-purge.mjs";
 import { legalEffective, legalVersions } from "./legal.mjs";
 import { resolveDataDirs, createPipeline } from "./pipeline.mjs";
 import { fetchGeoip } from "../scripts/fetch-geoip.mjs";
+import { createFootballStore } from "./football/store.mjs";
+import { createFootballPipeline } from "./football/scheduler.mjs";
+import { createTicker } from "./football/ticker.mjs";
+import { appName } from "./brand.mjs";
+import { registerFootballRoutes } from "./football/routes.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -76,7 +81,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     return d;
   };
   const checkoutAvailable = () => bypass || geoStatus(state.geo).ok;
-  const blockPage = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title} | ProSwisher</title>
+  const blockPage = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title} | ${appName(env)}</title>
 <style>body{margin:0;background:#0b0f17;color:#e2e8f0;font:16px/1.5 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}main{max-width:36rem;padding:2rem}a{color:#67e8f9;display:inline-block;padding:.6rem .25rem;text-decoration:underline}footer{max-width:36rem;padding:0 2rem 2rem;color:#cbd5e1;font-size:14px}footer p{margin:.5rem 0}</style></head>
 <body><main><h1>${title}</h1><p>${body}</p><p><a href="/">Browse predictions</a> · <a href="/track-record">Track record</a></p><p>${help}</p></main>
 <footer><p>${disc.footer}</p></footer></body></html>`;
@@ -140,7 +145,15 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
 
   // ---- payments ----
   // Public config only (no internal notes). checkout.available=false -> Subscribe shows "temporarily unavailable".
+  // ---- football (Phase 1): data API + simulator, never geo-checked (no payments involved) ----
+  const football = createFootballStore({ publicDir: publicDataDir, env, log });
+  football.load();
+  const ticker = createTicker({ store: football, env, privateDir, log });
+  registerFootballRoutes(app, { store: football, ticker, pipeline: { status: () => app.locals.footballPipeline?.status() || null }, env });
+  Object.assign(app.locals, { football, ticker });
+
   app.get("/api/config", (_req, res) => res.json({
+    appName: appName(env),
     payments: { enabled: mode.enabled, reason: mode.enabled ? null : "disabled" },
     checkout: { available: mode.enabled && checkoutAvailable() },
     counting: !!counter.enabled,
@@ -249,7 +262,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   });
 
   // ---- pages ----
-  const indexHtml = () => { try { return fs.readFileSync(path.join(dist, "index.html"), "utf8"); } catch { return "<!doctype html><title>ProSwisher</title>"; } };
+  const indexHtml = () => { try { return fs.readFileSync(path.join(dist, "index.html"), "utf8"); } catch { return `<!doctype html><title>${appName(env)}</title>`; } };
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const sendPage = (res, html, status = 200) => res.status(status).set("Cache-Control", "no-cache").type("html").send(html);
   // paid sign-up page: the ONLY page that is geo-gated
@@ -274,7 +287,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
       html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(t)}</title>`).replace(/(<meta name="description" content=")[^"]*/, `$1${esc(d)}`);
     }
     // Sal #9: unknown/placeholder game URLs are real 404s (the SPA still renders its not-found view).
-    if (!g) html = html.replace(/<title>[^<]*<\/title>/, "<title>Page not found | ProSwisher</title>").replace("<head>", '<head><meta name="robots" content="noindex">');
+    if (!g) html = html.replace(/<title>[^<]*<\/title>/, `<title>Page not found | ${appName(env)}</title>`).replace("<head>", '<head><meta name="robots" content="noindex">');
     sendPage(res, html, g ? 200 : 404);
   };
   app.get("/game/:id", gamePage);
@@ -298,7 +311,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   app.get(/.*/, (req, res) => {
     const p = req.path.length > 1 ? req.path.replace(/\/+$/, "") : req.path;
     if (SPA_ROUTES.has(p)) return sendPage(res, indexHtml());
-    sendPage(res, indexHtml().replace(/<title>[^<]*<\/title>/, "<title>Page not found | ProSwisher</title>").replace("<head>", '<head><meta name="robots" content="noindex">'), 404);
+    sendPage(res, indexHtml().replace(/<title>[^<]*<\/title>/, `<title>Page not found | ${appName(env)}</title>`).replace("<head>", '<head><meta name="robots" content="noindex">'), 404);
   });
   Object.assign(app.locals, { counter, state, mode: () => mode, stripe, reloadGames: () => { gamesAt = 0; } });
   return app;
@@ -318,8 +331,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   setInterval(() => { try { counter.flush(); } catch (e) { console.warn("[stats] flush failed", e.message); } }, 5 * 60 * 1000).unref();
   setInterval(async () => { if (await fetchGeoip()) { app.locals.state.geo = await openGeoip(); } }, 7 * 864e5).unref();
   // Server-side pipeline (P6): on start, then every PIPELINE_INTERVAL_MIN (default 60). Skips cleanly without keys.
-  app.locals.pipeline = createPipeline({ env: process.env, dirs, onDone: app.locals.reloadGames });
-  app.locals.pipeline.start();
+  // Legacy NBA pipeline: on by default for backwards compatibility; set LEGACY_NBA_PIPELINE=false after the football
+  // pivot so it stops sharing the balldontlie free-tier rate limit (5 req/min) with the NFL ticker.
+  if (!/^(0|false|no|off)$/i.test(String(process.env.LEGACY_NBA_PIPELINE ?? "true"))) {
+    app.locals.pipeline = createPipeline({ env: process.env, dirs, onDone: app.locals.reloadGames });
+    app.locals.pipeline.start();
+  } else console.log("[pipeline] legacy NBA pipeline disabled (LEGACY_NBA_PIPELINE=false)");
+  // Football: daily refresh at 04:00 America/Chicago (+ on start if stale), then reload + precompute upcoming sims.
+  const fb = app.locals.football;
+  app.locals.footballPipeline = createFootballPipeline({ env: process.env, dirs, onDone: () => { fb.load(); fb.precompute(); } });
+  app.locals.footballPipeline.start();
+  app.locals.ticker.start();
   const port = Number(process.env.PORT || 3000);
   app.listen(port, "0.0.0.0", () => console.log(`[server] listening on :${port}`));
   for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { try { counter.flush(); } catch {} process.exit(0); });

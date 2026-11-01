@@ -3,7 +3,7 @@ import { usePaymentsEnabled, useLegalEffective } from "../lib/runtime";
 import { Markdown } from "../components/Markdown";
 import privacyA from "../content/privacy-a.md?raw";
 import privacyB from "../content/privacy-b.md?raw";
-import termsV1 from "../content/terms-v1.md?raw";
+import termsV2 from "../content/terms-v2.md?raw";
 
 const SUPPORT = site.supportEmailActive ? site.supportEmail : "[support contact: not yet active]";
 const fill = (t: string, effective = "Effective on launch") => t
@@ -30,7 +30,7 @@ export const Responsible = () => <Paras title="Responsible gaming" paras={legal.
 export function Terms() {
   const eff = useLegalEffective();
   return site.supportEmailActive
-    ? <Shell><Markdown docTitle text={fill(termsV1, eff.terms)} /></Shell>
+    ? <Shell><Markdown docTitle text={fill(termsV2, eff.terms)} /></Shell>
     : <Paras title="Terms and Conditions" paras={legal.terms} />;
 }
 // Larry P4: §A always; §B (accounts + payments) only when payments are enabled.

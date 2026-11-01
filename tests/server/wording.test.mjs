@@ -28,7 +28,7 @@ test("relationship wording is exactly Larry's (memo 23 §6)", () => {
 test("the sentence appears in the footer, contact page, terms and privacy, and README", () => {
   assert.match(fs.readFileSync(path.join(ROOT, "src/config/site.ts"), "utf8"), /operatedBy: "Simculus Sports is operated by Op3x LLC\."/);
   for (const f of ["src/components/Layout.tsx", "src/pages/Contact.tsx"]) assert.match(fs.readFileSync(path.join(ROOT, f), "utf8"), /site\.operatedBy/, f);
-  for (const f of ["src/content/terms-v1.md", "src/content/privacy-a.md", "src/content/privacy-b.md", "README.md"])
+  for (const f of ["src/content/terms-v2.md", "src/content/privacy-a.md", "src/content/privacy-b.md", "README.md"])
     assert.ok(fs.readFileSync(path.join(ROOT, f), "utf8").includes(OK[0]), f);
   assert.ok(fs.readFileSync(path.join(ROOT, "src/config/site.ts"), "utf8").includes(`"${OK[0]} These terms govern`)); // short Terms stub
 });

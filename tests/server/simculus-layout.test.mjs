@@ -10,7 +10,7 @@ const commerce = JSON.parse(read("src/config/commerce.json"));
 const site = read("src/config/site.ts");
 const layout = read("src/components/Layout.tsx");
 const FOOTER = "Simulated estimates, not guarantees or betting advice. 21+. Gambling problem? Call 1-800-GAMBLER.";
-const LINES = ["$9/month, billed today and every month after.",
+const LINES = ["$9/month plus applicable tax, billed today and every month after.",
   "Renews automatically until you cancel. Cancel anytime in Account settings; you keep access through the end of the month you've paid for."];
 const UI_PAGES = ["src/components", "src/pages"].flatMap((d) => readdirSync(d).map((f) => join(d, f))).filter((f) => !/Legal\.tsx$/.test(f));
 
@@ -54,7 +54,7 @@ test("Terms-only clauses: no page renders not-a-sportsbook, address, CA notice, 
     for (const re of [/businessAddress/, /caComplaintNotice/, /notAffiliated/, /REQUIRED_ATTRIBUTION/, /not a sportsbook/i, /accept wagers/i])
       assert.ok(!re.test(s), `${f} must not render ${re}`);
   }
-  const terms = read("src/content/terms-v1.md");
+  const terms = read("src/content/terms-v2.md");
   assert.match(terms, /^\*\*Terms and Conditions\*\*$/m);
   assert.match(terms, /^### 20\. California users$/m);
   assert.ok(terms.includes("{ADDRESS}"));
@@ -76,4 +76,17 @@ test("picked-matchup tags: same strings in the UI and the API", () => {
   const sim = read("src/pages/Simulate.tsx");
   assert.match(sim, /site\.matchupTags/);
   assert.ok(!/Hypothetical|Not a real game/.test(sim + site + read("src/pages/HowItWorks.tsx") + read("server/football/store.mjs").replace(/HYPOTHETICAL_LABEL/g, "")));
+});
+
+test("Terms v2 (Larry 10:23 PM): football §1 sentence, game start, real cancel URL that the app serves", () => {
+  const terms = read("src/content/terms-v2.md");
+  assert.match(terms.split("\n")[1], /Version: terms-v2$/);
+  assert.ok(terms.includes("Simculus publishes statistical simulations and predictions for NFL and college football games, and other sports as we add them, such as projected scores, win probabilities and spreads."));
+  assert.ok(!/basketball|\[CANCEL_URL|\[CANCEL/i.test(terms));
+  assert.equal((terms.match(/before game start/g) || []).length, 2, "§4 and §9");
+  assert.ok(terms.includes("(https://simculus.com/account)"), "§5(c) cancel link");
+  assert.match(site, /cancelUrl: "https:\/\/simculus\.com\/account"/);
+  const server = read("server/index.mjs");
+  assert.match(server, /SPA_ROUTES[^\n]*"\/account"/, "/account is a route the app really serves");
+  assert.match(read("src/main.tsx"), /path="account"/);
 });

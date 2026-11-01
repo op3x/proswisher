@@ -4,15 +4,15 @@
   "price": "$9",
   "unitAmount": 900,
   "currency": "usd",
-  "consentVersion": "consent-v1-2026-10-25",
-  "renewalDisclosure": "$9/month, billed today and every month after. Renews automatically until you cancel. Cancel anytime in Account settings; you keep access through the end of the month you've paid for.",
-  "_checkoutLinesNote": "Larry 10/31 10:04 PM (ROSCA + Cal. Bus. & Prof. Code §17602), approved by Ryan: the ONLY two lines above the consent checkbox, verbatim. renewalDisclosure (Stripe Checkout custom_text) is the same two lines joined.",
+  "consentVersion": "consent-v2-terms-v2",
+  "renewalDisclosure": "$9/month plus applicable tax, billed today and every month after. Renews automatically until you cancel. Cancel anytime in Account settings; you keep access through the end of the month you've paid for.",
+  "_checkoutLinesNote": "Larry 10/31 10:04 PM (ROSCA + Cal. Bus. & Prof. Code §17602), approved by Ryan: the ONLY two lines above the consent checkbox, verbatim. renewalDisclosure (Stripe Checkout custom_text) is the same two lines joined. Line 1 adds \"plus applicable tax\" (Larry 10/31 10:23 PM).",
   "checkoutLines": [
-    "$9/month, billed today and every month after.",
+    "$9/month plus applicable tax, billed today and every month after.",
     "Renews automatically until you cancel. Cancel anytime in Account settings; you keep access through the end of the month you've paid for."
   ],
-  "gamePageTitle": "{Away} vs. {Home} Prediction, {date} | NBA | Simculus Sports",
-  "gamePageDescription": "Projected score, projected spread and our model's lean for {Away} vs {Home}, posted before tip-off. Not betting advice. 21+. 1-800-GAMBLER.",
+  "gamePageTitle": "{Away} vs. {Home} Prediction, {date} | Simculus Sports",
+  "gamePageDescription": "Projected score, projected spread and our model's lean for {Away} vs {Home}, posted before game start. Not betting advice. 21+. 1-800-GAMBLER.",
   "geoBlockCopy": {
     "title": "Subscriptions aren't available in your location",
     "body": "Sorry, Simculus subscriptions aren't available in Washington, Hawaii, Utah or Japan. You're still welcome to browse our public pages, today's featured game and the track record.",

@@ -11,7 +11,7 @@ export default function HowItWorks() {
         Every night at 4 AM CT we refresh public play-by-play data: nflverse for the NFL and CollegeFootballData.com for college. From it we rate each offense and defense by down, distance and field position: how often teams run or pass, how many yards a play gains, and how often drives end in turnovers, punts or field goals.
       </Step>
       <Step n={2} t="Simulate the game one play at a time">
-        For each snap the engine looks at the situation (down, distance, yard line, clock, score) and draws a play type and a result from the two teams' ratings. Kickoffs, punts, field goals, turnovers, penalties and the clock are all simulated. One game takes a few milliseconds.
+        For each snap the engine looks at the situation (down, distance, yard line, clock, score) and draws a play type and a result from the two teams' ratings. Kicks, punts, field goals, turnovers, penalties and the clock are all simulated. One game takes a few milliseconds.
       </Step>
       <Step n={3} t="Repeat thousands of times">
         We play the same matchup thousands of times. Win probability is the share of games each team won. Margin and total show the median plus the middle 50% and 90% ranges, so you can see how uncertain a game really is. Quarter scores are medians.

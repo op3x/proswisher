@@ -7,7 +7,7 @@ const read = (f) => readFileSync(f, "utf8");
 const INJURIES = "NFL injury adjustments use public injury reports, which may be late or incomplete. College injuries, weather, coaching changes and market prices aren't modeled yet. A simulation is an estimate, not a guarantee.";
 
 test("Terms carry the 'What the simulations model' section with Larry's exact injury text", () => {
-  const terms = read("src/content/terms-v1.md");
+  const terms = read("src/content/terms-v2.md");
   assert.match(terms, /^### 21\. What the simulations model\n/m);
   assert.ok(terms.includes(`### 21. What the simulations model\n${INJURIES}\n`), "Larry's exact text, verbatim");
   assert.ok(terms.includes("Custom matchups don't include injury adjustments."));

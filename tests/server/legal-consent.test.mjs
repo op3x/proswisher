@@ -35,19 +35,25 @@ test("ruling 3: IP goes to Subscription metadata + consent.jsonl, never to Check
     assert.equal(p.subscription_data.metadata.consent_ip, "192.0.2.77");
     const rec = JSON.parse(fs.readFileSync(path.join(dir, "consent.jsonl"), "utf8").trim());
     assert.equal(rec.consent_ip, "192.0.2.77"); assert.equal(rec.checkout_session, "cs_test_new");
+    // Larry 10:23 PM: every checkbox acceptance stores "terms-v2" + a server-side timestamp (consent.jsonl and Stripe metadata).
+    for (const m of [rec, p.metadata, p.subscription_data.metadata]) {
+      assert.equal(m.terms_version, "terms-v2");
+      assert.match(m.terms_accepted_at, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
+      assert.ok(Math.abs(Date.parse(m.terms_accepted_at) - Date.now()) < 60e3, "server-side time of acceptance");
+    }
     // text_version must equal the version strings printed on the pages (same src/content files)
-    const onPage = [read("terms-v1.md"), read("privacy-a.md"), read("privacy-b.md")].map(docVersion);
-    assert.deepEqual(onPage, ["terms-v1", "privacy-a2", "privacy-b1"]);
+    const onPage = [read("terms-v2.md"), read("privacy-a.md"), read("privacy-b.md")].map(docVersion);
+    assert.deepEqual(onPage, ["terms-v2", "privacy-a2", "privacy-b1"]);
     for (const m of [rec, p.metadata, p.subscription_data.metadata]) assert.equal(m.text_version, onPage.join(","));
     const cfg = await (await fetch(s.url + "/api/config")).json();
-    assert.deepEqual(cfg.legal.versions, { terms: "terms-v1", privacyA: "privacy-a2", privacyB: "privacy-b1" });
+    assert.deepEqual(cfg.legal.versions, { terms: "terms-v2", privacyA: "privacy-a2", privacyB: "privacy-b1" });
   } finally { s.close(); fs.rmSync(dir, { recursive: true }); }
 });
 
 test("ruling 3 runbook: audit lists Session ids still carrying an IP, never the IP", async () => {
   const sessions = [
     { id: "cs_test_old", created: 1761400000, metadata: { consent_ip: "198.51.100.5" } },
-    { id: "cs_test_new", created: 1761500000, metadata: { text_version: "terms-v1" } },
+    { id: "cs_test_new", created: 1761500000, metadata: { text_version: "terms-v2" } },
     { id: "cs_test_purged", created: 1761500000, metadata: { consent_ip: "" } },
   ];
   const stripe = { checkout: { sessions: { list: () => (async function* () { yield* sessions; })() } } };
@@ -63,12 +69,12 @@ test("effective dates: release-time env in production only; preview says 'Effect
   assert.equal(prod.terms, "October 26, 2026"); assert.equal(prod.privacyA, "October 26, 2026");
   assert.equal(prod.privacyB, ON_LAUNCH); assert.equal(prod.refund, ON_LAUNCH);   // §B/refund dated when checkout opens
   assert.equal(formatEffective("2026-3-1"), null);
-  for (const f of ["terms-v1.md", "privacy-a.md", "privacy-b.md"]) {
+  for (const f of ["terms-v2.md", "privacy-a.md", "privacy-b.md"]) {
     const t = read(f);
     assert.match(t, /Effective: \{EFFECTIVE\}/, f);
     assert.ok(!/\[DATE\]|20\d\d-\d\d-\d\d|(January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}, 20\d\d/.test(t.split("\n")[1]), f);
   }
-  assert.deepEqual(legalVersions(), { terms: "terms-v1", privacyA: "privacy-a2", privacyB: "privacy-b1" });
+  assert.deepEqual(legalVersions(), { terms: "terms-v2", privacyA: "privacy-a2", privacyB: "privacy-b1" });
 });
 
 test("Larry copy rulings 1 and 2 match the build", () => {

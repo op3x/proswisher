@@ -61,7 +61,8 @@ export const site = {
   supportEmail: __CONTACT_EMAIL__, // CONTACT_EMAIL env (build time), default support@simculus.com.
   supportEmailActive: commerce.supportEmailActive === true, // Larry P11: support@ is HIDDEN everywhere until it works (commerce.json)
   // refund text: see legal.refunds (Larry's exact wording, 9:36)
-  cancelUrl: "[CANCEL_URL TBD]",
+  // Account settings (/account): the cancel page. With payments on, its button opens the Stripe customer portal (Terms §5(c)).
+  cancelUrl: "https://simculus.com/account",
   proofLine: "Real play-by-play data. Thousands of simulated games per matchup.",
   // Where the full, append-only pick log lives. Switch logBranch to "main" when the PR merges.
   repo: "op3x/proswisher",
@@ -71,7 +72,7 @@ export const site = {
     // Laye's description mentions "$9/month"; the price-free variant is used while nothing is for sale (payments off).
     description: "Simulate any NFL or college football matchup: win probability, margin, total and score by quarter, plus a play-by-play drive chart. Not betting advice. 21+.",
     descriptionWhenSelling: "Simulate any NFL or college football matchup. One featured game free every day; more sims with Pro. Not betting advice. 21+.",
-    // Larry 9:36 (approved): "NBA" as plain text in game-page SEO titles, exactly this format. Never "Official", no logos.
+    // Larry 9:36 format, league-neutral since the football pivot (Larry 10:23 PM: no "NBA" in user-visible copy). Never "Official", no logos.
     gamePageTitle: commerce.gamePageTitle,
     gamePageDescription: commerce.gamePageDescription,
     ogTitle: `Play the game before it's played. | ${__APP_NAME__}`,
@@ -108,10 +109,10 @@ export const site = {
     ],
     paidTitle: "Members, $9/month",
     paid: [
-      ["Every game on the slate,", "posted before kickoff."],
+      ["Every game on the slate,", "posted before game start."],
       ["Projected score and projected spread", "for both sides."],
       ["Our model's lean:", "which side the numbers favor, and by how much."],
-      ["The why:", "the rating gap and home-court edge behind each prediction."], // Larry P7
+      ["The why:", "the rating gap and home-field edge behind each prediction."], // Larry P7
       ["No locks. No guarantees.", "Just the model's read, plainly stated."],
       ["Cancel any time, online.", "No calls, no emails, no hoops."],
     ],
@@ -128,7 +129,7 @@ export const site = {
     interval: "per month, plus applicable tax",
     renewal: "Renews automatically every month until you cancel.",
     cancel: "Cancel online any time in Account settings. Your access runs through the end of the period you've paid for.",
-    includes: ["Every game's projected score, projected spread and model lean", "The stats behind each prediction", "Cancel online any time"],
+    includes: ["Every game's projected score, win probability and projected spread", "The stats behind each prediction", "Cancel online any time"],
     cta: "Subscribe for $9/month",
     freeTier: { gamesPerDay: 1, label: "One game free every day", gatingEnabled: true, featuredBadge: "Today's free game" },
     unavailable: "Subscriptions aren't open yet. Nothing is for sale today.",
@@ -179,7 +180,7 @@ export const site = {
   gamePage: {
     featured: { badge: "Today's free game", note: "This one's on us, in full. No account needed.", cta: "Get every game: $9/month" },
     membersOnly: {
-      matchup: "{Away} vs. {Home} · Kickoff {time} CT",
+      matchup: "{Away} vs. {Home} · Game start {time} CT",
       body: "Our projected score, projected spread and model's lean for this game are for members. Today's free game is {FeaturedAway} vs. {FeaturedHome}.",
       cta: "Get every game: $9/month",
       ctaSecondary: "See today's free game",
@@ -189,13 +190,13 @@ export const site = {
   },
   predictionCard: {
     projectedScore: "Projected score", lean: "Our model's lean", why: "Why the model leans this way",
-    postedAt: "Posted {timestamp} CT, before kickoff · Logged in our public track record",
+    postedAt: "Posted {timestamp} CT, before game start · Logged in our public track record",
     freeBadge: "Today's free game",
     freeNote: "Free today, no sign-up needed.",
     lockedTeaser: "Members see every game on the slate. $9/month, cancel online any time.",
     lockedCta: "Get every game: $9/month",
     lockedUnavailable: "Memberships aren't open yet.", // shown under the disabled CTA while payments are off
-    lockedLogNote: "This prediction was posted before kickoff and appears in the track record once the game starts.",
+    lockedLogNote: "This prediction was posted before game start and appears in the track record once the game starts.",
   },
   ...framings[FRAMING],
   nav: [
@@ -255,7 +256,7 @@ export const site = {
     // The ONLY place a W-L summary may appear (Larry). Always the full log since launch.
     title: "Track record",
     intro:
-      "Every Simculus prediction is timestamped before kickoff, added to this public log, and graded once the game is final. Nothing is edited or removed.",
+      "Every Simculus prediction is timestamped before game start, added to this public log, and graded once the game is final. Nothing is edited or removed.",
     summaryLabel: "All predictions since launch, {startDate}–{endDate}: {W}–{L}{P}", // {P} renders "–P" only if pushes
     columns: ["Game", "Posted (CT)", "Projected score", "Projected spread", "Lean", "Market spread (source, time)", "Final", "Winner", "Against the spread"],
     gradeNames: { winner: "Winner", ats: "Against the spread" },
@@ -306,7 +307,7 @@ export const legal = {
     "You are solely responsible for any decision you make, including any wager. Op3x LLC is not liable for losses arising from use of the site.",
     "You must be 21+ to use the site. Do not use the site where doing so would violate local law.",
     "Simculus is independent and is not affiliated with, endorsed by, or sponsored by any professional league, team, or player. Team names are used only to identify games.",
-    // Larry P2: no "change at any time". Full Terms v1 (src/content/terms-v1.md) renders once support@ works.
+    // Larry P2: no "change at any time". Full Terms (src/content/terms-v2.md) renders once support@ works.
     "We may update these Terms. Changes apply from your first renewal at least 14 days after we email you about them.",
   ],
   // Larry P4: privacy text now comes from src/content/privacy-a.md (always) and privacy-b.md (only when payments are on).

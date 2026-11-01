@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-export const LEGAL_DOCS = { terms: "terms-v1.md", privacyA: "privacy-a.md", privacyB: "privacy-b.md" };
+export const LEGAL_DOCS = { terms: "terms-v2.md", privacyA: "privacy-a.md", privacyB: "privacy-b.md" };
 export const LEGAL_ENV = { terms: "LEGAL_EFFECTIVE_TERMS", privacyA: "LEGAL_EFFECTIVE_PRIVACY_A", privacyB: "LEGAL_EFFECTIVE_PRIVACY_B", refund: "LEGAL_EFFECTIVE_REFUND" };
 export const ON_LAUNCH = "Effective on launch";
 

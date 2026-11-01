@@ -55,7 +55,7 @@ export default function TrackRecord() {
           <p className="text-xs text-slate-400">
             {data.startedAt ? <>Log started {day(data.startedAt)} · </> : <>Log starts at launch · </>}model {data.modelVersion}{data.updatedAt ? <> · last updated {ct(data.updatedAt)} CT</> : null} ·{" "}
             <a className="text-accent underline underline-offset-4" href={REPO_LOG} target="_blank" rel="noreferrer">full log (JSON, with sealed-pick hashes)</a>
-            {hiddenPending > 0 && <> · {hiddenPending} more posted predictions appear here at tip-off</>}
+            {hiddenPending > 0 && <> · {hiddenPending} more posted predictions appear here at game start</>}
           </p>
           <div id="log" tabIndex={0} role="region" aria-label="Prediction log (scrolls sideways)" className="overflow-x-auto rounded-xl border border-line scroll-mt-20 focus:outline focus:outline-2 focus:outline-accent">
             <table className="w-full text-sm text-left">
@@ -69,7 +69,7 @@ export default function TrackRecord() {
                   const leanTeam = e.atsLean === "home" ? e.home : e.atsLean === "away" ? e.away : null;
                   return (
                     <tr key={e.gameId} className="border-t border-line align-top">
-                      <td className="p-2 whitespace-nowrap">{e.away} @ {e.home}<div className="text-[11px] text-slate-400">Tip-off {ct(e.date)} CT</div></td>
+                      <td className="p-2 whitespace-nowrap">{e.away} @ {e.home}<div className="text-[11px] text-slate-400">Game start {ct(e.date)} CT</div></td>
                       <td className="p-2 text-xs text-slate-400 whitespace-nowrap">{ct(e.loggedAt)}</td>
                       <td className="p-2 whitespace-nowrap tabular-nums">{projScore(e)}</td>
                       <td className="p-2 whitespace-nowrap">{fav} {fmtLine(e.spread.line)}<div className="text-[11px] text-slate-400">{fav} by {Math.abs(favMargin).toFixed(1)}</div></td>

@@ -190,11 +190,14 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     // The ONE place a raw IP is kept; separate from visit counting (counter only sees a truncated, hashed form). Stored in Stripe
     // Subscription metadata (durable) and, if CONSENT_DIR is set, an append-only JSONL file. Larry ruling 3: the raw IP is
     // NOT written to the Checkout Session's metadata (Session metadata can't be edited later, so it couldn't be purged).
+    // Larry 10/31 10:23 PM: every checkbox acceptance stores the Terms version ("terms-v2") and when it was accepted.
+    const versions = legalVersions(), acceptedAt = new Date().toISOString();
     const consent = {
-      consent_at: new Date().toISOString(), consent_ip: clientIp(req), consent_version: commerce.consentVersion,
+      consent_at: acceptedAt, consent_ip: clientIp(req), consent_version: commerce.consentVersion,
+      terms_version: versions.terms, terms_accepted_at: acceptedAt,
       price_shown: commerce.priceShown, age_21_confirmed: "true",
       // Larry: must equal the on-page version strings (read from the same src/content files the pages render).
-      text_version: (({ terms, privacyA, privacyB }) => `${terms},${privacyA},${privacyB}`)(legalVersions()),
+      text_version: `${versions.terms},${versions.privacyA},${versions.privacyB}`,
     };
     // billing_check: "pending" until the webhook checks Stripe's collected billing address; no paid access before "passed".
     const meta = { ...consent, declared_country: country, declared_state: st, ip_country: g.country || "", ip_region: g.region || "", geo_bypass: g.bypass ? "preview" : "", billing_check: "pending" };

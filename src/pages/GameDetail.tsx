@@ -22,7 +22,7 @@ export default function GameDetail() {
   const g0 = games.data?.games[id];
   useEffect(() => {
     if (!g0) return;
-    // Larry 9:36 format: "Lakers vs. Celtics Prediction, Oct 27 | NBA | Simculus" (plain text, never "Official")
+    // Larry 9:36 format: "{Away} vs. {Home} Prediction, {date} | Simculus Sports" (plain text, never "Official")
     const date = new Date(g0.date).toLocaleDateString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric" });
     document.title = site.meta.gamePageTitle.replace("{Away}", g0.away.short).replace("{Home}", g0.home.short).replace("{date}", date);
     const md = document.querySelector('meta[name="description"]');
@@ -99,7 +99,7 @@ export default function GameDetail() {
         <section className="rounded-2xl bg-panel border border-line p-5">
           <h2 className="font-bold mb-2">The math</h2>
           <ol className="text-sm text-slate-300 space-y-1 list-decimal list-inside">
-            <li>Home rating {signed(p.inputs.homeRating)} − away rating {signed(p.inputs.awayRating)} + home court {p.inputs.homeCourt} = <b>{signed(p.homeMargin)}</b> pts for {g.home.abbr}</li>
+            <li>Home rating {signed(p.inputs.homeRating)} − away rating {signed(p.inputs.awayRating)} + home edge {p.inputs.homeCourt} = <b>{signed(p.homeMargin)}</b> pts for {g.home.abbr}</li>
             <li>Win probability = Φ({p.homeMargin} ÷ 12) = <b>{pct(p.pHome)}</b> {g.home.abbr}</li>
             <li>Total = ({p.inputs.homeOff.toFixed(1)} + {p.inputs.awayDef.toFixed(1)} − {p.inputs.leaguePpg.toFixed(1)}) + ({p.inputs.awayOff.toFixed(1)} + {p.inputs.homeDef.toFixed(1)} − {p.inputs.leaguePpg.toFixed(1)}) ≈ <b>{p.total}</b></li>
           </ol>

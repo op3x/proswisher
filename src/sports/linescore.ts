@@ -10,8 +10,10 @@ export interface LineScore {
 
 type Ev = { period: number; score: { home: number; away: number } };
 
-/** Line score after the first `played` events. Periods not reached yet are null; OT is null until it is reached. */
-export function liveLineScore(events: Ev[], played: number, nPeriods = 4): LineScore {
+/** Line score after the first `played` events. Periods not reached yet are null; OT is null until it is reached.
+ *  `atPeriod` (optional) is the period of the play now on screen, so a new quarter shows as reached (0) as soon as
+ *  its first play starts, matching the clock in the score bug. */
+export function liveLineScore(events: Ev[], played: number, nPeriods = 4, atPeriod = 0): LineScore {
   const n = Math.max(0, Math.min(played, events.length));
   const H: number[] = Array(nPeriods + 1).fill(0), A: number[] = Array(nPeriods + 1).fill(0);
   let prev = { home: 0, away: 0 }, current = -1;
@@ -20,6 +22,7 @@ export function liveLineScore(events: Ev[], played: number, nPeriods = 4): LineS
     H[k] += e.score.home - prev.home; A[k] += e.score.away - prev.away;
     prev = e.score; current = Math.max(current, k);
   }
+  if (atPeriod > 0) current = Math.max(current, Math.min(atPeriod, nPeriods + 1) - 1);
   const hasOT = current >= nPeriods;
   const row = (xs: number[], fin: number): LineRow => ({
     periods: xs.slice(0, nPeriods).map((x, k) => (k <= current ? x : null)), ot: hasOT ? xs[nPeriods] : null, final: fin });

@@ -62,6 +62,14 @@ test("live line score never shows the future: unplayed quarters are blank and OT
   assert.equal(zero.current, -1); assert.deepEqual(zero.total.periods, [null, null, null, null]); assert.equal(zero.total.final, 0);
 });
 
+test("live line score: the quarter whose first play is on screen is highlighted (matches the clock), score unchanged", () => {
+  const g = findOt(NFL, 50000), ev = g.plays.map((p) => ({ period: p.q, score: p.score }));
+  const firstQ4 = ev.findIndex((e) => e.period === 4), firstOt = ev.findIndex((e) => e.period >= 5);
+  const before = liveLineScore(ev, firstQ4, 4), on = liveLineScore(ev, firstQ4, 4, 4);
+  assert.equal(before.current, 2); assert.equal(on.current, 3); assert.equal(on.home.periods[3], 0); assert.equal(on.total.final, before.total.final);
+  assert.equal(liveLineScore(ev, firstOt, 4, 5).hasOT, true); assert.equal(liveLineScore(ev, firstOt, 4, 5).total.ot, 0);
+});
+
 test("Monte Carlo representative game carries the line score and it adds up", () => {
   const r = runMonteCarlo(NFL, { target: { H: 24, A: 21 }, n: 300, seed: 7, pilot: 200, passes: 1, curve: buildCurve(NFL, 200), names: { H: "Home", A: "Away" } });
   const rep = r.representative, ls = rep.lineScore;
@@ -75,7 +83,7 @@ test("Monte Carlo representative game carries the line score and it adds up", ()
 
 test("UI: scoreboard is wired into the game player, OT column only when it happens, team names only (no logos/players)", () => {
   const gp = fs.readFileSync("src/components/GamePlayer.tsx", "utf8"), ls = fs.readFileSync("src/components/LineScore.tsx", "utf8");
-  assert.match(gp, /<LineScore league=\{league\} teams=\{teams\} events=\{events\} played=\{index \+ \(progress >= 1 \? 1 : 0\)\} done=\{atEnd\} \/>/);
+  assert.match(gp, /<LineScore league=\{league\} teams=\{teams\} events=\{events\} played=\{index \+ \(progress >= 1 \? 1 : 0\)\} done=\{atEnd\} atPeriod=\{index === 0 && progress === 0 \? 0 : cur\.period\} \/>/);
   assert.match(gp, /export const DEFAULT_SPEED = 12;/);
   assert.match(ls, /ls\.hasOT \? \["OT"\] : \[\]/);
   assert.match(ls, /"Total points"/); assert.match(ls, /Final game total:/);

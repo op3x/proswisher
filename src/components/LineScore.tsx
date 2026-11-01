@@ -3,11 +3,11 @@
 import type { League, PlayEvent, Team } from "../sports/types";
 import { liveLineScore } from "../sports/linescore";
 
-export default function LineScore({ league, teams, events, played, done }: {
-  league?: League; teams: { home: Team; away: Team }; events: PlayEvent[]; played: number; done: boolean;
+export default function LineScore({ league, teams, events, played, done, atPeriod = 0 }: {
+  league?: League; teams: { home: Team; away: Team }; events: PlayEvent[]; played: number; done: boolean; atPeriod?: number;
 }) {
   const nP = league?.periods.count ?? 4, short = league?.periods.short ?? "Q";
-  const ls = liveLineScore(events, played, nP);
+  const ls = liveLineScore(events, played, nP, atPeriod);
   const cols = [...Array.from({ length: nP }, (_, k) => `${short}${k + 1}`), ...(ls.hasOT ? ["OT"] : [])];
   const cell = (r: typeof ls.home, k: number) => (k < nP ? r.periods[k] : r.ot);
   const cur = (k: number) => !done && k === Math.min(ls.current, nP);

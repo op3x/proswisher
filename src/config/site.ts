@@ -69,7 +69,7 @@ export const site = {
   ageGate: {
     // Neutral click-through: no default choice, remembered for the browser session only (sessionStorage, no cookie).
     title: "You must be 21 or older to enter.",
-    body: "Simculus publishes sports predictions for entertainment and information only. We're not a sportsbook and we don't accept wagers. If you choose to bet elsewhere, you must be 21+ and located where sports betting is legal.",
+    body: "Simculus publishes sports predictions for information only. We're not a sportsbook and we don't accept wagers. If you choose to bet elsewhere, you must be 21+ and located where sports betting is legal.",
     confirm: "I'm 21 or older",
     deny: "I'm under 21",
     deniedMessage: "Sorry, Simculus is only for adults 21 and older.",
@@ -141,7 +141,7 @@ export const site = {
     // HOLD (Larry 9:38): refund copy ships only once support@simculus.com works (site.supportEmailActive).
     ["Do you offer refunds?", "{refunds}", true],
     ["Do you run contests or giveaways?", "No. Simculus doesn't run contests, sweepstakes or prizes of any kind."],
-    ["Should I bet based on a simulation?", "Simulations are for entertainment and information only and aren't betting advice. If you bet, set a budget, bet only what you can afford to lose, and never chase losses. If gambling stops being fun, call 1-800-GAMBLER."],
+    ["Should I bet based on a simulation?", "Simulations are for information only and aren't betting advice. If you bet, set a budget, bet only what you can afford to lose, and never chase losses. If gambling stops being fun, call 1-800-GAMBLER."],
     ["Can I subscribe today?", "Not yet. Subscriptions aren't open, so nothing is for sale today. Simulations on the site are free to run for now.", false, true],
   ] as ReadonlyArray<readonly [string, string, boolean?, boolean?]>,
   // Checkout / cancel copy (Laye). Rendered on /subscribe; the form is inactive while payments are disabled.
@@ -150,10 +150,10 @@ export const site = {
     summary: "Simculus Monthly: {price}/month plus applicable tax",
     // Laye's text has "at [CANCEL_URL]"; dropped until a cancel URL exists (cancel is via the Stripe customer portal).
     renewalDisclosure: commerce.renewalDisclosure,
-    whatItIs: "Simculus sells sports predictions for entertainment and information only. Op3x LLC is not a sportsbook, doesn't accept wagers and doesn't hold your money or pay out winnings.",
+    whatItIs: "Simculus sells sports predictions for information only. Op3x LLC is not a sportsbook, doesn't accept wagers and doesn't hold your money or pay out winnings.",
     // Larry's EXACT text (9:36). Rendered next to an UNCHECKED checkbox (the box is UI, not copy). Swap here only.
     consentCheckbox:
-      "I'm 21 or older. I understand Simculus sells sports predictions for entertainment and information only, not betting advice, and that Op3x LLC is not a sportsbook, accepts no wagers and guarantees no results. I agree that my {price}/month subscription renews automatically each month until I cancel. You can cancel anytime online in Account settings. I agree to the Terms and Privacy Policy.",
+      "I'm 21 or older. I understand Simculus sells sports predictions for information only, not betting advice, and that Op3x LLC is not a sportsbook, accepts no wagers and guarantees no results. I agree that my {price}/month subscription renews automatically each month until I cancel. You can cancel anytime online in Account settings. I agree to the Terms and Privacy Policy.",
     cta: "Subscribe for {price}/month",
     consentDefaultChecked: false,
     consentRequiredError: "Please check the box to confirm before continuing.",
@@ -254,7 +254,7 @@ export const legal = {
   refunds:
     "Refunds. You can cancel anytime online in Account settings. Cancellation stops future charges, and you keep paid access until the end of your current billing period. Because predictions are delivered as soon as they're posted, we don't refund partial months or unused time, except where the law requires. If you were charged in error or charged after you canceled, email support@simculus.com within 60 days and we'll refund that charge. If you dispute a charge with your card issuer, we may suspend paid access while it's reviewed.",
   responsible: [
-    "Simculus publishes statistical projections for entertainment and informational purposes only. Nothing on this site is betting, financial, or investment advice, and no projection is a guarantee of any outcome.",
+    "Simculus publishes statistical projections for informational purposes only. Nothing on this site is betting, financial, or investment advice, and no projection is a guarantee of any outcome.",
     // Keep in sync with Terms §12. (Larry P12)
     "Simculus does not accept wagers, does not operate a sportsbook, and does not link to or receive payment from any sportsbook.",
     "You must be 21 or older to use this site. Sports wagering is not legal everywhere; it is your responsibility to know and follow the laws where you are.",
@@ -263,7 +263,7 @@ export const legal = {
   ],
   terms: [
     "Simculus is operated by Op3x LLC. These terms govern your use of Simculus. By using the site you agree to them.",
-    "Content is provided \"as is\" for entertainment and informational purposes only, without warranties of any kind. Projections can be and often are wrong.",
+    "Content is provided \"as is\" for informational purposes only, without warranties of any kind. Projections can be and often are wrong.",
     "You are solely responsible for any decision you make, including any wager. Op3x LLC is not liable for losses arising from use of the site.",
     "You must be 21+ to use the site. Do not use the site where doing so would violate local law.",
     "Simculus is independent and is not affiliated with, endorsed by, or sponsored by any professional league, team, or player. Team names are used only to identify games.",

@@ -6,7 +6,7 @@ Simculus is operated by Op3x LLC. These Terms are an agreement between you and *
 ### 1. What Simculus is, and what it isn't
 Simculus publishes statistical predictions for pro basketball games: a projected score, a projected spread and our model's lean. **Simculus is a prediction service, not a sportsbook.** Op3x LLC does not accept wagers, hold your money, set odds for wagering or pay out winnings. We don't run contests, sweepstakes, pick'em games or prizes of any kind, and nothing you do on Simculus can win you money or anything else of value from us. You may choose to use our predictions when betting elsewhere. That choice, and any bet, is entirely yours.
 
-> Simculus provides sports predictions for entertainment and informational purposes only. It is not betting, financial or legal advice, and no outcome is guaranteed. Past results do not guarantee future results. Op3x LLC is not a sportsbook and does not accept wagers. Op3x LLC does not hold your money or pay out winnings. You must be 21+ and located where sports betting is legal to place bets; check your local laws. If you or someone you know has a gambling problem, call 1-800-GAMBLER. Simculus is not affiliated with or endorsed by the NBA, its teams or players.
+> Simculus provides sports predictions for informational purposes only. It is not betting, financial or legal advice, and no outcome is guaranteed. Past results do not guarantee future results. Op3x LLC is not a sportsbook and does not accept wagers. Op3x LLC does not hold your money or pay out winnings. You must be 21+ and located where sports betting is legal to place bets; check your local laws. If you or someone you know has a gambling problem, call 1-800-GAMBLER. Simculus is not affiliated with or endorsed by the NBA, its teams or players.
 
 ### 2. Eligibility: 21+
 You must be **21 or older** to use the Service, including the free featured game. By entering the site or subscribing, you confirm you're 21+. If we learn that a user is under 21, we'll end their access and refund any unused subscription time. You're responsible for knowing and following the laws where you are, including any law on sports betting or on using betting information.
@@ -22,7 +22,7 @@ Subscriptions aren't available to people located in, or with a billing address i
 ### 5. Automatic renewal, cancellation and price changes
 **(a) Renewal.** Your membership **renews automatically every month** at the price shown at checkout, plus applicable tax, and we charge your payment method on each renewal date **until you cancel**. You'll see the price, the renewal terms and how to cancel before you pay. To subscribe you must check the box confirming:
 
-> I'm 21 or older. I understand Simculus sells sports predictions for entertainment and information only, not betting advice, and that Op3x LLC is not a sportsbook, accepts no wagers and guarantees no results. I agree that my $9/month subscription renews automatically each month until I cancel. You can cancel anytime online in Account settings. I agree to the Terms and Privacy Policy.
+> I'm 21 or older. I understand Simculus sells sports predictions for information only, not betting advice, and that Op3x LLC is not a sportsbook, accepts no wagers and guarantees no results. I agree that my $9/month subscription renews automatically each month until I cancel. You can cancel anytime online in Account settings. I agree to the Terms and Privacy Policy.
 
 **(b) Confirmation.** After your first charge, we email you a confirmation with the plan, price, renewal terms and how to cancel.
 

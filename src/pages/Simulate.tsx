@@ -173,7 +173,7 @@ export default function Simulate() {
             {r.entertainmentOnly && <span className="rounded bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-500/30 px-2 py-0.5 text-[11px] font-semibold">{HYPOTHETICAL}</span>}
           </div>
 
-          {/* Ryan 10/31: the simulated game plays first (8x by default) and no outcome is shown until it ends. */}
+          {/* Ryan 10/31: the simulated game plays first (12x by default) and no outcome is shown until it ends. */}
           <div className="rounded-xl bg-panel border border-line p-4 space-y-2">
             <h3 className="font-bold">Watch one simulated game</h3>
             <p className="text-xs text-slate-400">One game from the batch, picked as closest to the median margin and total. It's a simulation, not a forecast of the actual plays. Players appear only by position.{revealed && <> Final: {r.teams.away.name} {r.representative.final.away}, {r.teams.home.name} {r.representative.final.home}{r.representative.overtime ? " (OT)" : ""}.</>}</p>

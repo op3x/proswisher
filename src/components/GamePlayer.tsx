@@ -5,8 +5,8 @@ import type { League, PlayEvent, Team, Sport } from "../sports/types";
 import { rendererFor } from "../renderers/registry";
 import { periodLabel } from "../sports/format";
 
-const SPEEDS = [0.5, 1, 2, 4, 8];
-export const DEFAULT_SPEED = 8; // Ryan 10/31: default 8x, slower options kept
+const SPEEDS = [0.5, 1, 2, 4, 8, 12];
+export const DEFAULT_SPEED = 12; // Ryan 10/31 9:37 PM: default 12x, slower options (0.5x to 8x) kept
 const BASE_MS = 1100; // one event at 1x
 
 // autoPlay: start as soon as a result arrives. onComplete fires once the last event has fully played (or the user

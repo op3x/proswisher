@@ -10,6 +10,7 @@ import { paymentsMode, makeStripe, verifyPrice, handleCheckoutCompleted } from "
 import { createCounter } from "./counter.mjs";
 import { purgeConsent } from "./consent-purge.mjs";
 import { legalEffective, legalVersions } from "./legal.mjs";
+import { assertRelease, portalLoginUrl } from "./release.mjs";
 import { resolveDataDirs, createPipeline } from "./pipeline.mjs";
 import { fetchGeoip } from "../scripts/fetch-geoip.mjs";
 import { createFootballStore } from "./football/store.mjs";
@@ -22,6 +23,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export async function createApp({ env = process.env, stripe: stripeOverride, geoLookup, counter = createCounter({ enabled: env.COUNTING_ENABLED === "true" }), dist = path.join(ROOT, "dist"), log = console.log } = {}) {
   assertGeoEnv(env); // GEO_PREVIEW_BYPASS + APP_ENV=production -> refuse to start
+  assertRelease(env); // production: Terms effective date set; portal login link when payments are on (server/release.mjs)
   const bypass = previewBypass(env);
   if (bypass) log("[geo] GEO_PREVIEW_BYPASS on (preview only): GeoIP checks on sign-up/checkout are skipped; declared and webhook billing checks still apply");
   const app = express();
@@ -160,6 +162,8 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     counting: !!counter.enabled,
     geoblock: { enabled: geoConfig.enabled, usStates: geoConfig.usStates, countries: geoConfig.countries },
     legal: { effective: legalEffective(env), versions: legalVersions() },
+    // "Paid on another device? Cancel here" (Stripe customer-portal login link). null = link hidden.
+    portalLoginUrl: portalLoginUrl(env),
   }));
   // Refusal bodies: never the support address while P11 holds; text from geoblock-notice.md / Larry 10:24.
   const refuse = (res, status, error, message) => res.status(status).json({ error, message });
@@ -191,10 +195,11 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
     // Subscription metadata (durable) and, if CONSENT_DIR is set, an append-only JSONL file. Larry ruling 3: the raw IP is
     // NOT written to the Checkout Session's metadata (Session metadata can't be edited later, so it couldn't be purged).
     // Larry 10/31 10:23 PM: every checkbox acceptance stores the Terms version ("terms-v2") and when it was accepted.
+    // Larry 10:31 PM: plus the Terms effective date exactly as the page showed it (release-time env; preview "Effective on launch").
     const versions = legalVersions(), acceptedAt = new Date().toISOString();
     const consent = {
       consent_at: acceptedAt, consent_ip: clientIp(req), consent_version: commerce.consentVersion,
-      terms_version: versions.terms, terms_accepted_at: acceptedAt,
+      terms_version: versions.terms, terms_effective: legalEffective(env).terms, terms_accepted_at: acceptedAt,
       price_shown: commerce.priceShown, age_21_confirmed: "true",
       // Larry: must equal the on-page version strings (read from the same src/content files the pages render).
       text_version: `${versions.terms},${versions.privacyA},${versions.privacyB}`,
@@ -222,8 +227,8 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   });
   const sessionSub = async (sid) => {
     if (!/^cs_(test|live)_[\w]+$/.test(sid)) return null;
-    const s = await stripe.checkout.sessions.retrieve(sid, { expand: ["subscription"] });
-    return s;
+    try { return await stripe.checkout.sessions.retrieve(sid, { expand: ["subscription"] }); }
+    catch (e) { if (e?.statusCode === 404 || e?.code === "resource_missing") return null; throw e; } // unknown session = no buyer here
   };
   const subscriberOf = async (sid) => {
     const s = await sessionSub(String(sid || ""));
@@ -254,14 +259,26 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
       res.json({ predictions: out });
     } catch { res.status(502).json({ predictions: {} }); }
   });
+  // Larry 10:31 PM: {flow:"cancel"} deep-links straight to the portal's cancel screen for the recognized buyer's
+  // subscription (flow_data subscription_cancel), so the path is Cancel subscription -> Confirm. {flow:"manage"} (default)
+  // is the plain portal. A subscription that is already canceled or set to end falls back to the plain portal
+  // (Stripe refuses a cancel flow for it). No buyer recognized -> 404 with the portal login link (or null = hidden).
   app.post("/api/portal", async (req, res) => {
     if (!mode.enabled) return res.status(503).json({ error: "payments_disabled" });
     try {
       const s = await sessionSub(String(req.body?.session_id || ""));
-      if (!s?.customer) return res.status(404).json({ error: "not_found", loginUrl: env.STRIPE_PORTAL_LOGIN_URL || null });
+      if (!s?.customer) return res.status(404).json({ error: "not_found", loginUrl: portalLoginUrl(env) });
       const customer = typeof s.customer === "string" ? s.customer : s.customer.id;
-      const p = await stripe.billingPortal.sessions.create({ customer, return_url: `${base}/account` });
-      res.json({ url: p.url });
+      const sub = s.subscription && typeof s.subscription === "object" ? s.subscription : null;
+      const subId = sub?.id || (typeof s.subscription === "string" ? s.subscription : null);
+      const cancellable = subId && (!sub || (["active", "trialing", "past_due", "unpaid"].includes(sub.status) && !sub.cancel_at_period_end && !sub.cancel_at));
+      const params = { customer, return_url: `${base}/account` };
+      if (req.body?.flow === "cancel" && cancellable) {
+        params.flow_data = { type: "subscription_cancel", subscription_cancel: { subscription: subId },
+          after_completion: { type: "redirect", redirect: { return_url: `${base}/account?canceled=1` } } };
+      }
+      const p = await stripe.billingPortal.sessions.create(params);
+      res.json({ url: p.url, flow: params.flow_data ? "cancel" : "manage" });
     } catch (e) { log(`[pay] portal failed (${e.type || e.name})`); res.status(502).json({ error: "portal_failed" }); }
   });
 
@@ -302,7 +319,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   if (publicDataDir) app.use("/data", express.static(publicDataDir, { maxAge: "1m" }));
   app.use(express.static(dist, { index: false, maxAge: "5m", setHeaders: (r, p) => { if (p.includes("/assets/")) r.setHeader("Cache-Control", "public, max-age=31536000, immutable"); } }));
   // Sal #9: only real SPA routes get 200; everything else (incl. /refunds, held per P11) is a 404 with the SPA's not-found view.
-  const SPA_ROUTES = new Set(["/", "/simulate", ...(legacyNba ? ["/track-record"] : []), "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/account", "/contact", "/credits"]);
+  const SPA_ROUTES = new Set(["/", "/simulate", ...(legacyNba ? ["/track-record"] : []), "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/account", "/cancel", "/contact", "/credits"]);
   const INDEXABLE = ["/", "/simulate", ...(legacyNba ? ["/track-record"] : []), "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/contact", "/credits"];
   const isProd = String(env.APP_ENV || "").toLowerCase() === "production";
   app.get("/robots.txt", (_req, res) => res.type("text/plain").set("Cache-Control", "public, max-age=3600").send(isProd

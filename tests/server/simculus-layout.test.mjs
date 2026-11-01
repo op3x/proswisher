@@ -89,4 +89,5 @@ test("Terms v2 (Larry 10:23 PM): football §1 sentence, game start, real cancel 
   const server = read("server/index.mjs");
   assert.match(server, /SPA_ROUTES[^\n]*"\/account"/, "/account is a route the app really serves");
   assert.match(read("src/main.tsx"), /path="account"/);
+  assert.match(server, /SPA_ROUTES[^\n]*"\/cancel"/, "/cancel (footer target) is served");
 });

@@ -1,6 +1,7 @@
 import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { site } from "../config/site";
+import OtherDeviceCancel from "./OtherDeviceCancel";
 import { countView } from "../lib/runtime";
 import Ticker from "./Ticker";
 
@@ -73,6 +74,7 @@ export default function Layout() {
           {/* Sal #10: 44px tap targets */}
           <nav aria-label="Footer" className="flex flex-wrap gap-x-4 text-xs">
             {site.footerNav.map((l) => <Link key={l.to} to={l.to} className="inline-flex items-center min-h-11 text-slate-400 underline underline-offset-4 hover:text-white">{l.label}</Link>)}
+            <OtherDeviceCancel className="text-slate-400" />
           </nav>
           <p className="text-xs">{site.operatedBy} © {site.year} {site.company}</p>
         </div>

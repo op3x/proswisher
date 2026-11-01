@@ -26,7 +26,7 @@ Subscriptions aren't available to people located in, or with a billing address i
 
 **(b) Confirmation.** After your first charge, we email you a confirmation with the plan, price, renewal terms and how to cancel.
 
-**(c) Cancel online any time.** Go to Account settings → Cancel subscription (https://simculus.com/account) and confirm. It's one page and one click, with no call required. You can also email support@simculus.com with "Cancel my subscription." Cancellation stops all future charges. Your member access continues until the end of the period you've already paid for, and we email you a confirmation.
+**(c) Cancel online any time.** Go to Account settings (https://simculus.com/account) and choose Cancel subscription, then confirm. If you're on a different device, use the "Paid on another device?" link there and we'll email you a code to sign in and cancel. No call is required. You can also email support@simculus.com from your account email with the word "cancel" and we'll cancel it within one business day.
 
 **(d) Reminders.** We email you a reminder of your plan, price and how to cancel at least once a year.
 
@@ -52,7 +52,7 @@ Quoting a single free featured prediction with credit to Simculus and a link is 
 
 ### 9. Track record and grading
 We timestamp every prediction before game start, add it to our public Track record, and grade it when the game is final:
-> Each prediction is graded two ways once the game is final. Winner: did the team our model favored win? Against the spread: did our lean cover the market point spread we record, with its source and time, when we post the prediction? Pushes and postponed games are shown and not counted as wins or losses. Grades are never changed after the fact.
+> Each prediction is graded once the game is final. Winner: did the team our model favored win? Pushes and postponed games are shown and not counted as wins or losses. Grades are never changed after the fact.
 
 Past results do not guarantee future results.
 

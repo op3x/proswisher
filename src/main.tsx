@@ -11,6 +11,7 @@ import Faq from "./pages/Faq";
 import AgeGate from "./components/AgeGate";
 import SubscribePage from "./pages/Subscribe";
 import Account from "./pages/Account";
+import Cancel from "./pages/Cancel";
 import Contact from "./pages/Contact";
 import Simulate from "./pages/Simulate";
 import Credits from "./pages/Credits";
@@ -31,6 +32,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="faq" element={<Faq />} />
           <Route path="subscribe" element={<SubscribePage />} />
           <Route path="account" element={<Account />} />
+          <Route path="cancel" element={<Cancel />} />
           <Route path="contact" element={<Contact />} />
           <Route path="credits" element={<Credits />} />
           <Route path="*" element={<NotFound />} />

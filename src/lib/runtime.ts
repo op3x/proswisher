@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 // Runtime state from our own server (no cookies). Payments are enabled only when the server has a valid
 // TEST key + webhook secret + price (preview) — otherwise everything renders in "payments off" mode.
 type Legal = { effective: Record<string, string>; versions: Record<string, string> };
-type Cfg = { payments: { enabled: boolean }; checkout?: { available: boolean }; counting?: boolean; legal?: Legal };
+type Cfg = { payments: { enabled: boolean }; checkout?: { available: boolean }; counting?: boolean; legal?: Legal; portalLoginUrl?: string | null };
 let cfgP: Promise<Cfg> | null = null;
 const getCfg = () => (cfgP ||= fetch("/api/config").then((r) => (r.ok ? r.json() : { payments: { enabled: false } })).catch(() => ({ payments: { enabled: false } })));
 export function usePaymentsEnabled(): boolean {
@@ -24,6 +24,14 @@ export function useLegalEffective(): Record<string, string> {
   const [e, setE] = useState<Record<string, string>>({});
   useEffect(() => { getCfg().then((c) => setE(c.legal?.effective || {})); }, []);
   return e;
+}
+
+// Larry 10:31 PM: Stripe customer-portal login link (STRIPE_PORTAL_LOGIN_URL, validated server-side). null = hide the
+// "Paid on another device? Cancel here" link everywhere.
+export function usePortalLoginUrl(): string | null {
+  const [u, setU] = useState<string | null>(null);
+  useEffect(() => { getCfg().then((c) => setU(typeof c.portalLoginUrl === "string" && /^https:\/\/billing\.stripe\.com\/p\/login\//.test(c.portalLoginUrl) ? c.portalLoginUrl : null)); }, []);
+  return u;
 }
 
 // Membership: the Checkout Session id from the success redirect, kept in localStorage (not a cookie).

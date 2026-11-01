@@ -2,6 +2,7 @@
 // Refuses to proceed if a LIVE Stripe key is present outside production, if live payments are
 // requested outside production, or if any secret-looking value is exposed to the browser bundle.
 // Never prints secret values, only variable NAMES.
+import { releaseProblems } from "../server/release.mjs";
 const env = process.env;
 const APP_ENV = (env.APP_ENV || "preview").toLowerCase();
 const LIVE_ENABLED = String(env.STRIPE_LIVE_ENABLED || "false").toLowerCase() === "true";
@@ -20,6 +21,9 @@ if (LIVE_ENABLED && APP_ENV !== "production") problems.push(`STRIPE_LIVE_ENABLED
 
 // Larry 10:24: the geo bypass is preview-only; with APP_ENV=production it must stop the start, not be silently ignored.
 if (/^(1|true|yes|on)$/i.test(String(env.GEO_PREVIEW_BYPASS || "").trim()) && APP_ENV === "production") problems.push("GEO_PREVIEW_BYPASS is set while APP_ENV=production (preview-only flag)");
+
+// Larry 10/31 10:31 PM release checks (production only): Terms effective date set; portal login link when payments are on.
+problems.push(...releaseProblems(env));
 
 if (problems.length) {
   console.error("[guard] REFUSING to build/start:\n - " + problems.join("\n - "));

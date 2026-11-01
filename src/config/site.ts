@@ -63,6 +63,8 @@ export const site = {
   // refund text: see legal.refunds (Larry's exact wording, 9:36)
   // Account settings (/account): the cancel page. With payments on, its button opens the Stripe customer portal (Terms §5(c)).
   cancelUrl: "https://simculus.com/account",
+  // Larry 10:31 PM: the Stripe customer-portal login link (runtime, STRIPE_PORTAL_LOGIN_URL); hidden when unset.
+  otherDeviceCancel: "Paid on another device? Cancel here",
   proofLine: "Real play-by-play data. Thousands of simulated games per matchup.",
   // Where the full, append-only pick log lives. Switch logBranch to "main" when the PR merges.
   repo: "op3x/proswisher",
@@ -152,7 +154,7 @@ export const site = {
     ["What is Pick Your Matchup?", "Pick any two teams. If they're on the schedule, you get our normal prediction for that game. If they're in the same league and season but not scheduled to play, the result is tagged “Pick Your Matchup · Non-Scheduled Game”. Teams from different seasons, or a college team against an NFL team, are tagged “Pick Your Matchup · Can't be played for real.”"],
     ["Who can use Simculus?", "Adults 21 and older. Subscriptions won't be available in Washington, Hawaii, Utah or Japan, though anyone 21+ can browse the public pages."],
     ["How much does it cost?", "The price and what it includes are shown on the Subscribe page before you pay, plus applicable tax. Membership renews monthly until you cancel. If the price or other terms ever change, we'll email you first, and changes apply from your first renewal at least 14 days after that email.", true],
-    ["How do I cancel?", "Go to Account settings → Cancel subscription and confirm. It takes about a minute, with no call or email required. Your access continues through the end of your current billing period, and we email you a confirmation.", true],
+    ["How do I cancel?", "Go to Account settings and choose Cancel subscription, then confirm. On a different device? Use the \"Paid on another device?\" link there and we'll email you a code to sign in and cancel. No call is required. Your access continues through the end of your current billing period, and we email you a confirmation.", true],
     // HOLD (Larry 9:38): refund copy ships only once support@simculus.com works (site.supportEmailActive).
     ["Do you offer refunds?", "{refunds}", true],
     ["Do you run contests or giveaways?", "No. Simculus doesn't run contests, sweepstakes or prizes of any kind."],
@@ -233,7 +235,7 @@ export const site = {
   // responsible-betting clauses where they are), online cancel stays one click away (ROSCA), plus Contact and FAQ.
   footerNav: [
     { to: "/responsible-gaming", label: "Responsible gaming" },
-    { to: "/account", label: "Cancel subscription" },
+    { to: "/cancel", label: "Cancel subscription" },
     { to: "/contact", label: "Contact" },
     { to: "/faq", label: "FAQ" },
   ],

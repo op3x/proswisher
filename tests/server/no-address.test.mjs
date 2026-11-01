@@ -61,7 +61,8 @@ test("the patterns allow exactly the configured address and still catch everythi
 
 test("TODO(box-number) is tracked but never blocks a launch: preview and production guards both pass", () => {
   assert.match(siteSrc, /TODO\(box-number\)/);
-  const run = (APP_ENV) => spawnSync(process.execPath, ["scripts/guard.mjs"], { env: { PATH: process.env.PATH, APP_ENV }, encoding: "utf8" });
+  // (production also needs the Terms effective date since the 10:31 PM release check; that's not what this test is about)
+  const run = (APP_ENV) => spawnSync(process.execPath, ["scripts/guard.mjs"], { env: { PATH: process.env.PATH, APP_ENV, LEGAL_EFFECTIVE_TERMS: "2026-11-01" }, encoding: "utf8" });
   assert.equal(run("preview").status, 0);
   assert.equal(run("production").status, 0);
 });

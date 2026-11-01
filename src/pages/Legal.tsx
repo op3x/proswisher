@@ -31,7 +31,7 @@ export function Terms() {
   const eff = useLegalEffective();
   return site.supportEmailActive
     ? <Shell><Markdown docTitle text={fill(termsV1, eff.terms)} /></Shell>
-    : <Paras title="Terms of use" paras={legal.terms} />;
+    : <Paras title="Terms and Conditions" paras={legal.terms} />;
 }
 // Larry P4: §A always; §B (accounts + payments) only when payments are enabled.
 export function Privacy() {

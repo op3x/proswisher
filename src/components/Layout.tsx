@@ -1,13 +1,12 @@
 import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import { useEffect } from "react";
-import { site, legal, LEGAL_DRAFT } from "../config/site";
+import { site } from "../config/site";
 import { countView } from "../lib/runtime";
-import DataSources from "./DataSources";
 import Ticker from "./Ticker";
 
 const ROUTE_TITLES: Record<string, string> = {
   "/simulate": "Simulate a Game", "/how-it-works": "How It Works", "/faq": "FAQ", "/contact": "Contact",
-  "/terms": "Terms of Service", "/privacy": "Privacy Policy", "/responsible-gaming": "Responsible Gaming",
+  "/terms": "Terms and Conditions", "/credits": "Credits", "/privacy": "Privacy Policy", "/responsible-gaming": "Responsible Gaming",
 };
 
 export default function Layout() {
@@ -63,17 +62,18 @@ export default function Layout() {
             <img src="/brand/simculus-sports-stacked-dark-nobg.svg" alt={site.brandTM} width={542} height={392} loading="lazy" className="sm:hidden h-20 w-auto" />
             <img src="/brand/simculus-sports-logo-dark-nobg.svg" alt={site.brandTM} width={749} height={200} loading="lazy" className="hidden sm:block h-10 w-auto" />
           </Link>
-          {LEGAL_DRAFT && <p className="text-[11px] uppercase tracking-wider text-amber-400">{legal.draftNotice}</p>}
-          <p className="text-slate-300">{site.footerDisclaimer}</p>
-          <p className="text-xs">{site.dataCredit}</p>
-          <DataSources />
+          {/* Larry 10/31 10:04 PM (Ryan approved): one line, then Terms and Conditions · Privacy · Credits. Everything else
+              (long disclaimer, not-affiliated, attribution, address) is in the Terms or on /credits. */}
+          <p className="text-slate-300" data-testid="footer-line">
+            {site.footerDisclaimer}{" "}
+            <span className="inline-flex flex-wrap items-center">
+              {site.footerLinks.map((l, i) => <span key={l.to} className="inline-flex items-center">{i > 0 && <span aria-hidden="true" className="px-1">·</span>}<Link to={l.to} className="inline-flex items-center min-h-11 text-slate-200 underline underline-offset-4 hover:text-white">{l.label}</Link></span>)}
+            </span>
+          </p>
           {/* Sal #10: 44px tap targets */}
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-4">
-            {site.footerLinks.map((l) => <Link key={l.to} to={l.to} className="inline-flex items-center min-h-11 text-slate-300 underline underline-offset-4 hover:text-white">{l.label}</Link>)}
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-4 text-xs">
+            {site.footerNav.map((l) => <Link key={l.to} to={l.to} className="inline-flex items-center min-h-11 text-slate-400 underline underline-offset-4 hover:text-white">{l.label}</Link>)}
           </nav>
-          {/* Ryan 10/31 9:47 PM: business address next to the support email. Larry P11: email hidden until it works. */}
-          <p className="text-xs">{site.company} · {site.businessAddress}{site.supportEmailActive && <> · {site.supportEmail}</>}</p>
-          <p className="text-xs text-slate-400">{site.geoCredit}</p>
           <p className="text-xs">{site.operatedBy} © {site.year} {site.company}</p>
         </div>
       </footer>

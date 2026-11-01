@@ -37,10 +37,9 @@ export default function SubscribePage() {
   return (
     <div className="max-w-xl space-y-4">
       <h1 className="text-2xl sm:text-3xl font-extrabold">{c.title}</h1>
-      {/* price, renewal and cancel terms come BEFORE any payment fields */}
-      <div className="rounded-xl bg-panel border border-line p-4 space-y-2 text-sm">
-        <p className="font-semibold">{c.summary.replace("{price}", price)}</p>
-        <p className="text-slate-300">{c.renewalDisclosure}</p>
+      {/* Larry 10:04 PM (ROSCA / Cal. B&P §17602): ONLY these two lines, verbatim, before any payment field and the consent box. */}
+      <div className="rounded-xl bg-panel border border-line p-4 space-y-2 text-sm" data-testid="checkout-lines">
+        {c.lines.map((l, i) => <p key={i} className={i === 0 ? "font-semibold" : "text-slate-300"}>{l}</p>)}
       </div>
       {!selling ? (
         <p className="rounded-xl border border-line bg-panel p-4 text-sm text-slate-300">{payments && geoOk === false ? site.geoBlockCopy.unavailable : site.pricing.unavailable}</p>
@@ -66,7 +65,7 @@ export default function SubscribePage() {
           <button onClick={submit} disabled={busy || !consent} className="min-h-11 rounded-lg bg-accent text-ink font-semibold px-4 py-2 disabled:opacity-50">{c.cta.replace("{price}", price)}</button>
         </div>
       )}
-      {/* Responsible-betting line stays on checkout (Ryan 10:05 PM); the full one is in the footer. */}
+      {/* Responsible-betting line stays on checkout (Ryan 10:05 PM). */}
       <p className="text-xs text-slate-300">{site.pickDisclaimer}</p>
     </div>
   );

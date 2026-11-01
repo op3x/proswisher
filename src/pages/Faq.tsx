@@ -1,10 +1,9 @@
+import { Link } from "react-router-dom";
 import { site, legal } from "../config/site";
 import { usePaymentsEnabled } from "../lib/runtime";
-import { useInjuriesModeled } from "../components/ModelDisclaimer";
 
 export default function Faq() {
   const selling = usePaymentsEnabled();
-  const injuries = useInjuriesModeled();
   // [q, a, onlyWhenSelling, onlyWhenNotSelling]
   const items = site.faq.filter(([, a, whenSelling, whenNot]) => (whenSelling ? selling : true) && (whenNot ? !selling : true)
     // Larry 9:38 HOLD: refund copy ships only once the support inbox works
@@ -15,7 +14,7 @@ export default function Faq() {
       {items.map(([q, a]) => (
         <details key={q} className="rounded-xl bg-panel border border-line p-4">
           <summary className="font-semibold cursor-pointer">{q}</summary>
-          <p className="mt-2 text-sm text-slate-300">{a === "{refunds}" ? legal.refunds : a === "{modeled}" ? (injuries ? site.modelDisclaimer.injuries : site.modelDisclaimer.base) : a}</p>
+          <p className="mt-2 text-sm text-slate-300">{a === "{refunds}" ? legal.refunds : a === "{modeled}" ? <>It's an estimate, not a guarantee. What the model does and doesn't account for is in the <Link to="/terms" className="underline underline-offset-4">Terms and Conditions</Link>.</> : a}</p>
         </details>
       ))}
       {site.supportEmailActive && <p className="text-sm text-slate-400">Contact: {site.supportEmail}</p>}

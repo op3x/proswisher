@@ -1,4 +1,4 @@
-**Simculus Terms of Service**
+**Terms and Conditions**
 Effective: {EFFECTIVE} · Version: terms-v1
 
 Simculus is operated by Op3x LLC. These Terms are an agreement between you and **Op3x LLC** ("Op3x," "we," "us"), an Illinois limited liability company, and cover Simculus at simculus.com (the "Service"). By using the Service you agree to these Terms and to our Privacy Policy. If you subscribe, you also confirm the checkout consent described in §5.
@@ -6,7 +6,7 @@ Simculus is operated by Op3x LLC. These Terms are an agreement between you and *
 ### 1. What Simculus is, and what it isn't
 Simculus publishes statistical predictions for pro basketball games: a projected score, a projected spread and our model's lean. **Simculus is a prediction service, not a sportsbook.** Op3x LLC does not accept wagers, hold your money, set odds for wagering or pay out winnings. We don't run contests, sweepstakes, pick'em games or prizes of any kind, and nothing you do on Simculus can win you money or anything else of value from us. You may choose to use our predictions when betting elsewhere. That choice, and any bet, is entirely yours.
 
-> Simculus provides sports predictions for informational purposes only. It is not betting, financial or legal advice, and no outcome is guaranteed. Past results do not guarantee future results. Op3x LLC is not a sportsbook and does not accept wagers. Op3x LLC does not hold your money or pay out winnings. You must be 21+ and located where sports betting is legal to place bets; check your local laws. If you or someone you know has a gambling problem, call 1-800-GAMBLER. Simculus is not affiliated with or endorsed by the NBA, its teams or players.
+> Simculus provides sports simulations and predictions for informational purposes only. It is not betting, financial or legal advice, and no outcome is guaranteed. Past results do not guarantee future results. Op3x LLC is not a sportsbook and does not accept wagers. Op3x LLC does not hold your money or pay out winnings. You must be 21+ and located where sports betting is legal to place bets; check your local laws. If you or someone you know has a gambling problem, call 1-800-GAMBLER. Not affiliated with, endorsed or sponsored by the NFL, NCAA or any team.
 
 ### 2. Eligibility: 21+
 You must be **21 or older** to use the Service, including the free featured game. By entering the site or subscribing, you confirm you're 21+. If we learn that a user is under 21, we'll end their access and refund any unused subscription time. You're responsible for knowing and following the laws where you are, including any law on sports betting or on using betting information.
@@ -60,7 +60,7 @@ Past results do not guarantee future results.
 The Service belongs to Op3x LLC and its licensors and is protected by copyright, trademark and other laws. That includes our predictions, model outputs, write-ups, track-record compilation, software, design and the Simculus name and logo. While your membership is active, we give you a limited, personal, non-transferable, revocable license to view predictions for your own use under §7. "Simculus" is our brand; don't use it in a way that suggests we endorse you. Game schedules and scores are facts we get from third-party sources, and market spreads are credited to their source.
 
 ### 11. No affiliation
-Simculus is independent. It isn't affiliated with, endorsed by or sponsored by the NBA, any team or player, or any sportsbook. Team and league names are used only to identify games.
+Simculus is independent. It isn't affiliated with, endorsed by or sponsored by the NFL, the NCAA, any conference, team or player, our data providers (nflverse and CollegeFootballData.com), or any sportsbook. Team and league names are used only to identify games. Data credits are listed on the Credits page.
 
 ### 12. Affiliate links
 Simculus has no affiliate links and doesn't link to or receive payment from any sportsbook. If that ever changes, this section will be updated first.
@@ -91,7 +91,12 @@ Simculus Sports is provided by Op3x LLC, {ADDRESS}. The daily featured game is f
 
 California users: The Complaint Assistance Unit of the Division of Consumer Services of the California Department of Consumer Affairs may be contacted in writing at 1625 North Market Blvd., Suite N 112, Sacramento, CA 95834, or by telephone at (916) 445-1254 or (800) 952-5210.
 
-### 21. Contact
+### 21. What the simulations model
+NFL injury adjustments use public injury reports, which may be late or incomplete. College injuries, weather, coaching changes and market prices aren't modeled yet. A simulation is an estimate, not a guarantee.
+
+Custom matchups don't include injury adjustments.
+
+### 22. Contact
 Op3x LLC · {ADDRESS} · support@simculus.com
 
 Gambling problem? Call 1-800-GAMBLER.

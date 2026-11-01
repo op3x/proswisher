@@ -6,14 +6,13 @@ import { getSchedule, getTeams, runGameSim, runSim, Sourced } from "../sports/ap
 import { ctDateTime, pct, signed } from "../sports/format";
 import type { League, ScoreGame, SimResult, Team } from "../sports/types";
 import GamePlayer from "../components/GamePlayer";
-import DataSources from "../components/DataSources";
-import ModelDisclaimer, { useInjuriesModeled } from "../components/ModelDisclaimer";
 import { preloadRenderer } from "../renderers/registry";
 import { site } from "../config/site";
 
 const THIS_SEASON = 2026;
-// Ryan + Larry 10/31: cross-era/cross-level label (replaces "For entertainment only"). Shown instead of the API label.
-const HYPOTHETICAL = "Hypothetical matchup. Not a real game.";
+// Ryan via Larry 10/31 10:07 PM: picked-matchup tags. Same league + season but not scheduled -> unscheduled;
+// cross-era or college-vs-pro -> cross; a pick that's on the schedule is a normal prediction with NO tag.
+const TAGS = site.matchupTags;
 const sel = "w-full min-h-11 rounded-md bg-ink border border-line px-3 text-sm";
 
 function SamplePill() { return <span className="rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 text-[11px] font-semibold">Sample data, not a real simulation</span>; }
@@ -58,7 +57,6 @@ const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 export default function Simulate() {
   const [params, setParams] = useSearchParams();
   const leagues = useLeagues();
-  const injuriesModeled = useInjuriesModeled();
   const enabled = useMemo(() => (leagues?.data || []).filter((l) => l.enabled), [leagues]);
   const [league, setLeague] = useState(params.get("league") || "nfl");
   const [fictional, setFictional] = useState(params.get("mode") === "fictional");
@@ -86,6 +84,10 @@ export default function Simulate() {
   const hl = fictional ? homeLeague : league, al = fictional ? awayLeague : league;
   const hs = fictional ? homeSeason : THIS_SEASON, as = fictional ? awaySeason : THIS_SEASON;
   const crossEra = hs !== as, crossLevel = hl !== al, entertainment = crossEra || crossLevel;
+  // A pick (fictional mode or not) that is an upcoming game on the schedule, home/away as picked: normal prediction.
+  const schedMatch = !entertainment && hs === THIS_SEASON && home && away
+    ? (schedule?.data || []).find((g) => g.league === hl && g.status === "scheduled" && g.home.id === home && g.away.id === away) : undefined;
+  const pickTag = entertainment ? TAGS.cross : home && away && !schedMatch ? TAGS.unscheduled : null;
   const teamOf = (lg: string, id: string) => teams[lg]?.data.find((t) => t.id === id);
 
   async function run() {
@@ -98,10 +100,12 @@ export default function Simulate() {
     try {
       const req = { league: hl, home, away, n, ...(fictional ? { homeLeague: hl, awayLeague: al, homeSeason: hs, awaySeason: as, neutral: crossLevel } : {}) };
       const names = { home: fictional && hs !== THIS_SEASON ? { ...h, name: `${hs} ${h.name}` } : h, away: fictional && as !== THIS_SEASON ? { ...a, name: `${as} ${a.name}` } : a };
-      // A real scheduled game uses the game's own sim (NFL injury-adjusted when on); anything else is a custom matchup.
-      const sched = !fictional ? upcoming.find((g) => g.home.id === home && g.away.id === away) : undefined;
-      const r = sched && schedule?.source === "live" ? await runGameSim(sched.id, req, names) : await runSim(req, names);
-      if (entertainment) r.entertainmentOnly = true;
+      // A scheduled game uses the game's own sim (NFL injury-adjusted when on) and gets no tag; anything else is a picked matchup.
+      const sched = schedMatch && schedule?.source === "live" ? schedMatch : undefined;
+      const r = sched ? await runGameSim(sched.id, req, names) : await runSim(req, names);
+      // The server's label wins (it also routes a scheduled pick to the game sim, with no label); the sample fallback uses ours.
+      r.label = sched || r.scheduled ? undefined : r.sample ? pickTag ?? undefined : r.label || pickTag || undefined;
+      r.entertainmentOnly = !!r.label;
       setResult(r);
     } catch { setErr("The simulator didn't respond. Try again in a moment."); }
     finally { setBusy(false); }
@@ -126,7 +130,7 @@ export default function Simulate() {
               aria-pressed={league === l.id}>{l.name}{!l.enabled && <span className="ml-1 text-[10px] font-normal">soon</span>}</button>
           ))}
           <label className="ml-auto inline-flex items-center gap-2 text-sm min-h-11">
-            <input type="checkbox" checked={fictional} onChange={(e) => setFictional(e.target.checked)} className="h-5 w-5 accent-cyan-400" /> Fictional matchup (any season or league)
+            <input type="checkbox" checked={fictional} onChange={(e) => setFictional(e.target.checked)} className="h-5 w-5 accent-cyan-400" /> Pick Your Matchup (any season or league)
           </label>
         </div>
 
@@ -151,7 +155,7 @@ export default function Simulate() {
           <TeamPick label="Home" fictional={fictional} league={hl} leagues={leagues?.data || []} teams={teams[hl]?.data || []} value={home} season={homeSeason}
             onLeague={(v) => { setHomeLeague(v); setHome(""); }} onTeam={setHome} onSeason={setHomeSeason} />
         </div>
-        {entertainment && <p className="rounded-md bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-200 text-sm px-3 py-2"><b>{HYPOTHETICAL}</b> {crossLevel ? "College vs. pro" : "Cross-era"} matchups can't be checked against a real game.{crossLevel ? " Played on a neutral field." : ""}</p>}
+        {pickTag && <p className="rounded-md bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-200 text-sm px-3 py-2" data-testid="pick-tag"><b>{pickTag}</b>{crossLevel ? " Played on a neutral field." : ""}</p>}
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-sm text-slate-400 flex items-center gap-2">Simulations
             <select className="min-h-11 rounded-md bg-ink border border-line px-2 text-sm text-slate-100" value={n} onChange={(e) => setN(Number(e.target.value))}>
@@ -174,7 +178,7 @@ export default function Simulate() {
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-bold">{r.teams.away.name} at {r.teams.home.name}</h2>
             {r.sample && <SamplePill />}
-            {r.entertainmentOnly && <span className="rounded bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-500/30 px-2 py-0.5 text-[11px] font-semibold">{HYPOTHETICAL}</span>}
+            {r.label && <span className="rounded bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-500/30 px-2 py-0.5 text-[11px] font-semibold" data-testid="result-tag">{r.label}</span>}
           </div>
 
           {/* Ryan 10/31: the simulated game plays first (12x by default) and no outcome is shown until it ends. */}
@@ -223,12 +227,11 @@ export default function Simulate() {
                 </div>
               </div>
             )}
-            {/* Always rendered, outside the hidden part: quarter note, hypothetical label, 21+ disclaimer, data sources. */}
+            {/* Always rendered, outside the hidden part: quarter note, matchup tag, responsible-betting line. Model caveats are
+                in the Terms (§21) and data credits on /credits (Larry 10:04 PM, Ryan approved). */}
             <p className="text-[11px] text-slate-400">Quarter scores show a typical scoring shape, not a precise forecast. {r.periodKind === "line" ? "They add up to the median final score; regular time only." : "Each quarter's median is taken on its own, so they needn't add up to the median final."}</p>
-            {r.entertainmentOnly && <p className="text-xs text-fuchsia-200">{HYPOTHETICAL}</p>}
-            {injuriesModeled && !r.injuryAdjusted && <p className="text-xs text-slate-300" data-testid="custom-injury-note">{site.modelDisclaimer.customNote}</p>}
-            <ModelDisclaimer />
-            <DataSources only={[hl, al]} />
+            {r.label && <p className="text-xs text-fuchsia-200">{r.label}</p>}
+            <p className="text-xs text-slate-400">{site.pickDisclaimer}</p>
           </div>
         </section>
       )}

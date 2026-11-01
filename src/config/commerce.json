@@ -5,7 +5,12 @@
   "unitAmount": 900,
   "currency": "usd",
   "consentVersion": "consent-v1-2026-10-25",
-  "renewalDisclosure": "You'll be charged $9 today and $9 every month after that until you cancel. Cancel online any time in Account settings. Cancellation takes effect at the end of your current billing period.",
+  "renewalDisclosure": "$9/month, billed today and every month after. Renews automatically until you cancel. Cancel anytime in Account settings; you keep access through the end of the month you've paid for.",
+  "_checkoutLinesNote": "Larry 10/31 10:04 PM (ROSCA + Cal. Bus. & Prof. Code §17602), approved by Ryan: the ONLY two lines above the consent checkbox, verbatim. renewalDisclosure (Stripe Checkout custom_text) is the same two lines joined.",
+  "checkoutLines": [
+    "$9/month, billed today and every month after.",
+    "Renews automatically until you cancel. Cancel anytime in Account settings; you keep access through the end of the month you've paid for."
+  ],
   "gamePageTitle": "{Away} vs. {Home} Prediction, {date} | NBA | Simculus Sports",
   "gamePageDescription": "Projected score, projected spread and our model's lean for {Away} vs {Home}, posted before tip-off. Not betting advice. 21+. 1-800-GAMBLER.",
   "geoBlockCopy": {
@@ -40,8 +45,8 @@
     ]
   },
   "disclaimers": {
-    "_note": "Larry's verbatim texts (disclaimer-footer.md §1-2). Shared by the SPA (site.ts) and the server block page. Don't edit without Larry.",
-    "footer": "Simculus provides sports simulations and predictions for informational purposes only. It is not betting, financial or legal advice, and no outcome is guaranteed. Past results do not guarantee future results. Op3x LLC is not a sportsbook and does not accept wagers. Op3x LLC does not hold your money or pay out winnings. You must be 21+ and located where sports betting is legal to place bets; check your local laws. If you or someone you know has a gambling problem, call 1-800-GAMBLER. Not affiliated with, endorsed or sponsored by the NFL, NCAA or any team.",
+    "_note": "Larry's verbatim texts. footer = Larry 10/31 10:04 PM one-line footer (every page + the 451 block page); the old long footer text now lives only in Terms §1. Shared by the SPA (site.ts) and the server block page. Don't edit without Larry.",
+    "footer": "Simulated estimates, not guarantees or betting advice. 21+. Gambling problem? Call 1-800-GAMBLER.",
     "short": "Not betting advice. 21+. 1-800-GAMBLER."
   }
 }

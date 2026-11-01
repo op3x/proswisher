@@ -1,6 +1,5 @@
 // Sport-agnostic explainer. Football first; basketball steps slot in when NBA/NCAAB launch.
 import { Link } from "react-router-dom";
-import ModelDisclaimer from "../components/ModelDisclaimer";
 import { site } from "../config/site";
 
 export default function HowItWorks() {
@@ -20,11 +19,10 @@ export default function HowItWorks() {
       <Step n={4} t="Watch a representative game">
         We pick the simulated game whose margin and total sit closest to the median and replay it on the field: drive arrows, down and distance, the scoreboard and the clock. Players appear only by position. Simulations never use real names or likenesses.
       </Step>
-      <Step n={5} t="Dream matchups are hypothetical">
-        You can pit any two teams, including different seasons or a college team against a pro team. Those games can never be played, so they are labeled "Hypothetical matchup. Not a real game." and can't be checked against a real result.
+      <Step n={5} t="Pick Your Matchup">
+        Pick any two teams. If they're on the schedule, you get our normal prediction for that game. If they're in the same league and season but not scheduled to play, the result is tagged "{site.matchupTags.unscheduled}". Teams from different seasons, or a college team against a pro team, are tagged "{site.matchupTags.cross}"
       </Step>
-      <h2 className="text-lg font-bold pt-2">What it ignores</h2>
-      <ModelDisclaimer className="text-slate-400 text-sm" />
+      <p className="text-xs text-slate-400">{site.pickDisclaimer}</p>
       <Link to="/simulate" className="inline-flex items-center min-h-11 rounded-lg bg-accent text-ink font-semibold px-4">{site.heroCta}</Link>
     </div>
   );

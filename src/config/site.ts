@@ -56,7 +56,7 @@ export const site = {
   // TODO(box-number): set BUSINESS_ADDRESS_BOX to the digits only (e.g. "123") once Ryan buys the mailbox.
   businessAddressBox: BUSINESS_ADDRESS_BOX,
   businessAddress: `${ADDRESS_STREET}${BUSINESS_ADDRESS_BOX ? ` #${BUSINESS_ADDRESS_BOX}` : ""}, ${ADDRESS_CITY}`,
-  // Larry 10/31, exact text: Terms + paid checkout disclosure.
+  // Larry 10/31, exact text. Terms §20 only (Ryan via Larry 10:02 PM); the address is Terms-only too (Larry 10:04 PM).
   caComplaintNotice: "California users: The Complaint Assistance Unit of the Division of Consumer Services of the California Department of Consumer Affairs may be contacted in writing at 1625 North Market Blvd., Suite N 112, Sacramento, CA 95834, or by telephone at (916) 445-1254 or (800) 952-5210.",
   supportEmail: __CONTACT_EMAIL__, // CONTACT_EMAIL env (build time), default support@simculus.com.
   supportEmailActive: commerce.supportEmailActive === true, // Larry P11: support@ is HIDDEN everywhere until it works (commerce.json)
@@ -97,7 +97,7 @@ export const site = {
   howItWorksSteps: [
     { title: "We rate every team", body: "Each morning at 4 AM CT we refresh NFL and college play-by-play data and rate every offense and defense by down, distance and field position." },
     { title: "We play it snap by snap", body: "Pick a league and any two teams. The simulator plays the game one snap at a time, thousands of times, and reports win probability, margin, total and score by quarter with ranges." },
-    { title: "You watch one game unfold", body: "One representative simulated game plays out on a field drive chart, yard by yard. It's a simulation, not a forecast of the actual plays. You make your own call; we never take bets or tell you how much to wager." },
+    { title: "You watch one game unfold", body: "One representative simulated game plays out on a field drive chart, yard by yard. It's a simulation, not a forecast of the actual plays. You make your own call." },
   ],
   whatYouGet: {
     title: "What you get",
@@ -137,20 +137,18 @@ export const site = {
   // (they describe checkout/cancel flows that don't exist yet).
   faq: [
     // Simculus football FAQ (rewritten from NBA-era copy, 10/31). Memo 24 rules: never the word "official", no
-    // betting-edge or win-rate claims, cross-era/cross-level = "Hypothetical matchup. Not a real game." (Ryan + Larry 10/31: no "Entertainment only"), no real player names.
+    // betting-edge or win-rate claims, picked matchups use site.matchupTags (Ryan via Larry 10:07 PM) (Ryan + Larry 10/31: no "Entertainment only"), no real player names.
     ["What is Simculus?", "Simculus simulates football games. Pick an NFL or college matchup and we play it out snap by snap thousands of times, then show how often each team won, the typical score and margin, and one representative game you can watch on a drive chart."],
-    ["Do you take bets?", "No. Simculus is not a sportsbook. Op3x LLC doesn't accept wagers, hold your money or pay out winnings."],
     ["How does a simulation work?", "Each simulated game is built play by play from team-level tendencies estimated from past seasons: how often a team runs or passes, how many yards plays tend to gain, and how drives end. We repeat the game thousands of times and summarize the results as ranges, not a single answer."],
-    // {modeled} = site.modelDisclaimer (injuries text when /api/leagues injuriesModeled is on for NFL)
-    ["What does a simulation leave out?", "{modeled}"],
+    // {modeled} = a link to the Terms (model caveats are Terms-only, Larry 10:04 PM)
+    ["What does a simulation leave out?", "{modeled}"], // renders a link to the Terms section (Larry 10:04 PM: caveats are Terms-only)
     ["What do the numbers on the results page mean?", "Win chance is the share of simulated games each team won. The score, margin and total show the middle of the simulated results with a range around them. Quarter scores show a typical scoring shape, not a precise forecast."],
     ["Is the game I watch what will actually happen?", "No. The game on the drive chart is one simulated game picked because it lands close to the typical margin and total. It's an illustration of how a game like this can unfold, not a prediction of the actual plays."],
     ["Why don't simulated plays name any players?", "Simulated plays use position labels only. We don't use real player names, likenesses, team logos or helmets."],
     ["Which leagues do you cover?", "NFL and college football (FBS). Other sports are shown as coming soon and aren't available yet."],
-    ["Where does the data come from?", "NFL data comes from nflverse and college data from CollegeFootballData.com. The full credits are listed under Data sources at the bottom of every page. Data is refreshed daily."],
+    ["Where does the data come from?", "NFL data comes from nflverse and college data from CollegeFootballData.com. The full credits are on the Credits page, linked at the bottom of every page. Data is refreshed daily."],
     ["What does the scores bar show?", "Schedule & final scores: teams, score, quarter, clock and status. College games show final scores only."],
-    ["Are you affiliated with the league or any team?", "No. Simculus is independent. Not affiliated with, endorsed or sponsored by the NFL, NCAA or any team. Team names are used only to identify games."],
-    ["What is a fictional or cross-era matchup?", "You can pit teams that will never meet, such as teams from different seasons or a college team against an NFL team. Those results are labeled “Hypothetical matchup. Not a real game.” because they can't be checked against a real game."],
+    ["What is Pick Your Matchup?", "Pick any two teams. If they're on the schedule, you get our normal prediction for that game. If they're in the same league and season but not scheduled to play, the result is tagged “Pick Your Matchup · Non-Scheduled Game”. Teams from different seasons, or a college team against an NFL team, are tagged “Pick Your Matchup · Can't be played for real.”"],
     ["Who can use Simculus?", "Adults 21 and older. Subscriptions won't be available in Washington, Hawaii, Utah or Japan, though anyone 21+ can browse the public pages."],
     ["How much does it cost?", "The price and what it includes are shown on the Subscribe page before you pay, plus applicable tax. Membership renews monthly until you cancel. If the price or other terms ever change, we'll email you first, and changes apply from your first renewal at least 14 days after that email.", true],
     ["How do I cancel?", "Go to Account settings → Cancel subscription and confirm. It takes about a minute, with no call or email required. Your access continues through the end of your current billing period, and we email you a confirmation.", true],
@@ -163,13 +161,12 @@ export const site = {
   // Checkout / cancel copy (Laye). Rendered on /subscribe; the form is inactive while payments are disabled.
   checkout: {
     title: "Confirm your subscription",
-    summary: "Simculus Monthly: {price}/month plus applicable tax",
-    // Laye's text has "at [CANCEL_URL]"; dropped until a cancel URL exists (cancel is via the Stripe customer portal).
+    // Larry 10/31 10:04 PM (ROSCA + Cal. Bus. & Prof. Code §17602), approved by Ryan: ONLY these two lines, verbatim,
+    // right above the consent box. Everything else lives behind the linked Terms and Conditions. Source: commerce.json.
+    lines: commerce.checkoutLines as readonly string[],
+    // Stripe Checkout custom_text (server) = the same two lines joined.
     renewalDisclosure: commerce.renewalDisclosure,
-    whatItIs: "Simculus sells sports predictions for information only. Op3x LLC is not a sportsbook, doesn't accept wagers and doesn't hold your money or pay out winnings.",
-    // Ryan 10/31 10:03 PM: no legal terms listed on the checkout page; everything lives behind the linked Terms and
-    // Conditions, which must be checked before checkout. Only the price and the one auto-renew line stay visible
-    // (ROSCA / California auto-renewal law) pending Larry's review. {terms} renders the Terms link.
+    // {terms} renders the Terms and Conditions link.
     consentCheckbox: "I'm 21 or older and I agree to the {terms}, including that my {price}/month subscription renews automatically until I cancel.",
     termsLinkLabel: "Terms and Conditions",
     cta: "Subscribe for {price}/month",
@@ -206,33 +203,49 @@ export const site = {
     { to: "/simulate", label: "Simulate" },
     { to: "/how-it-works", label: "How it works" },
   ],
-  // Footer, every page. Larry's canonical text (landing-page-copy.md `disclaimers.footer`), flat 21+,
-  // plus Larry's ruling: "Op3x LLC does not hold your money or pay out winnings." after the wagers sentence.
-  // Includes the NFL/NCAA non-affiliation line and "Op3x LLC is not a sportsbook". Do not edit without counsel.
+  // Footer, every page (Larry 10/31 10:04 PM, Ryan approved): ONE line, then Terms and Conditions · Privacy · Credits.
+  // The long disclaimer, not-affiliated text, attribution and address are in the Terms (and Credits) only.
   footerDisclaimer: commerce.disclaimers.footer, // single source: src/config/commerce.json (server block page uses it too)
   // Next to every prediction and on checkout (`disclaimers.short`).
   pickDisclaimer: commerce.disclaimers.short,
-  // What the model covers. Driven by /api/leagues `injuriesModeled` (NFL row); see components/ModelDisclaimer.tsx.
+  // Picked-matchup tags (Ryan via Larry 10/31 10:07 PM). Same strings as server/football/store.mjs MATCHUP_TAGS.
+  // Scheduled games (picked or not) get no tag: they're a normal prediction.
+  matchupTags: {
+    unscheduled: "Pick Your Matchup · Non-Scheduled Game",
+    cross: "Pick Your Matchup · Can't be played for real.",
+  },
+  // The model-coverage caveats (injuries, weather, coaching changes, estimate-not-guarantee) are Terms-only now
+  // (Terms §21, Larry 10:04 PM). Kept here for the Terms text check (tests/server/model-disclaimer.test.mjs).
   modelDisclaimer: {
-    // injuriesModeled false/missing (unchanged text)
-    base: "Injuries, weather, coaching changes and market prices aren't modeled yet. A simulation is an estimate, not a guarantee. " + commerce.disclaimers.short,
-    // Larry 10/31 (NFL injuries cleared), exact text
-    injuries: "NFL injury adjustments use public injury reports, which may be late or incomplete. College injuries, weather, coaching changes and market prices aren't modeled yet. A simulation is an estimate, not a guarantee. Not betting advice. 21+. Gambling problem? Call 1-800-GAMBLER.",
+    // Larry 10/31 (NFL injuries cleared), exact text, without the responsible-betting tail (that stays on the pages).
+    injuries: "NFL injury adjustments use public injury reports, which may be late or incomplete. College injuries, weather, coaching changes and market prices aren't modeled yet. A simulation is an estimate, not a guarantee.",
     customNote: "Custom matchups don't include injury adjustments.",
   },
   pastResults: "Past results do not guarantee future results.",
-  // Larry's order (disclaimer-footer.md §5): Track record · Terms · Privacy · Refunds* · Cancel subscription ·
-  // Responsible gaming · Contact. *Refunds stays unshipped until support@ works (P11). FAQ kept at the end.
+  // Larry 10:04 PM: the footer line is followed by exactly these three links.
   footerLinks: [
-    { to: "/terms", label: "Terms" },
+    { to: "/terms", label: "Terms and Conditions" },
     { to: "/privacy", label: "Privacy" },
-    { to: "/account", label: "Cancel subscription" },
+    { to: "/credits", label: "Credits" },
+  ],
+  // Site navigation kept in the footer (not legal text): responsible gaming stays reachable (Ryan: keep the
+  // responsible-betting clauses where they are), online cancel stays one click away (ROSCA), plus Contact and FAQ.
+  footerNav: [
     { to: "/responsible-gaming", label: "Responsible gaming" },
+    { to: "/account", label: "Cancel subscription" },
     { to: "/contact", label: "Contact" },
     { to: "/faq", label: "FAQ" },
   ],
+  // Credits page (/credits). Larry memo 24 attribution (CC BY 4.0 / CFBD must be reasonably findable), via
+  // sports/api.ts REQUIRED_ATTRIBUTION; plus these.
+  credits: {
+    title: "Credits",
+    intro: "Simculus Sports is built on public data. Thanks to the people who collect and share it.",
+  },
+  // Larry 10:04 PM: not-affiliated is Terms (§11) + Credits only.
+  notAffiliated: "Simculus Sports is not affiliated with, endorsed or sponsored by the NFL, the NCAA, any conference or any team.",
   dataCredit: "Football data refreshed daily at 4 AM CT. Simulated plays use position labels only.",
-  // Ingus 10:00: required GeoLite2 attribution (MaxMind EULA). Footer, every page.
+  // Ingus 10:00: required GeoLite2 attribution (MaxMind EULA). Credits page + Privacy.
   geoCredit: "This product includes GeoLite2 data created by MaxMind, available from https://www.maxmind.com",
   empty: {
     noUpcoming: "No upcoming games in the next 7 days. Check back soon.",

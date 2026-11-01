@@ -14,7 +14,11 @@ export const disclaimer = (name) => `${name} provides sports simulations and pre
   "It is not betting, financial or legal advice, and no outcome is guaranteed. Op3x LLC is not a sportsbook and does not accept wagers. " +
   "You must be 21+ and located where sports betting is legal to place bets; check your local laws. If you or someone you know has a gambling problem, call 1-800-GAMBLER. " +
   `${name} is not affiliated with or endorsed by the NFL, the NCAA, any conference or any team.`;
-export const HYPOTHETICAL_LABEL = "Hypothetical matchup. Not a real game, and not a prediction of one.";
+// Ryan via Larry (10/31 10:07 PM CT): picked-matchup tags. Keep in sync with src/config/site.ts matchupTags.
+// Same league + same season but not on the schedule -> UNSCHEDULED; cross-era or college-vs-pro -> CROSS;
+// a picked matchup that IS on the schedule is a normal prediction (the game's own sim, no tag).
+export const MATCHUP_TAGS = { unscheduled: "Pick Your Matchup · Non-Scheduled Game", cross: "Pick Your Matchup · Can't be played for real." };
+export const HYPOTHETICAL_LABEL = MATCHUP_TAGS.cross; // legacy name
 const readJson = (p) => { try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return null; } };
 
 // Rigor step 2 (docs/sim-methodology.md 5b): game-environment shock, chosen on the 2023 test season only (envSd 0.6/0.8 compared;
@@ -91,7 +95,8 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
     }
     const floor = (v) => Math.max(3, v);
     const hypothetical = h.season !== a.season || home.league !== away.league;
-    return { home: h, away: a, target: { H: floor(H), A: floor(A) }, rules, neutral, notes, hypothetical };
+    const kind = hypothetical ? "cross" : "unscheduled";
+    return { home: h, away: a, target: { H: floor(H), A: floor(A) }, rules, neutral, notes, hypothetical, kind };
   }
 
   function simulate(m, { n = 2000, seed = 20261031, playoff = false } = {}) {
@@ -99,11 +104,20 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
     const res = runMonteCarlo(L[lg].S, { target: m.target, n, seed, playoff, curve: curveFor(lg), ...SIM_UNCERTAINTY[lg], names: { H: m.home.name || m.home.team, A: m.away.name || m.away.team } });
     return { ...res, teams: { home: { id: m.home.team, name: m.home.name, season: m.home.season }, away: { id: m.away.team, name: m.away.name, season: m.away.season } },
              neutral: m.neutral, rules: m.rules, expectedPoints: { home: Math.round(m.target.H * 10) / 10, away: Math.round(m.target.A * 10) / 10 },
-             notes: m.notes, ...(m.hypothetical ? { label: HYPOTHETICAL_LABEL } : {}), attribution: ATTRIBUTION[m.rules] };
+             notes: m.notes, ...(m.kind === "scheduled" ? {} : { label: MATCHUP_TAGS[m.kind || (m.hypothetical ? "cross" : "unscheduled")], matchupKind: m.kind || (m.hypothetical ? "cross" : "unscheduled") }), attribution: ATTRIBUTION[m.rules] };
   }
 
   const games = (lg) => (L[lg]?.schedule?.games || []);
   const findGame = (id) => { for (const lg of LEAGUES) { const g = games(lg).find((x) => x.id === String(id)); if (g) return { lg, g }; } return null; };
+
+  /** A same-league, current-season pick that is an upcoming (not final) game on the schedule, home/away as picked. */
+  function scheduledFor(m) {
+    if (m.hypothetical) return null;
+    const lg = m.rules, cur = L[lg]?.ratings?.season;
+    if (m.home.season !== cur || m.away.season !== cur) return null;
+    const g = games(lg).find((x) => x.status !== "final" && x.home === m.home.team && x.away === m.away.team);
+    return g ? g.id : null;
+  }
 
   function gameSim(id, n = Number(env.FOOTBALL_GAME_SIMS || 10000)) {
     if (sims.has(id)) return sims.get(id);
@@ -112,6 +126,7 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
     if (!ready(lg)) return { error: `${lg} data not loaded` };
     const m = matchup({ league: lg, team: g.home }, { league: lg, team: g.away }, { neutral: g.neutral });
     if (m.error) return m;
+    m.kind = "scheduled"; // a real scheduled game: normal prediction, no matchup tag
     // NFL player availability (FOOTBALL_INJURIES_ENABLED in the refresh): derived team points only, same split as refresh.py
     const av = lg === "nfl" && L.nfl?.schedule?.injuriesModeled === true ? g.availabilityAdj : null;
     if (av && Number.isFinite(av.home) && Number.isFinite(av.away)) {
@@ -139,5 +154,5 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
 
   const injuriesModeled = () => L.nfl?.schedule?.injuriesModeled === true;
 
-  return { load, status, ready, injuriesModeled, teamRating, matchup, simulate, games, findGame, gameSim, precompute, data: L };
+  return { load, status, ready, injuriesModeled, teamRating, matchup, simulate, games, findGame, scheduledFor, gameSim, precompute, data: L };
 }

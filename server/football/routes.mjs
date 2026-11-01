@@ -106,6 +106,12 @@ export function registerFootballRoutes(app, { store, ticker, pipeline, env = pro
     if (cache.has(key)) { const v = cache.get(key); cache.delete(key); cache.set(key, v); return res.set("Cache-Control", "public, max-age=300").json(withPlays({ query: { plays: String(q.plays ?? "") } }, v)); }
     const m = store.matchup({ league: hl, team: String(q.home), season: hs }, { league: al, team: String(q.away), season: as }, { neutral });
     if (m.error) return res.status(404).json(m);
+    // Ryan via Larry 10:07 PM: a picked matchup that's on the schedule is a normal prediction: the game's own sim, no tag.
+    const schedId = store.scheduledFor(m);
+    if (schedId) {
+      const g = store.gameSim(schedId);
+      if (g && !g.error) return res.set("Cache-Control", "public, max-age=300").json(withPlays({ query: { plays: String(q.plays ?? "") } }, { ...g, scheduledGameId: schedId }));
+    }
     if (inflight >= maxConc) return res.status(503).set("Retry-After", "2").json({ error: "simulator busy, try again in a moment" });
     inflight++;
     try {

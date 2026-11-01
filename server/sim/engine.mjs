@@ -63,6 +63,7 @@ export function simulateGame(S, opts) {
   const rec = opts.record ? [] : null;
   const score = { H: 0, A: 0 };
   const qs = { H: [0, 0, 0, 0], A: [0, 0, 0, 0] };
+  const otPts = { H: 0, A: 0 }; // overtime points are kept out of Q4 (the quarter line is regulation only)
   const other = (s) => (s === "H" ? "A" : "H");
   let qtr = 1, clock = rules.quarterSec, poss = "H", yl = 75, down = 1, togo = 10;
   const tos = { H: rules.timeouts || 0, A: rules.timeouts || 0 };
@@ -70,7 +71,7 @@ export function simulateGame(S, opts) {
   const firstReceiver = rng() < 0.5 ? "H" : "A";
 
   const qIndex = () => Math.min(qtr, 4) - 1;
-  const add = (side, pts) => { score[side] += pts; qs[side][qIndex()] += pts; };
+  const add = (side, pts) => { score[side] += pts; if (qtr > 4) otPts[side] += pts; else qs[side][qIndex()] += pts; };
   const hsr = () => (qtr === 1 || qtr === 3 ? clock + rules.quarterSec : clock);
   const log = (type, text, extra = {}) => {
     if (!rec) return;
@@ -318,5 +319,5 @@ export function simulateGame(S, opts) {
     clock = 0;
   }
 
-  return { H: score.H, A: score.A, q: qs, ot: inOT, plays: rec };
+  return { H: score.H, A: score.A, q: qs, otPoints: otPts, ot: inOT, plays: rec };
 }

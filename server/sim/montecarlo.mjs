@@ -47,6 +47,14 @@ const r1 = (x) => Math.round(x * 10) / 10;
 const r2 = (x) => Math.round(x * 100) / 100;
 const r3 = (x) => Math.round(x * 1000) / 1000;
 const bin = (k, n) => { const p = k / n; return { p: r3(p), se: r3(Math.sqrt((p * (1 - p)) / n)) }; };
+/** Box-score line of one simulated game: points per regulation period, overtime (null when none) and final, per team,
+ * plus the combined total per period. Periods + overtime add up exactly to the final. */
+export function lineScore(g) {
+  const ot = g.ot ? { home: g.otPoints?.H ?? 0, away: g.otPoints?.A ?? 0, total: (g.otPoints?.H ?? 0) + (g.otPoints?.A ?? 0) } : null;
+  return { periods: g.periods.H.map((h, k) => ({ home: h, away: g.periods.A[k], total: h + g.periods.A[k] })), overtime: ot,
+    final: { home: g.H, away: g.A, total: g.H + g.A } };
+}
+
 /** Integer per-period line that sums exactly to `total`: period means scaled to the total, largest remainder rounding. */
 export function periodLine(means, total) {
   const T = Math.max(0, Math.round(total)), sum = means.reduce((a, b) => a + b, 0);
@@ -137,6 +145,7 @@ export function runMonteCarlo(S, opts) {
     calibration: { targetPoints: { home: r1(target.H), away: r1(target.A) }, simMeanPoints: { home: r1(H.reduce((a, b) => a + b, 0) / n), away: r1(A.reduce((a, b) => a + b, 0) / n) },
                    tilt: { home: Math.round(tilt.H * 1000) / 1000, away: Math.round(tilt.A * 1000) / 1000 }, envSd, teamSd },
     playLogFields: "generic envelope: seq, t (elapsed game seconds), period, clock, score (after the event), type, text, payload (sport-specific; football: poss, down, togo, yl = yards to the opponent goal line, at the snap for type 'play', after the event otherwise)",
-    representative: { index: best, seed: drawSeed(seed, 0, best), names: { home: names.H, away: names.A }, final: { home: rep.H, away: rep.A }, periods: { home: rep.periods.H, away: rep.periods.A }, overtime: rep.ot, events: rep.events },
+    representative: { index: best, seed: drawSeed(seed, 0, best), names: { home: names.H, away: names.A }, final: { home: rep.H, away: rep.A }, periods: { home: rep.periods.H, away: rep.periods.A }, overtimePoints: { home: rep.otPoints?.H ?? 0, away: rep.otPoints?.A ?? 0 }, overtime: rep.ot,
+      lineScore: lineScore(rep), events: rep.events },
   };
 }

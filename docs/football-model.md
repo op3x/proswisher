@@ -42,6 +42,10 @@ Offense and defense EPA per play (nflverse EPA for NFL, CFBD PPA for NCAAF), opp
 least-squares fit (team offense + opponent defense), recency-weighted (half-life 16 weeks NFL / 12 NCAAF, prior seasons
 discounted by an offseason gap). Garbage time (win prob <5% or >95%) and 2-point tries are excluded.
 Expected points = a + b·(off + opp def) ± hfa/2, with a, b, hfa fitted on as-of ratings from the 3 prior seasons.
+Expected game total (since 2026-10-31, `scripts/football/totals.py`): a weekly least-squares blend of the EPA pair sum,
+the total from opponent-adjusted points-scored ratings, and an indoor flag (NFL, dome or closed roof), trained on completed
+games before the week (3 prior NFL seasons / 1 NCAAF season + current). The expected margin (Elo, NCAAF blend, availability)
+is unchanged; `E.split_points(total, margin)` gives each team's expected points. See docs/sim-methodology.md 5i.
 
 ## Simulation engine (`server/sim/engine.mjs`, `server/sim/montecarlo.mjs`)
 Snap-by-snap: play call by down/distance/situation, run/dropback (sack, scramble, interception, completion) yardage

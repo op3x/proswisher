@@ -20,6 +20,7 @@ from football import ratings as R, params as PR, teams as T
 from football.extract import extract_pbp, save_compact, load_compact, IDX
 from football import elo as E
 from football import injuries as INJ
+from football import totals as TOT
 from football.sources import SourceBlocked, NotConfigured, nfl_provider, ncaaf_provider, NFL_ATTRIBUTION, NCAAF_ATTRIBUTION
 from football.timeutil import eastern_to_utc, iso
 
@@ -103,6 +104,7 @@ def nfl_schedule_games(sched, season):
             "neutral": g.get("location") == "Neutral",
             "homeScore": int(g["home_score"]) if final else None, "awayScore": int(g["away_score"]) if final else None,
             "overtime": g.get("overtime") == "1", "status": "final" if final else "scheduled",
+            "indoor": TOT.is_indoor(g.get("roof")),       # dome / closed roof (nflverse `roof`), a totals-model feature
         })
     return out
 
@@ -151,16 +153,20 @@ def nfl_obs(cmp_dir, seasons):
     return obs
 
 
-def asof_samples(obs, games, cfg):
-    """[(x_team, site, points)] for each completed game, using ratings fitted strictly before its week."""
+def asof_samples(obs, games, cfg, fits=None):
+    """[(x_team, site, points)] for each completed game, using ratings fitted strictly before its week.
+    `fits` (a totals.Fits) shares its per-week EPA fits so the totals model does not refit them."""
     cache, out = {}, []
     for g in games:
         if g["homeScore"] is None:
             continue
         k = (g["season"], g["week"])
-        if k not in cache:
-            cache[k] = R.fit(obs, *k, cfg, iters=30)
-        r = cache[k]
+        if fits is not None:
+            r = fits.at(*k)[0]
+        else:
+            if k not in cache:
+                cache[k] = R.fit(obs, *k, cfg, iters=30)
+            r = cache[k]
         if not r["weight"].get(g["home"]) or not r["weight"].get(g["away"]):
             continue
         site = 0 if g["neutral"] else 1
@@ -185,6 +191,18 @@ def ratings_payload(league, r, model, teams_names, season, at_week, cfg, games_p
             "leagueMeanEpa": round(r["m"], 4), "model": model, "config": cfg, "teams": rows,
             "method": "Opponent-adjusted, recency-weighted EPA per play (offense and defense), ridge-shrunk to league average; "
                       "points = a + b*(offense EPA + opponent defense EPA) +/- hfa/2."}
+
+
+def totals_model(league, fits, games, season, at_week):
+    """Fit the expected-total model (football/totals.py) as of (season, at_week); None -> fall back to the EPA total."""
+    try:
+        tm = TOT.fit(league, TOT.samples(league, fits, games), season, at_week)
+    except (ValueError, ZeroDivisionError) as e:
+        log(f"{league.upper()} totals model fallback: {type(e).__name__}")
+        return None
+    if tm:
+        tm["fittedOn"] = f"completed games before {season} week {at_week} (features as of each game's week)"
+    return tm
 
 
 def refresh_nfl(pub, priv, blocks, now, prov=None):
@@ -219,7 +237,10 @@ def refresh_nfl(pub, priv, blocks, now, prov=None):
 
     # points model: completed games of the last POINTS_SEASONS seasons (+ current), ratings as of each game's week
     fit_games = [g for g in all_games if g["season"] >= cur - POINTS_SEASONS]
-    model = R.fit_points_model(asof_samples(obs, fit_games, cfg))
+    fits = TOT.Fits("nfl", obs, TOT.points_obs(all_games), cfg)
+    model = R.fit_points_model(asof_samples(obs, fit_games, cfg, fits))
+    tmodel = totals_model("nfl", fits, fit_games, cur, at_week)   # expected total (Ryan 10/31: better over/under)
+    r_pts = fits.at(cur, at_week)[1] if tmodel else None
     model["fittedOn"] = f"{cur - POINTS_SEASONS}-{cur} completed games (ratings as of each game's week)"
     r = R.fit(obs, cur, at_week, cfg)
     # rigor step 1: Elo carries the expected margin (beat EPA, unit ratings and blends out of sample), EPA the total
@@ -234,7 +255,9 @@ def refresh_nfl(pub, priv, blocks, now, prov=None):
     for t in rp["teams"]:
         if t["team"] in elo_now:
             t["elo"] = round(elo_now[t["team"]], 1)
-    rp["marginModel"] = {"type": "elo", **E.NFL_ELO, "note": "expected margin = (elo_home - elo_away + hfa*site) / per_pt; expected total from the EPA points model"}
+    rp["marginModel"] = {"type": "elo", **E.NFL_ELO, "note": "expected margin = (elo_home - elo_away + hfa*site) / per_pt"}
+    rp["totalModel"] = ({"type": "blend", **tmodel, "note": "expected total = coef . [1, EPA pair sum, points-ratings total, indoor]"}
+                        if tmodel else {"type": "epa", "note": "expected total from the EPA points model"})
     rp["source"] = NFL_ATTRIBUTION
     wjson(os.path.join(out_dir, "ratings.json"), rp)
 
@@ -260,6 +283,8 @@ def refresh_nfl(pub, priv, blocks, now, prov=None):
         if g["status"] != "final":
             site = 0 if g["neutral"] else 1
             tot = R.expected_points(r, model, g["home"], g["away"], site) + R.expected_points(r, model, g["away"], g["home"], -site)
+            if tmodel:
+                tot = TOT.predict(tmodel, TOT.features("nfl", r, r_pts, g))
             if g["home"] in elo_now and g["away"] in elo_now:
                 mg = (elo_now[g["home"]] - elo_now[g["away"]] + (0 if g["neutral"] else E.NFL_ELO["hfa"])) / E.NFL_ELO["per_pt"]
             else:
@@ -469,16 +494,22 @@ def refresh_ncaaf(pub, priv, blocks, now, prov=None):
     cur_games = [g for g in games if g["season"] == cur]
     done = [g for g in cur_games if g["status"] == "final"]
     at_week = (max(g["week"] for g in done) + 1) if done else 1
-    model = R.fit_points_model(asof_samples(obs, games, cfg))
+    fits = TOT.Fits("ncaaf", obs, TOT.points_obs(games), cfg)
+    model = R.fit_points_model(asof_samples(obs, games, cfg, fits))
     model["fittedOn"] = f"{cur - 1}-{cur} completed games involving FBS teams (ratings as of each game's week)"
     r = R.fit(obs, cur, at_week, cfg, teams=fbs | {"FCS"})
+    tmodel = totals_model("ncaaf", fits, games, cur, at_week)     # expected total (Ryan 10/31: better over/under)
+    r_pts = R.fit(TOT.points_obs(games), cur, at_week, TOT.pts_cfg("ncaaf", cfg), teams=fbs | {"FCS"}) if tmodel else None
     mascot = {t.get("school"): (t.get("mascot") or "").strip() for t in team_rows if isinstance(t, dict)}
     names = {t: (f"{t} {mascot[t]}" if mascot.get(t) else t) for t in fbs}; names["FCS"] = "Non-FBS opponent (pooled)"
     played = {}
     for g in done:
         played[g["home"]] = played.get(g["home"], 0) + 1; played[g["away"]] = played.get(g["away"], 0) + 1
     out = os.path.join(pub, "ncaaf")
-    wjson(os.path.join(out, "ratings.json"), ratings_payload("ncaaf", r, model, names, cur, at_week, cfg, played))
+    rp = ratings_payload("ncaaf", r, model, names, cur, at_week, cfg, played)
+    rp["totalModel"] = ({"type": "blend", **tmodel, "note": "expected total = coef . [1, EPA pair sum, points-ratings total]"}
+                        if tmodel else {"type": "epa", "note": "expected total from the EPA points model"})
+    wjson(os.path.join(out, "ratings.json"), rp)
     lo, hi = iso(now - timedelta(days=8)), iso(now + timedelta(days=15))
     window = [g for g in cur_games if g["kickoff"] and lo <= g["kickoff"].replace(".000Z", "Z") <= hi]
     for g in window:
@@ -489,7 +520,8 @@ def refresh_ncaaf(pub, priv, blocks, now, prov=None):
             mg = eh - ea
             if g["id"] in elo_pre:                                  # step 5: Elo/EPA blend beat EPA alone in every test season
                 mg = NCAAF_ELO_WEIGHT * elo_pre[g["id"]]["spread"] + (1 - NCAAF_ELO_WEIGHT) * mg
-            h, a = E.split_points(eh + ea, mg)
+            tot = TOT.predict(tmodel, TOT.features("ncaaf", r, r_pts, g)) if tmodel else eh + ea
+            h, a = E.split_points(tot, mg)
             g["expected"] = {"home": round(h, 2), "away": round(a, 2)}
     wjson(os.path.join(out, "schedule.json"), {"league": "ncaaf", "season": cur, "generatedAt": iso(now),
           "source": NCAAF_ATTRIBUTION, "games": window,

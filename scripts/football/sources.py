@@ -80,6 +80,7 @@ class NflDataProvider:
     name = "base"
     def pbp_file(self, season: int, dest_dir: str) -> str: raise NotImplementedError
     def schedule_rows(self, dest_dir: str) -> list: raise NotImplementedError
+    def injuries_file(self, season: int, dest_dir: str) -> str: raise NotImplementedError
 
 
 class Nflverse(NflDataProvider):
@@ -87,11 +88,13 @@ class Nflverse(NflDataProvider):
     name = "nflverse"
     BASE = "https://github.com/nflverse/nflverse-data/releases/download"
 
-    def _download(self, url, dest, what):
+    def _download(self, url, dest, what, need_file=True):
+        """need_file=False: the caller keeps only a derived cache (the raw file was deleted after compaction), so a stored
+        ETag alone is enough for a conditional GET; on 304 the returned path does not exist and changed is False."""
         check_url(url)
         meta_path = dest + ".etag"
         headers = {}
-        if os.path.exists(dest) and os.path.exists(meta_path):
+        if os.path.exists(meta_path) and (os.path.exists(dest) or not need_file):
             with open(meta_path) as f:
                 headers["If-None-Match"] = f.read().strip()
         try:
@@ -118,12 +121,13 @@ class Nflverse(NflDataProvider):
     def pbp_file(self, season, dest_dir):
         os.makedirs(dest_dir, exist_ok=True)
         dest = os.path.join(dest_dir, f"play_by_play_{season}.csv.gz")
-        return self._download(f"{self.BASE}/pbp/play_by_play_{season}.csv.gz", dest, f"nflverse pbp {season}")
+        return self._download(f"{self.BASE}/pbp/play_by_play_{season}.csv.gz", dest, f"nflverse pbp {season}", need_file=False)
 
     def injuries_file(self, season, dest_dir):
-        """RESEARCH ONLY, PRIVATE dir only (I1/I2). Refuses unless FOOTBALL_INJURIES_ENABLED is on; not called by refresh."""
+        """Refuses unless FOOTBALL_INJURIES_ENABLED is on. The refresh passes a temporary directory that it deletes right
+        after computing team-level adjustments (Larry (c): nothing player-level is kept), so no ETag is ever reused."""
         if str(os.environ.get("FOOTBALL_INJURIES_ENABLED", "")).lower() not in ("1", "true", "yes"):
-            raise RuntimeError("injuries are off (FOOTBALL_INJURIES_ENABLED); research prototype only")
+            raise RuntimeError("injuries are off (FOOTBALL_INJURIES_ENABLED)")
         os.makedirs(dest_dir, exist_ok=True)
         ext = "csv.gz" if season >= 2023 else "csv"   # the release has no .csv.gz before 2023
         dest = os.path.join(dest_dir, f"injuries_{season}.{ext}")
@@ -148,6 +152,15 @@ class LocalNflDir(NflDataProvider):
         if not os.path.exists(p):
             raise RuntimeError(f"local pbp {season}: HTTP 404 (not in {self.root})")
         return p, True
+
+    def injuries_file(self, season, dest_dir):
+        if str(os.environ.get("FOOTBALL_INJURIES_ENABLED", "")).lower() not in ("1", "true", "yes"):
+            raise RuntimeError("injuries are off (FOOTBALL_INJURIES_ENABLED)")
+        for ext in ("csv.gz", "csv"):
+            p = os.path.join(self.root, f"injuries_{season}.{ext}")
+            if os.path.exists(p):
+                return p, True
+        raise RuntimeError(f"local injuries {season}: HTTP 404 (not in {self.root})")
 
     def schedule_rows(self, dest_dir):
         with open(os.path.join(self.root, "games.csv"), newline="", encoding="utf-8") as f:

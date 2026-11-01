@@ -242,7 +242,7 @@ and fits play parameters from the previous season's CFBD plays (16 calls, once p
 For the record, on the test seasons it gave Brier 0.1687, log loss 0.5072, margin coverage 75.2/90.8: no better. Too-narrow NCAAF margin intervals
 remain an open item (candidates: heavier-tailed team-strength uncertainty early in the season, or a mismatch blowout term).
 
-## 5g. NFL injury/availability adjustment: research prototype, behind FOOTBALL_INJURIES_ENABLED (off) (2026-10-31)
+## 5g. NFL injury/availability adjustment: backtest, behind FOOTBALL_INJURIES_ENABLED (2026-10-31; wired in 5h)
 
 Source: nflverse-data `injuries` release (CC BY 4.0), cleared by Larry for NFL with I1-I4 (model only; player-ID join
 server-side; same attribution; only the `injuries` tag added to the allow-list). Terms: research/data-sources-terms.md s.5.
@@ -282,10 +282,46 @@ Per season, paired difference (adjusted - production), se in brackets:
 Result: out of sample it improves Brier (-0.0024, about 1.7 se), log loss (-0.0046), margin MAE (-0.07, about 1.3 se),
 RMSE and winner %, so it passes the keep rule (better Brier AND MAE). The gain is concentrated in 2024; 2023 and 2025 are
 flat-to-better and 2026 (108 games) has a slightly worse MAE. It closes about a quarter of the Brier gap to the closing line.
-Status: KEPT as code behind FOOTBALL_INJURIES_ENABLED, default OFF. It is not wired into refresh.py, the API or the site;
-Nflverse.injuries_file() refuses while the flag is off, and a test checks refresh/server code never mentions injuries.
-Turning it on would need: wiring into the refresh (weekly report + pbp IDs, server-side only), Larry's I1-I4 re-check, and
-the same-day disclaimer change (site copy says injuries aren't modeled).
+Status: KEPT behind FOOTBALL_INJURIES_ENABLED, default OFF, and wired into the daily refresh (5h).
+
+## 5h. NFL availability wired into the refresh (2026-10-31), NFL only
+
+Larry cleared NFL injuries (college is NOT cleared, so NCAAF never uses them) with three must-haves on top of I1-I4.
+Turn on with `FOOTBALL_INJURIES_ENABLED=true` (also accepted: `1`, `yes`) in the web service env; the scheduler passes it
+to the refresh child (allow-list), and a flag change triggers a startup refresh. Off = identical output to before.
+
+What runs (scripts/football/refresh.py `nfl_injury_adjustments`, both the 04:00 America/Chicago refresh and the startup refresh):
+- Downloads the current season's `injuries` file and the current + previous season pbp into a temporary directory, computes
+  {(week, team): points} for upcoming games with the production constants above (`injuries.PRODUCTION`, fitted 2019-2022),
+  and deletes the temporary directory in a `finally` block before returning.
+- Upcoming games with a listed absence get `availabilityAdj: {home, away}` (team points, e.g. -2.72 for a starting QB Out)
+  and their `expected` points move by (home - away)/2 each way. The Node game sim applies the same shift, only when the
+  schedule says `injuriesModeled: true`. Custom/what-if sims (`/api/football/sim`, `/api/sim`) use ratings only and are NOT
+  adjusted.
+- schedule.json carries `injuriesModeled` (true only when the step ran today); /api/leagues exposes `injuriesModeled` on the
+  NFL entry only (the NCAAF entry has no such field). status.json carries `nfl.availability` = on / off / failed / blocked.
+
+Larry's must-haves and how each is enforced:
+- (a) No player id or name in logs, error messages, stack traces, crash reports or debug endpoints. Any failure inside the step
+  is caught and logged as "skipped at <stage> (<ExceptionClass>)" only: never the message (a parser error can quote a row),
+  never a traceback; the site then shows unadjusted margins. A refusal (401/403/persistent 429) stops the source as
+  `nflverse-availability` in blocked.json (cleared only by a human via FOOTBALL_CLEAR_BLOCKS). As a second layer, the
+  per-league catch-all in main() masks nflverse player ids (`\d{2}-\d{7}` -> [id]) in the printed traceback and in the
+  status.json error. Success logs contain counts only. No debug endpoint exposes the private dir.
+- (b) tests/football/injuries.test.mjs runs the real refresh.py with the flag on over synthetic pbp/injury files with planted
+  ids, names, positions, body parts and statuses, starts the app on its output and walks every key and value of every API
+  response (leagues, status, teams, games, schedule, scores, ticker, game sims and play logs, custom sims). It fails on any
+  player-id pattern, any planted string, any injury-status value, or any key like player/gsis/name/position/report/practice/
+  injur* (except `injuriesModeled`). The checker is itself tested against each kind of leak.
+- (c) Nothing player-level is stored: the injury report and the pbp used for roles live only in the temporary directory
+  (deleted) and in function locals. The only file written is private `nfl_availability.json` ({week: {team: points}}), and it
+  is removed when the step is off or fails. The same must-have also changed the existing pbp cache: raw nflverse pbp (which
+  has player names/ids) is now deleted after compaction for the CURRENT season too (before, only past seasons); only its
+  ETag is kept, so the next run is still a conditional GET. Compact caches never had player columns. Python and Node tests
+  scan every public and private file (gz included) for the planted strings and id pattern.
+
+Not covered: defense/OL (no permitted usage source), and NCAAF (not cleared). The site disclaimer says injuries are not
+modeled; it must change the same day the flag goes on (copy owned by the UI side).
 
 ## 6. Pending from the rigor brief
 1. (Done 5a; not adopted, Elo won.) Ridge regression per pass and run unit (EPA ~ off + def + HFA + situation) with exponential decay / Kalman recency and a Bayesian prior

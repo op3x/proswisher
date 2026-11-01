@@ -112,6 +112,12 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
     if (!ready(lg)) return { error: `${lg} data not loaded` };
     const m = matchup({ league: lg, team: g.home }, { league: lg, team: g.away }, { neutral: g.neutral });
     if (m.error) return m;
+    // NFL player availability (FOOTBALL_INJURIES_ENABLED in the refresh): derived team points only, same split as refresh.py
+    const av = lg === "nfl" && L.nfl?.schedule?.injuriesModeled === true ? g.availabilityAdj : null;
+    if (av && Number.isFinite(av.home) && Number.isFinite(av.away)) {
+      const d = (av.home - av.away) / 2;
+      m.target = { H: Math.max(3, m.target.H + d), A: Math.max(3, m.target.A - d) };
+    }
     const seed = [...String(id)].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
     const r = { game: g, ...simulate(m, { n, seed, playoff: !!g.playoff }) };
     sims.set(id, r);
@@ -131,5 +137,7 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
     setImmediate(step);
   }
 
-  return { load, status, ready, teamRating, matchup, simulate, games, findGame, gameSim, precompute, data: L };
+  const injuriesModeled = () => L.nfl?.schedule?.injuriesModeled === true;
+
+  return { load, status, ready, injuriesModeled, teamRating, matchup, simulate, games, findGame, gameSim, precompute, data: L };
 }

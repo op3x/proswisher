@@ -47,7 +47,9 @@ export function registerFootballRoutes(app, { store, ticker, pipeline, env = pro
   // Generic: every league of every registered SportModule, with readiness. Basketball will appear here when added.
   app.get("/api/leagues", (_req, res) => {
     noStore(res).json({ app: appName(env), leagues: allLeagues().map((l) => ({ ...l, ready: store.ready(l.id) ?? false,
-      season: store.data[l.id]?.ratings?.season ?? null, asOfWeek: store.data[l.id]?.ratings?.asOfWeek ?? null })) });
+      season: store.data[l.id]?.ratings?.season ?? null, asOfWeek: store.data[l.id]?.ratings?.asOfWeek ?? null,
+      // NFL only (college availability is not cleared): true when the published NFL schedule includes player availability
+      ...(l.id === "nfl" ? { injuriesModeled: store.injuriesModeled?.() === true } : {}) })) });
   });
 
   app.get("/api/football/status", (_req, res) => {

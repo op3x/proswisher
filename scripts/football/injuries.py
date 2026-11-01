@@ -1,4 +1,4 @@
-"""NFL player-availability adjustment (RESEARCH PROTOTYPE, behind FOOTBALL_INJURIES_ENABLED, default off).
+"""NFL player-availability adjustment (behind FOOTBALL_INJURIES_ENABLED, default off; NFL only, college is not cleared).
 
 Source: nflverse-data `injuries` release (CC BY 4.0, cleared by Larry for NFL with conditions I1-I4):
   I1 model-only: nothing from these rows (names, positions, body parts, practice or game status) is ever written to public
@@ -16,7 +16,7 @@ Method (no look-ahead; see docs/sim-methodology.md section 5g):
   points  margin adjustment = -(b_qb * qb_loss + b_sk * skill_loss) for each side; b fitted by least squares on the
           residual of the production (Elo) margin on the training seasons only.
 """
-import csv, gzip, os
+import csv, gzip, os, re
 from collections import defaultdict
 
 STATUSES = ("Out", "Doubtful", "Questionable")
@@ -113,3 +113,39 @@ def fit_coefs(rows):
 
 def enabled(env=os.environ):
     return str(env.get("FOOTBALL_INJURIES_ENABLED", "")).lower() in ("1", "true", "yes")
+
+
+# Production constants: fitted on 2019-2022 only (scripts/football/injuries_backtest.py), walk-forward tested on 2023-2025.
+PRODUCTION = {"rates": {"Out": 1.0, "Doubtful": 0.9873, "Questionable": 0.3536}, "b_qb": 2.7233, "b_skill": 6.2885,
+              "lookback": LOOKBACK, "fitSeasons": [2019, 2020, 2021, 2022]}
+
+
+def team_adjustments(pbp_paths, injury_paths, season, team_weeks, const=PRODUCTION):
+    """Derived, team-level only: {(week, team): points} for the requested (week, team) pairs that have a report.
+    points = -(b_qb * qb_loss + b_skill * skill_loss), i.e. how many points the listed absences are expected to cost that
+    team. Player ids, statuses and roles exist only in this function's locals and are dropped before it returns."""
+    usage = pbp_usage(pbp_paths)
+    role = roles_before(usage)
+    reports = load_reports(injury_paths)
+    out = {}
+    for w, t in team_weeks:
+        if (season, w, t) not in reports:
+            continue
+        q, k = team_loss(reports, role, const["rates"], season, w, t)
+        out[(w, t)] = round(-(const["b_qb"] * q + const["b_skill"] * k), 2) + 0.0   # + 0.0: no "-0.0" in JSON
+    del usage, role, reports
+    return out
+
+
+_ID = re.compile(r"\b\d{2}-\d{7}\b")
+
+
+def safe_error(stage, e):
+    """Log text for a failure in the injury step: the stage and the exception CLASS only. The message is never used
+    because parser/lookup errors can quote a row (player id or name); no traceback is printed either (Larry (a))."""
+    return f"NFL injuries: skipped at {stage} ({type(e).__name__}); expected margins are unadjusted"
+
+
+def scrub(text):
+    """Belt and braces for any other error text that reaches logs or status.json: mask nflverse player ids."""
+    return _ID.sub("[id]", str(text))

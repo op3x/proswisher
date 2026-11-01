@@ -1,5 +1,6 @@
 // Sport-agnostic explainer. Football first; basketball steps slot in when NBA/NCAAB launch.
 import { Link } from "react-router-dom";
+import ModelDisclaimer from "../components/ModelDisclaimer";
 import { site } from "../config/site";
 
 export default function HowItWorks() {
@@ -23,7 +24,7 @@ export default function HowItWorks() {
         You can pit any two teams, including different seasons or a college team against a pro team. Those games can never be played, so they are labeled "Hypothetical matchup. Not a real game." and can't be checked against a real result.
       </Step>
       <h2 className="text-lg font-bold pt-2">What it ignores</h2>
-      <p className="text-slate-400 text-sm">Injuries, weather, coaching changes and market prices aren't modeled yet. A simulation is an estimate, not a guarantee. {site.pickDisclaimer}</p>
+      <ModelDisclaimer className="text-slate-400 text-sm" />
       <Link to="/simulate" className="inline-flex items-center min-h-11 rounded-lg bg-accent text-ink font-semibold px-4">{site.heroCta}</Link>
     </div>
   );

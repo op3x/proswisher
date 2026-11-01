@@ -2,18 +2,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLeagues, SAMPLE_RETRY_MS } from "../sports/hooks";
-import { getSchedule, getTeams, runSim, Sourced } from "../sports/api";
+import { getSchedule, getTeams, runGameSim, runSim, Sourced } from "../sports/api";
 import { ctDateTime, pct, signed } from "../sports/format";
 import type { League, ScoreGame, SimResult, Team } from "../sports/types";
 import GamePlayer from "../components/GamePlayer";
 import DataSources from "../components/DataSources";
+import ModelDisclaimer, { useInjuriesModeled } from "../components/ModelDisclaimer";
 import { preloadRenderer } from "../renderers/registry";
 import { site } from "../config/site";
 
 const THIS_SEASON = 2026;
 // Ryan + Larry 10/31: cross-era/cross-level label (replaces "For entertainment only"). Shown instead of the API label.
 const HYPOTHETICAL = "Hypothetical matchup. Not a real game.";
-const FULL_DISCLAIMER = "Injuries, weather, coaching changes and market prices aren't modeled yet. A simulation is an estimate, not a guarantee.";
 const sel = "w-full min-h-11 rounded-md bg-ink border border-line px-3 text-sm";
 
 function SamplePill() { return <span className="rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 text-[11px] font-semibold">Sample data, not a real simulation</span>; }
@@ -58,6 +58,7 @@ const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 export default function Simulate() {
   const [params, setParams] = useSearchParams();
   const leagues = useLeagues();
+  const injuriesModeled = useInjuriesModeled();
   const enabled = useMemo(() => (leagues?.data || []).filter((l) => l.enabled), [leagues]);
   const [league, setLeague] = useState(params.get("league") || "nfl");
   const [fictional, setFictional] = useState(params.get("mode") === "fictional");
@@ -95,8 +96,11 @@ export default function Simulate() {
     setBusy(true); setResult(null);
     setParams({ league, home, away, ...(fictional ? { mode: "fictional" } : {}) }, { replace: true });
     try {
-      const r = await runSim({ league: hl, home, away, n, ...(fictional ? { homeLeague: hl, awayLeague: al, homeSeason: hs, awaySeason: as, neutral: crossLevel } : {}) },
-        { home: fictional && hs !== THIS_SEASON ? { ...h, name: `${hs} ${h.name}` } : h, away: fictional && as !== THIS_SEASON ? { ...a, name: `${as} ${a.name}` } : a });
+      const req = { league: hl, home, away, n, ...(fictional ? { homeLeague: hl, awayLeague: al, homeSeason: hs, awaySeason: as, neutral: crossLevel } : {}) };
+      const names = { home: fictional && hs !== THIS_SEASON ? { ...h, name: `${hs} ${h.name}` } : h, away: fictional && as !== THIS_SEASON ? { ...a, name: `${as} ${a.name}` } : a };
+      // A real scheduled game uses the game's own sim (NFL injury-adjusted when on); anything else is a custom matchup.
+      const sched = !fictional ? upcoming.find((g) => g.home.id === home && g.away.id === away) : undefined;
+      const r = sched && schedule?.source === "live" ? await runGameSim(sched.id, req, names) : await runSim(req, names);
       if (entertainment) r.entertainmentOnly = true;
       setResult(r);
     } catch { setErr("The simulator didn't respond. Try again in a moment."); }
@@ -222,7 +226,8 @@ export default function Simulate() {
             {/* Always rendered, outside the hidden part: quarter note, hypothetical label, 21+ disclaimer, data sources. */}
             <p className="text-[11px] text-slate-400">Quarter scores show a typical scoring shape, not a precise forecast. {r.periodKind === "line" ? "They add up to the median final score; regular time only." : "Each quarter's median is taken on its own, so they needn't add up to the median final."}</p>
             {r.entertainmentOnly && <p className="text-xs text-fuchsia-200">{HYPOTHETICAL}</p>}
-            <p className="text-xs text-slate-400">{FULL_DISCLAIMER} {site.pickDisclaimer}</p>
+            {injuriesModeled && !r.injuryAdjusted && <p className="text-xs text-slate-300" data-testid="custom-injury-note">{site.modelDisclaimer.customNote}</p>}
+            <ModelDisclaimer />
             <DataSources only={[hl, al]} />
           </div>
         </section>

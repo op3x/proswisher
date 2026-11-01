@@ -52,7 +52,7 @@ const fromLeagueRow = (l: any): League => {
   const count = l.periods?.count ?? l.rules?.periods ?? mock?.periods.count ?? 4;
   return { id: String(l.id), sport: l.sport, name: mock?.name || String(l.name || l.id).toUpperCase(),
     periods: l.periods?.label ? l.periods : { count, label: count === 2 ? "Half" : "Quarter", short: count === 2 ? "H" : "Q" },
-    enabled: l.enabled ?? true, attribution: attributionFor(String(l.id), l.attribution) };
+    enabled: l.enabled ?? true, attribution: attributionFor(String(l.id), l.attribution), injuriesModeled: l.injuriesModeled === true };
 };
 export async function getLeagues(): Promise<Sourced<League[]>> {
   try {
@@ -133,6 +133,18 @@ function fromFootballSim(r: any, req: SimRequest): SimResult {
     entertainmentOnly: !!(r.entertainmentOnly || r.label), label: r.label,
     representative: { final: rep.final, periods: rep.periods || rep.quarters, overtime: !!rep.overtime, events },
   };
+}
+
+/** Scheduled game (server game id): the precomputed game sim, which carries NFL injury adjustments when they're on.
+ *  Falls back to the custom matchup sim (no injury adjustment). */
+export async function runGameSim(gameId: string, req: SimRequest, names: { home: Team; away: Team }): Promise<SimResult> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const j = await getJson<any>(`/api/football/games/${encodeURIComponent(gameId)}/sim`);
+    const r = fromFootballSim(j, req);
+    r.injuryAdjusted = req.league === "nfl" && !!j?.game?.availabilityAdj;
+    return r;
+  } catch { return runSim(req, names); }
 }
 
 export async function runSim(req: SimRequest, names: { home: Team; away: Team }): Promise<SimResult> {

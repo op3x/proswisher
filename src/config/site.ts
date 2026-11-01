@@ -11,6 +11,12 @@
 import commerce from "./commerce.json";
 import geo from "./geo.json";
 
+// Business address parts (see site.businessAddress). Box format is "#<digits>" after the street, never Unit/Suite.
+const ADDRESS_STREET = "5970 E State St";
+const ADDRESS_CITY = "Rockford, IL 61108";
+// TODO(box-number): Anytime Mailbox box number, digits only. Empty until Ryan buys the mailbox (never blocks launch).
+const BUSINESS_ADDRESS_BOX: string = "";
+
 export type Framing = "betting" | "fan";
 export const FRAMING: Framing = "betting";
 
@@ -45,10 +51,11 @@ export const site = {
   year: 2026,
   // ── Placeholders: clearly marked, must be filled before launch ──
   // Ryan 10/31 9:47 PM: Anytime Mailbox (E State St location). The ONLY street address allowed on the site
-  // (tests/server/no-address.test.mjs). Box format is "#<box>" after the street, never Unit/Suite.
-  // TODO(box-number): replace #XXX with the real box number once Ryan buys the mailbox. scripts/guard.mjs fails
-  // any APP_ENV=production build/start while it still reads #XXX (preview builds are fine).
-  businessAddress: "5970 E State St #XXX, Rockford, IL 61108",
+  // (tests/server/no-address.test.mjs). Ryan 9:52 PM: the address must never hold up a launch, so the box number is
+  // optional: empty renders "5970 E State St, Rockford, IL 61108"; set renders with " #<digits>" after the street.
+  // TODO(box-number): set BUSINESS_ADDRESS_BOX to the digits only (e.g. "123") once Ryan buys the mailbox.
+  businessAddressBox: BUSINESS_ADDRESS_BOX,
+  businessAddress: `${ADDRESS_STREET}${BUSINESS_ADDRESS_BOX ? ` #${BUSINESS_ADDRESS_BOX}` : ""}, ${ADDRESS_CITY}`,
   // Larry 10/31, exact text: Terms + paid checkout disclosure.
   caComplaintNotice: "California users: The Complaint Assistance Unit of the Division of Consumer Services of the California Department of Consumer Affairs may be contacted in writing at 1625 North Market Blvd., Suite N 112, Sacramento, CA 95834, or by telephone at (916) 445-1254 or (800) 952-5210.",
   supportEmail: __CONTACT_EMAIL__, // CONTACT_EMAIL env (build time), default support@simculus.com.
@@ -134,6 +141,8 @@ export const site = {
     ["What is Simculus?", "Simculus simulates football games. Pick an NFL or college matchup and we play it out snap by snap thousands of times, then show how often each team won, the typical score and margin, and one representative game you can watch on a drive chart."],
     ["Do you take bets?", "No. Simculus is not a sportsbook. Op3x LLC doesn't accept wagers, hold your money or pay out winnings."],
     ["How does a simulation work?", "Each simulated game is built play by play from team-level tendencies estimated from past seasons: how often a team runs or passes, how many yards plays tend to gain, and how drives end. We repeat the game thousands of times and summarize the results as ranges, not a single answer."],
+    // {modeled} = site.modelDisclaimer (injuries text when /api/leagues injuriesModeled is on for NFL)
+    ["What does a simulation leave out?", "{modeled}"],
     ["What do the numbers on the results page mean?", "Win chance is the share of simulated games each team won. The score, margin and total show the middle of the simulated results with a range around them. Quarter scores show a typical scoring shape, not a precise forecast."],
     ["Is the game I watch what will actually happen?", "No. The game on the drive chart is one simulated game picked because it lands close to the typical margin and total. It's an illustration of how a game like this can unfold, not a prediction of the actual plays."],
     ["Why don't simulated plays name any players?", "Simulated plays use position labels only. We don't use real player names, likenesses, team logos or helmets."],
@@ -201,6 +210,14 @@ export const site = {
   footerDisclaimer: commerce.disclaimers.footer, // single source: src/config/commerce.json (server block page uses it too)
   // Next to every prediction and on checkout (`disclaimers.short`).
   pickDisclaimer: commerce.disclaimers.short,
+  // What the model covers. Driven by /api/leagues `injuriesModeled` (NFL row); see components/ModelDisclaimer.tsx.
+  modelDisclaimer: {
+    // injuriesModeled false/missing (unchanged text)
+    base: "Injuries, weather, coaching changes and market prices aren't modeled yet. A simulation is an estimate, not a guarantee. " + commerce.disclaimers.short,
+    // Larry 10/31 (NFL injuries cleared), exact text
+    injuries: "NFL injury adjustments use public injury reports, which may be late or incomplete. College injuries, weather, coaching changes and market prices aren't modeled yet. A simulation is an estimate, not a guarantee. Not betting advice. 21+. Gambling problem? Call 1-800-GAMBLER.",
+    customNote: "Custom matchups don't include injury adjustments.",
+  },
   pastResults: "Past results do not guarantee future results.",
   // Larry's order (disclaimer-footer.md §5): Track record · Terms · Privacy · Refunds* · Cancel subscription ·
   // Responsible gaming · Contact. *Refunds stays unshipped until support@ works (P11). FAQ kept at the end.

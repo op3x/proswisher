@@ -11,6 +11,7 @@ export interface League {
   periods: { count: number; label: string; short: string }; // football: 4 quarters "Q"; basketball: 4 quarters / 2 halves
   enabled: boolean;      // false = "coming soon" in the picker
   attribution?: string;  // data-source credit from /api/leagues (Larry memo 24)
+  injuriesModeled?: boolean; // /api/leagues, NFL only: scheduled NFL game sims use public injury reports
 }
 
 export interface Team { id: string; name: string } // name = plain-text "City Name" (e.g. "Chicago Bears"), never logos
@@ -60,6 +61,7 @@ export interface FootballPayload {
 }
 
 export interface SimResult {
+  injuryAdjusted?: boolean; // true only for a scheduled NFL game sim served with availability adjustments
   league: string;
   sport: Sport;
   n: number;

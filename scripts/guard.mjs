@@ -21,14 +21,6 @@ if (LIVE_ENABLED && APP_ENV !== "production") problems.push(`STRIPE_LIVE_ENABLED
 // Larry 10:24: the geo bypass is preview-only; with APP_ENV=production it must stop the start, not be silently ignored.
 if (/^(1|true|yes|on)$/i.test(String(env.GEO_PREVIEW_BYPASS || "").trim()) && APP_ENV === "production") problems.push("GEO_PREVIEW_BYPASS is set while APP_ENV=production (preview-only flag)");
 
-// TODO(box-number) launch check (Ryan 10/31): production must not ship the placeholder mailbox number.
-try {
-  const siteSrc = (await import("node:fs")).readFileSync(new URL("../src/config/site.ts", import.meta.url), "utf8");
-  const addr = (siteSrc.match(/businessAddress:\s*"([^"]*)"/) || [])[1];
-  if (APP_ENV === "production" && (!addr || /#X+\b|#XXX/i.test(addr) || !/^5970 E State St #\d+, Rockford, IL 61108$/.test(addr)))
-    problems.push("site.businessAddress still has the placeholder box number (TODO(box-number)); set the real #<box> before a production build");
-} catch { if (APP_ENV === "production") problems.push("could not read src/config/site.ts for the box-number launch check"); }
-
 if (problems.length) {
   console.error("[guard] REFUSING to build/start:\n - " + problems.join("\n - "));
   process.exit(1);

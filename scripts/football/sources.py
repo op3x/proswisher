@@ -1,6 +1,7 @@
 """Football data sources behind small provider interfaces (same rules as scripts/providers.py, Larry memo 20).
 
-- NFL: nflverse release files, ONLY the CC BY 4.0 `pbp` and `schedules` releases (Larry memo 24, N2). Attribution
+- NFL: nflverse release files, ONLY the CC BY 4.0 `pbp` and `schedules` releases (Larry memo 24, N2), plus `injuries`
+  (Larry Oct 31, I1-I4; model-only research prototype behind FOOTBALL_INJURIES_ENABLED, default off). Attribution
   (with licence link and change note, memo 24 N4) is NFL_ATTRIBUTION below. Banned (BANNED_NFLVERSE_TAGS, enforced in
   Nflverse._download and by tests): FTN charting and participation (CC BY-SA), Next Gen Stats (NFL-owned), anything
   sourced from Pro-Football-Reference, ESPN or OverTheCap, and the teams file (logo URLs). Raw play rows are never
@@ -19,7 +20,9 @@ NFL_ATTRIBUTION = ("NFL data: nflverse (github.com/nflverse/nflverse-data), lice
                    "(https://creativecommons.org/licenses/by/4.0/). Modified by Op3x LLC (aggregated, modeled and simulated). "
                    "Not affiliated with or endorsed by the NFL or nflverse.")
 NCAAF_ATTRIBUTION = "Data provided by CollegeFootballData.com."
-ALLOWED_NFLVERSE_TAGS = ("pbp", "schedules")
+# Oct 31: Larry cleared the CC BY 4.0 `injuries` release for NFL (I1 model only, I2 player-ID join server-side,
+# I3 same attribution, I4 only this tag added). Fetching it is additionally gated by FOOTBALL_INJURIES_ENABLED (off).
+ALLOWED_NFLVERSE_TAGS = ("pbp", "schedules", "injuries")
 # memo 24: excluded nflverse releases (licence or upstream owner) plus the teams file (logo URLs)
 BANNED_NFLVERSE_TAGS = ("ftn_charting", "pbp_participation", "participation", "nextgen_stats", "pfr_advstats", "snap_counts",
                         "draft_picks", "combine", "espn_data", "contracts", "teams", "teams_colors_logos")
@@ -116,6 +119,15 @@ class Nflverse(NflDataProvider):
         os.makedirs(dest_dir, exist_ok=True)
         dest = os.path.join(dest_dir, f"play_by_play_{season}.csv.gz")
         return self._download(f"{self.BASE}/pbp/play_by_play_{season}.csv.gz", dest, f"nflverse pbp {season}")
+
+    def injuries_file(self, season, dest_dir):
+        """RESEARCH ONLY, PRIVATE dir only (I1/I2). Refuses unless FOOTBALL_INJURIES_ENABLED is on; not called by refresh."""
+        if str(os.environ.get("FOOTBALL_INJURIES_ENABLED", "")).lower() not in ("1", "true", "yes"):
+            raise RuntimeError("injuries are off (FOOTBALL_INJURIES_ENABLED); research prototype only")
+        os.makedirs(dest_dir, exist_ok=True)
+        ext = "csv.gz" if season >= 2023 else "csv"   # the release has no .csv.gz before 2023
+        dest = os.path.join(dest_dir, f"injuries_{season}.{ext}")
+        return self._download(f"{self.BASE}/injuries/injuries_{season}.{ext}", dest, f"nflverse injuries {season}")
 
     def schedule_rows(self, dest_dir):
         os.makedirs(dest_dir, exist_ok=True)

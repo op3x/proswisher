@@ -242,6 +242,51 @@ and fits play parameters from the previous season's CFBD plays (16 calls, once p
 For the record, on the test seasons it gave Brier 0.1687, log loss 0.5072, margin coverage 75.2/90.8: no better. Too-narrow NCAAF margin intervals
 remain an open item (candidates: heavier-tailed team-strength uncertainty early in the season, or a mismatch blowout term).
 
+## 5g. NFL injury/availability adjustment: research prototype, behind FOOTBALL_INJURIES_ENABLED (off) (2026-10-31)
+
+Source: nflverse-data `injuries` release (CC BY 4.0), cleared by Larry for NFL with I1-I4 (model only; player-ID join
+server-side; same attribution; only the `injuries` tag added to the allow-list). Terms: research/data-sources-terms.md s.5.
+NCAAF: no permitted source (CFBD has no injury endpoint; conference availability reports listed for Larry's review, s.6).
+
+Method (scripts/football/injuries.py; no look-ahead, no player names anywhere in output):
+- Usage from pbp (IDs in memory only): each player's share of team QB dropbacks (passer or scrambler) and of skill touches
+  (designed rushes + targets) per game. Role before week w = mean share over his last 4 games played before week w (this
+  season or last). Defense/OL are not covered: pbp gives no usage for them, and snap_counts (PFR) and participation are banned.
+- Status = final game status on the week-w report (Out / Doubtful / Questionable). P(miss | status), estimated on
+  2019-2022 only (miss = no usage that week): Out 1.000, Doubtful 0.987, Questionable 0.354 (n 937 / 157 / 1,332).
+- Team loss = sum of P(miss) x share, separately for QB and skill (capped at 1). Home margin adjustment =
+  -(b_qb x (home QB loss - away QB loss) + b_skill x (home skill loss - away skill loss)), split +-1/2 into expected points.
+- b fitted by least squares on the residual of the production Elo margin, 2019-2022 only: b_qb = 2.72, b_skill = 6.29 pts
+  per unit of loss (a fully missing starting QB ~ -2.7 pts on top of what Elo already absorbed; IR players have left the
+  report and are already in Elo). Train margin MAE 10.155 -> 10.086. Leave-one-season-out on 2019-2022 (model choice,
+  train only): both terms 10.110 vs base 10.156, QB-only 10.123, "new absences only" 10.156, so both terms kept.
+
+Test: 2023 wk1 - 2026 wk8 walk-forward (963 games), re-simmed with n=1000, envSd 0.8, same params and seeds as the Q2-fix
+production rows (paired). Expected margins moved by 0.98 pts on average.
+
+| model | n | Brier | log loss | margin MAE | margin RMSE | winner % |
+|---|---|---|---|---|---|---|
+| production sim (Elo margin + EPA total, Q2 fix, envSd 0.8) | 963 | 0.2237 | 0.6393 | 10.17 | 13.17 | 64.5% |
+| injury-adjusted sim (flag on) | 963 | 0.2213 | 0.6347 | 10.10 | 13.03 | 65.9% |
+| closing line (n=963) | 963 | 0.2128 | 0.6151 | 9.74 | 12.64 | 67.5% |
+
+Per season, paired difference (adjusted - production), se in brackets:
+
+| season | Brier | margin MAE |
+|---|---|---|
+| 2023 | -0.0006 (se 0.0025) | -0.001 (se 0.082) |
+| 2024 | -0.0064 (se 0.0025) | -0.243 (se 0.095) |
+| 2025 | -0.0006 (se 0.0026) | -0.027 (se 0.096) |
+| 2026 | -0.0008 (se 0.0045) | +0.121 (se 0.147) |
+
+Result: out of sample it improves Brier (-0.0024, about 1.7 se), log loss (-0.0046), margin MAE (-0.07, about 1.3 se),
+RMSE and winner %, so it passes the keep rule (better Brier AND MAE). The gain is concentrated in 2024; 2023 and 2025 are
+flat-to-better and 2026 (108 games) has a slightly worse MAE. It closes about a quarter of the Brier gap to the closing line.
+Status: KEPT as code behind FOOTBALL_INJURIES_ENABLED, default OFF. It is not wired into refresh.py, the API or the site;
+Nflverse.injuries_file() refuses while the flag is off, and a test checks refresh/server code never mentions injuries.
+Turning it on would need: wiring into the refresh (weekly report + pbp IDs, server-side only), Larry's I1-I4 re-check, and
+the same-day disclaimer change (site copy says injuries aren't modeled).
+
 ## 6. Pending from the rigor brief
 1. (Done 5a; not adopted, Elo won.) Ridge regression per pass and run unit (EPA ~ off + def + HFA + situation) with exponential decay / Kalman recency and a Bayesian prior
    regressed to preseason, weight chosen by rolling CV. scripts/football/linalg.py has the pure-Python solvers (weighted ridge with prior mean, logistic Newton with SEs,
@@ -255,6 +300,7 @@ remain an open item (candidates: heavier-tailed team-strength uncertainty early 
 7. Generic backtest harness keyed by SportModule (today backtest.mjs is football-specific; the MC runner, API and scheduler hook are generic).
 
 ## Reproduce
+cd scripts && python3 -m football.injuries_backtest <nflverse cache: games.csv, pbp 2018-2026, injuries 2019-2026> <dir with q2_<season> shards> <out>; then BT_SEASONS=<s> BT_ENV_SD=0.8 node scripts/football/backtest.mjs <out>/inj_<s> 1000   # 5g injuries (flag-off research)
 python3 scripts/football/backtest_ncaaf.py --raw <cfbd raw dir> --test 2024-2026 --out <dir>; BT_LEAGUE=ncaaf BT_SEASONS=2024 BT_ENV_SD=0.8 BT_LINE_SD=15.18 node scripts/football/backtest.mjs <dir> 1000   # step 5 NCAAF
 BT_SEASONS=2023 BT_ENV_SD=0.8 node scripts/football/backtest.mjs <dir> 1000   # step 2 (shard by season, merge rows.json)
 python3 scripts/football/quarter_eval.py <dir>/rows.json <out.json> play_by_play_202{3,4,5,6}.csv.gz   # step 4

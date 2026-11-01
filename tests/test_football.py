@@ -121,7 +121,8 @@ class BannedSources(unittest.TestCase):
     def test_allowed_releases_pass(self):
         for t in SRC.ALLOWED_NFLVERSE_TAGS:
             SRC.check_url(f"https://github.com/nflverse/nflverse-data/releases/download/{t}/x.csv")
-        self.assertEqual(set(SRC.ALLOWED_NFLVERSE_TAGS), {"pbp", "schedules"})
+        self.assertEqual(set(SRC.ALLOWED_NFLVERSE_TAGS), {"pbp", "schedules", "injuries"})   # I4: only `injuries` was added
+        self.assertFalse(set(SRC.ALLOWED_NFLVERSE_TAGS) & set(SRC.BANNED_NFLVERSE_TAGS))
 
     def test_no_code_references_banned_releases(self):
         root = os.path.join(os.path.dirname(__file__), "..")
@@ -344,6 +345,43 @@ class LinAlg(unittest.TestCase):
         # a prior mean pulls the estimate toward it when the penalty is large
         b2, _ = LA.ridge_sparse([([0, 1], x, 3 * x[1], 1.0) for x in X[:20]], 2, [0.0, 1e6], prior=[0.0, 1.0])
         self.assertAlmostEqual(b2[1], 1.0, delta=0.01)
+
+class InjuriesPrototype(unittest.TestCase):
+    """Oct 31 injuries research (I1-I4): flag off by default, no look-ahead roles, model-only output."""
+
+    def test_flag_off_by_default_and_fetch_refused(self):
+        from football import injuries as INJ
+        self.assertFalse(INJ.enabled({}))
+        with mock.patch.dict(os.environ, {"FOOTBALL_INJURIES_ENABLED": ""}), mock.patch("urllib.request.urlopen") as u:
+            with self.assertRaises(RuntimeError):
+                SRC.Nflverse().injuries_file(2026, "/tmp/never")
+            u.assert_not_called()
+
+    def test_refresh_and_server_do_not_use_injuries(self):
+        root = os.path.join(os.path.dirname(__file__), "..")
+        for f in ("scripts/football/refresh.py", "server/football/routes.mjs", "server/football/scheduler.mjs",
+                  "server/football/store.mjs", "server/football/ticker.mjs"):
+            p = os.path.join(root, f)
+            self.assertNotIn("injur", open(p, encoding="utf-8").read().lower(), f)
+
+    def test_roles_use_only_earlier_games(self):
+        from football import injuries as INJ
+        usage = {(2024, 1, "KC"): {"q1": (1.0, 0.0), "r1": (0.0, 0.5)}, (2024, 2, "KC"): {"q2": (1.0, 0.0), "r1": (0.0, 1.0)}}
+        role = INJ.roles_before(usage)
+        self.assertEqual(role("q1", 2024, 1), (0.0, 0.0))          # nothing before week 1
+        self.assertEqual(role("q1", 2024, 2), (1.0, 0.0))
+        self.assertEqual(role("r1", 2024, 2), (0.0, 0.5))          # week-2 usage not visible in week 2
+        self.assertEqual(role("q2", 2024, 2), (0.0, 0.0))
+        rates = {"Out": 1.0, "Doubtful": 0.9, "Questionable": 0.4}
+        rep = {(2024, 2, "KC"): [("q1", "Out"), ("r1", "Questionable")]}
+        self.assertEqual(INJ.team_loss(rep, role, rates, 2024, 2, "KC"), (1.0, 0.2))
+        self.assertEqual(INJ.team_loss(rep, role, rates, 2024, 2, "BUF"), (0.0, 0.0))
+
+    def test_fit_recovers_coefficients(self):
+        from football import injuries as INJ
+        rows = [(-(3 * q + 6 * k), q, k) for q, k in ((1, 0), (0, 1), (0.5, 0.2), (-1, 0.3), (0.2, -0.7))]
+        bq, bk = INJ.fit_coefs(rows)
+        self.assertAlmostEqual(bq, 3, places=6); self.assertAlmostEqual(bk, 6, places=6)
 
 
 if __name__ == "__main__":

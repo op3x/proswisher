@@ -66,6 +66,8 @@ export default function Simulate() {
   const [teams, setTeams] = useState<Record<string, Sourced<Team[]>>>({});
   const [schedule, setSchedule] = useState<Sourced<ScoreGame[]> | null>(null);
   const [result, setResult] = useState<SimResult | null>(null), [busy, setBusy] = useState(false), [err, setErr] = useState("");
+  const [revealed, setRevealed] = useState(false); // outcome stays hidden until the simulated game finishes
+  useEffect(() => { setRevealed(false); }, [result]);
 
   useEffect(() => { for (const l of enabled) preloadRenderer(l.sport); }, [enabled]);
   // Sample fallbacks (server still refreshing data at startup) are retried until the live feed answers.
@@ -162,49 +164,64 @@ export default function Simulate() {
         </section>
       )}
       {r && fav && !busy && (
-        <section className="space-y-4" aria-live="polite">
+        <section className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-bold">{r.teams.away.name} at {r.teams.home.name}</h2>
             {r.sample && <SamplePill />}
             {r.entertainmentOnly && <span className="rounded bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-500/30 px-2 py-0.5 text-[11px] font-semibold">{ENTERTAINMENT}</span>}
           </div>
-          <div className="rounded-xl bg-panel border border-line p-4 space-y-4">
-            <div>
-              <div className="flex justify-between text-sm"><span className="text-amber-300 font-semibold">{r.teams.away.name} {pct(r.winProbability.away)}</span><span className="text-accent font-semibold">{pct(r.winProbability.home)} {r.teams.home.name}</span></div>
-              <div className="mt-1 h-3 rounded-full overflow-hidden flex bg-line" role="img" aria-label={`Win probability: ${r.teams.away.name} ${pct(r.winProbability.away)}, ${r.teams.home.name} ${pct(r.winProbability.home)}`}>
-                <div className="bg-amber-400" style={{ width: pct(r.winProbability.away) }} /><div className="bg-slate-500" style={{ width: pct(r.winProbability.tie) }} /><div className="bg-accent flex-1" />
+
+          {/* Ryan 10/31: the simulated game plays first (8x by default) and no outcome is shown until it ends. */}
+          <div className="rounded-xl bg-panel border border-line p-4 space-y-2">
+            <h3 className="font-bold">Watch one simulated game</h3>
+            <p className="text-xs text-slate-400">One game from the batch, picked as closest to the median margin and total. It's a simulation, not a forecast of the actual plays. Players appear only by position.{revealed && <> Final: {r.teams.away.name} {r.representative.final.away}, {r.teams.home.name} {r.representative.final.home}{r.representative.overtime ? " (OT)" : ""}.</>}</p>
+            <GamePlayer league={lr} sport={r.sport} teams={r.teams} events={r.representative.events} autoPlay hideFuture onComplete={() => setRevealed(true)} />
+          </div>
+
+          <div className="rounded-xl bg-panel border border-line p-4 space-y-4" data-testid="sim-results">
+            {!(revealed || !r.representative.events.length) ? (
+              <div className="flex items-center gap-3 py-4" role="status" aria-live="polite">
+                <span className="inline-block h-5 w-5 rounded-full border-2 border-accent border-t-transparent animate-spin" aria-hidden="true" />
+                <div>
+                  <p className="font-semibold">Simulation running…</p>
+                  <p className="text-xs text-slate-400">Win chances, scores and the quarter line for all {r.n.toLocaleString()} games appear when the game above reaches the final whistle. Slow it down or step through plays any time.</p>
+                </div>
               </div>
-              <p className="mt-2 text-sm text-slate-300">{fav.t.name} won {pct(fav.p)} of {r.n.toLocaleString()} simulated games.{r.winProbability.tie > 0.001 ? ` Ties: ${pct(r.winProbability.tie)}.` : ""}</p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-lg bg-ink border border-line p-3">
-                <div className="text-xs text-slate-400">Median score</div>
-                <div className="text-2xl font-extrabold tabular-nums">{r.medianScore.away}–{r.medianScore.home}</div>
-                <div className="text-xs text-slate-400">Away–home</div>
+            ) : (
+              <div className="space-y-4" aria-live="polite">
+                <div>
+                  <div className="flex justify-between text-sm"><span className="text-amber-300 font-semibold">{r.teams.away.name} {pct(r.winProbability.away)}</span><span className="text-accent font-semibold">{pct(r.winProbability.home)} {r.teams.home.name}</span></div>
+                  <div className="mt-1 h-3 rounded-full overflow-hidden flex bg-line" role="img" aria-label={`Win probability: ${r.teams.away.name} ${pct(r.winProbability.away)}, ${r.teams.home.name} ${pct(r.winProbability.home)}`}>
+                    <div className="bg-amber-400" style={{ width: pct(r.winProbability.away) }} /><div className="bg-slate-500" style={{ width: pct(r.winProbability.tie) }} /><div className="bg-accent flex-1" />
+                  </div>
+                  <p className="mt-2 text-sm text-slate-300">{fav.t.name} won {pct(fav.p)} of {r.n.toLocaleString()} simulated games.{r.winProbability.tie >= 0.005 ? ` Ties: ${pct(r.winProbability.tie)}.` : ""}</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg bg-ink border border-line p-3">
+                    <div className="text-xs text-slate-400">Median score</div>
+                    <div className="text-2xl font-extrabold tabular-nums">{r.medianScore.away}–{r.medianScore.home}</div>
+                    <div className="text-xs text-slate-400">Away–home</div>
+                  </div>
+                  <Interval label={`Margin (${r.teams.home.name})`} d={r.margin} fmt={(x) => signed(Math.round(x))} />
+                  <Interval label="Total points" d={r.total} />
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm tabular-nums">
+                    <caption className="text-left text-xs text-slate-400 pb-1">{r.periodKind === "line" ? "Projected points" : "Median points"} by {(lr?.periods.label || "Quarter").toLowerCase()}</caption>
+                    <thead><tr className="text-slate-400 text-xs"><th className="text-left font-normal p-1">Team</th>{r.periodScores.home.map((_, i) => <th key={i} className="p-1 font-normal">{lr?.periods.short || "Q"}{i + 1}</th>)}{r.periodKind === "line" && <th className="p-1 font-normal">Final</th>}</tr></thead>
+                    <tbody>
+                      <tr><td className="p-1 text-amber-300">{r.teams.away.name}</td>{r.periodScores.away.map((x, i) => <td key={i} className="p-1 text-center">{x}</td>)}{r.periodKind === "line" && <td className="p-1 text-center font-semibold">{sum(r.periodScores.away)}</td>}</tr>
+                      <tr><td className="p-1 text-accent">{r.teams.home.name}</td>{r.periodScores.home.map((x, i) => <td key={i} className="p-1 text-center">{x}</td>)}{r.periodKind === "line" && <td className="p-1 text-center font-semibold">{sum(r.periodScores.home)}</td>}</tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <Interval label={`Margin (${r.teams.home.name})`} d={r.margin} fmt={(x) => signed(Math.round(x))} />
-              <Interval label="Total points" d={r.total} />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm tabular-nums">
-                <caption className="text-left text-xs text-slate-400 pb-1">{r.periodKind === "line" ? "Projected points" : "Median points"} by {(lr?.periods.label || "Quarter").toLowerCase()}</caption>
-                <thead><tr className="text-slate-400 text-xs"><th className="text-left font-normal p-1">Team</th>{r.periodScores.home.map((_, i) => <th key={i} className="p-1 font-normal">{lr?.periods.short || "Q"}{i + 1}</th>)}{r.periodKind === "line" && <th className="p-1 font-normal">Final</th>}</tr></thead>
-                <tbody>
-                  <tr><td className="p-1 text-amber-300">{r.teams.away.name}</td>{r.periodScores.away.map((x, i) => <td key={i} className="p-1 text-center">{x}</td>)}{r.periodKind === "line" && <td className="p-1 text-center font-semibold">{sum(r.periodScores.away)}</td>}</tr>
-                  <tr><td className="p-1 text-accent">{r.teams.home.name}</td>{r.periodScores.home.map((x, i) => <td key={i} className="p-1 text-center">{x}</td>)}{r.periodKind === "line" && <td className="p-1 text-center font-semibold">{sum(r.periodScores.home)}</td>}</tr>
-                </tbody>
-              </table>
-              <p className="text-[11px] text-slate-400 mt-1">Quarter scores show a typical scoring shape, not a precise forecast. {r.periodKind === "line" ? "They add up to the median final score; regular time only." : "Each quarter's median is taken on its own, so they needn't add up to the median final."}</p>
-            </div>
+            )}
+            {/* Always rendered, outside the hidden part: quarter note, entertainment label, 21+ disclaimer, data sources. */}
+            <p className="text-[11px] text-slate-400">Quarter scores show a typical scoring shape, not a precise forecast. {r.periodKind === "line" ? "They add up to the median final score; regular time only." : "Each quarter's median is taken on its own, so they needn't add up to the median final."}</p>
             {r.label && <p className="text-xs text-fuchsia-200">{r.label}</p>}
             <p className="text-xs text-slate-400">{site.pickDisclaimer}</p>
             <DataSources only={[hl, al]} />
-          </div>
-
-          <div className="rounded-xl bg-panel border border-line p-4 space-y-2">
-            <h3 className="font-bold">Watch one simulated game</h3>
-            <p className="text-xs text-slate-400">One game from the batch, picked as closest to the median margin and total. It's a simulation, not a forecast of the actual plays. Players appear only by position. Final: {r.teams.away.name} {r.representative.final.away}, {r.teams.home.name} {r.representative.final.home}{r.representative.overtime ? " (OT)" : ""}.</p>
-            <GamePlayer league={lr} sport={r.sport} teams={r.teams} events={r.representative.events} />
           </div>
         </section>
       )}

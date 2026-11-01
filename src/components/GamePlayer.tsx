@@ -5,15 +5,23 @@ import type { League, PlayEvent, Team, Sport } from "../sports/types";
 import { rendererFor } from "../renderers/registry";
 import { periodLabel } from "../sports/format";
 
-const SPEEDS = [0.5, 1, 2, 4];
+const SPEEDS = [0.5, 1, 2, 4, 8];
+export const DEFAULT_SPEED = 8; // Ryan 10/31: default 8x, slower options kept
 const BASE_MS = 1100; // one event at 1x
 
-export default function GamePlayer({ league, sport, teams, events }: { league?: League; sport: Sport; teams: { home: Team; away: Team }; events: PlayEvent[] }) {
+// autoPlay: start as soon as a result arrives. onComplete fires once the last event has fully played (or the user
+// steps/scrubs onto it); the page uses it to keep the outcome hidden until then. hideFuture keeps the play log from
+// listing plays (and scores) that haven't happened yet.
+export default function GamePlayer({ league, sport, teams, events, autoPlay = false, onComplete, hideFuture = false }: {
+  league?: League; sport: Sport; teams: { home: Team; away: Team }; events: PlayEvent[];
+  autoPlay?: boolean; onComplete?: () => void; hideFuture?: boolean;
+}) {
   const [index, setIndex] = useState(0), [progress, setProgress] = useState(0);
-  const [playing, setPlaying] = useState(false), [speed, setSpeed] = useState(1);
-  const raf = useRef(0), last = useRef(0);
+  const [playing, setPlaying] = useState(autoPlay), [speed, setSpeed] = useState(DEFAULT_SPEED);
+  const raf = useRef(0), last = useRef(0), lastIdx = useRef(0);
+  lastIdx.current = index;
   const Renderer = rendererFor(sport);
-  useEffect(() => { setIndex(0); setProgress(0); setPlaying(false); }, [events]);
+  useEffect(() => { setIndex(0); setProgress(0); setPlaying(autoPlay); }, [events]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!playing) return;
     last.current = performance.now();
@@ -22,7 +30,8 @@ export default function GamePlayer({ league, sport, teams, events }: { league?: 
       setProgress((p) => {
         const np = p + (dt * speed) / BASE_MS;
         if (np < 1) return np;
-        setIndex((i) => { if (i + 1 >= events.length) { setPlaying(false); return i; } return i + 1; });
+        if (lastIdx.current + 1 >= events.length) { setPlaying(false); return 1; } // hold the final play complete
+        setIndex((i) => Math.min(events.length - 1, i + 1));
         return 0;
       });
       raf.current = requestAnimationFrame(step);
@@ -30,9 +39,14 @@ export default function GamePlayer({ league, sport, teams, events }: { league?: 
     raf.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf.current);
   }, [playing, speed, events.length]);
+  const doneRef = useRef(false);
+  useEffect(() => { doneRef.current = false; }, [events]);
+  const reachedEnd = events.length > 0 && index >= events.length - 1 && progress >= 1;
+  useEffect(() => { if (reachedEnd && !doneRef.current) { doneRef.current = true; onComplete?.(); } }, [reachedEnd]); // eslint-disable-line react-hooks/exhaustive-deps
   const cur = events[index];
   if (!cur) return <p className="text-sm text-slate-400">No play log returned for this simulation.</p>;
   const atEnd = index >= events.length - 1 && progress >= 1;
+  const done = doneRef.current || atEnd;
   const shown = progress >= 1 ? cur.score : events[index - 1]?.score ?? { home: 0, away: 0 };
   const btn = "inline-flex items-center justify-center min-h-11 min-w-11 rounded-md border border-line px-3 text-sm";
   return (
@@ -65,9 +79,9 @@ export default function GamePlayer({ league, sport, teams, events }: { league?: 
         <span className="text-xs text-slate-400 tabular-nums">{index + 1}/{events.length}</span>
       </div>
       <details className="rounded-lg bg-panel border border-line">
-        <summary className="cursor-pointer px-3 py-2 text-sm font-semibold min-h-11 flex items-center">Play log ({events.length} events)</summary>
+        <summary className="cursor-pointer px-3 py-2 text-sm font-semibold min-h-11 flex items-center">Play log ({hideFuture && !done ? `${index + (progress >= 1 ? 1 : 0)} of ${events.length}` : events.length} events)</summary>
         <ol className="max-h-72 overflow-y-auto text-xs divide-y divide-line">
-          {events.map((e) => (
+          {(hideFuture && !done ? events.slice(0, index + (progress >= 1 ? 1 : 0)) : events).map((e) => (
             <li key={e.t} className={`px-3 py-1.5 flex gap-2 ${e.t === index ? "bg-accent/10" : ""}`}>
               <button className="text-left flex gap-2 w-full" onClick={() => { setPlaying(false); setIndex(e.t); setProgress(1); }}>
                 <span className="w-16 shrink-0 text-slate-400 tabular-nums">{periodLabel(league, e.period, e.clock)}</span>

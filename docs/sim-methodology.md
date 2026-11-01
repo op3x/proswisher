@@ -19,6 +19,7 @@ Numbers come from /workspace/proswisher/scratch/bt3 (rows.json, results.json) an
 - NFL: offense and defense EPA/play per team, opponent-adjusted by ridge-penalised alternating fit (lambda=800 plays) and recency-weighted by
   exponential decay (half-life 16 weeks; 8-week offseason gap, so last season keeps weight ~0.7 at week 1). Implicit shrinkage to league mean.
 - Points model: points = a + b*(off + opp_def) + hfa/2*site, fitted by least squares on the 3 prior seasons using ratings as of each game's week (no look-ahead).
+  The expected game TOTAL now comes from the totals blend in 5i (EPA pair sum + points-ratings total + indoor); the margin from Elo / blend as before.
   Fitted values in the backtest: b 58-66, hfa 1.3-2.3 points.
 - NCAAF: same structure on CFBD per-game PPA; 2025-2026 FBS games; currently a=26.6, b=71.5, hfa=5.0 (n=2844). The HFA looks high vs the ~2.5-3.5 consensus and is unvalidated.
 
@@ -32,7 +33,7 @@ Numbers come from /workspace/proswisher/scratch/bt3 (rows.json, results.json) an
 ## 4. Monte Carlo output (server/sim/montecarlo.mjs, generic over SportModule)
 - n=10,000 by default (cap 50k, API max 20k). mulberry32 fixed seeds -> identical output per (matchup, n, seed).
 - Win/tie probability + MC standard error sqrt(p(1-p)/n).
-- Margin, total and per-period points: mean, sd, SE of mean, median, p05/p95, 80% [p10,p90] and 95% [p2.5,p97.5] intervals, histogram.
+- Margin, total and per-period points (Q4 excludes overtime since 2026-10-31; OT points are reported separately as `overtimePoints` / `lineScore.overtime` on the representative game): mean, sd, SE of mean, median, p05/p95, 80% [p10,p90] and 95% [p2.5,p97.5] intervals, histogram.
 - A representative game whose final matches the median margin, with the full play log in the generic event envelope.
 - ~1 s per 10k NFL sims on the box.
 
@@ -322,6 +323,40 @@ Larry's must-haves and how each is enforced:
 
 Not covered: defense/OL (no permitted usage source), and NCAAF (not cleared). The site disclaimer says injuries are not
 modeled; it must change the same day the flag goes on (copy owned by the UI side).
+
+## 5i. Expected game total (over/under points) model (2026-10-31, Ryan: "do better at the over/under total points")
+
+What changed (scripts/football/totals.py, wired into refresh.py for NFL and NCAAF; margin unchanged):
+- Before: total = 2a + b*x_epa with x_epa = off_h + def_a + off_a + def_h from the EPA ratings.
+- After: total = c0 + c1*x_epa + c2*x_pts (+ c3*indoor, NFL), refit before every week by least squares.
+  - x_pts: expected combined points from game-level points ratings (R.fit on [season, week, team, opp, 1, points scored];
+    opponent-adjusted, recency-weighted, ridge-shrunk; lambda 8, half-life 8 weeks NFL / 12 NCAAF). Picked on validation
+    seasons only (NFL 2020-2022, NCAAF 2023 FBS-vs-FBS) from a lambda {2,4,8} x half-life grid.
+  - indoor: 1 for a dome or closed retractable roof (nflverse schedule `roof`). NFL only (no roof data for college).
+  - Training rows: completed games of the previous 3 NFL seasons (1 NCAAF season) plus earlier weeks of the current season;
+    NFL rows recency-weighted (half-life 22 weeks); NCAAF rows need EPA weight for both teams (as in the points model).
+  - Every feature uses ratings fitted strictly before the game's week; coefficients use only games before the week being
+    predicted. No closing lines, odds or market data are used anywhere in the model.
+  - Falls back to the old EPA total if fewer than 50 training games (ratings.json `totalModel.type` = "epa" vs "blend").
+- Tried and dropped (no validation gain): plays-per-game and drives-per-game pace ratings, month, retractable roof.
+- E.split_points(total, margin) keeps the expected margin exactly; the sim calibrates each team's mean to the split.
+
+Walk-forward test (same games and engine as 5g / 5f; n=1000 sims per game; paired per-game differences, SE in brackets):
+
+| League | Games | Total MAE before | Total MAE after | Paired diff | Margin MAE before / after | Brier before / after |
+|---|---|---|---|---|---|---|
+| NFL 2023 wk1-2026 wk8 (availability on) | 963 | 10.657 | 10.491 | -0.166 (0.094) | 10.104 / 10.105 | 0.2213 / 0.2209 |
+| NCAAF 2024-2026 | 2,442 | 12.971 | 12.698 | -0.273 (0.072) | 13.405 / 13.420 | 0.1687 / 0.1691 |
+
+Total bias after: NFL -0.33, NCAAF -0.09 points per game; total RMSE NFL 13.51 -> 13.30, NCAAF 16.32 -> 15.93.
+Margin and Brier changes are inside one standard error (margin input is identical; the residual is sim noise).
+By season (total MAE paired diff): NFL 2023 -0.80, 2024 +0.17, 2025 +0.09, 2026 -0.07 (the NFL gain is concentrated in
+2023 and is under two SEs pooled); NCAAF 2024 -0.38, 2025 -0.28, 2026 -0.10. Kept for both leagues.
+These are internal backtest numbers, not public accuracy claims.
+
+Reproduce: scratch scripts feats_nfl.py / e4.py (NFL), feats_ncaaf.py / e7.py (NCAAF); verify_prod.py re-runs the test
+through scripts/football/totals.py (max difference from the research predictions 0.0003 points); then backtest.mjs
+on games.json with the new totals as in 5f / 5g.
 
 ## 6. Pending from the rigor brief
 1. (Done 5a; not adopted, Elo won.) Ridge regression per pass and run unit (EPA ~ off + def + HFA + situation) with exponential decay / Kalman recency and a Bayesian prior

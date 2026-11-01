@@ -1,5 +1,5 @@
-import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { NavLink, Outlet, Link, useLocation, useNavigationType } from "react-router-dom";
+import { useEffect, useRef } from "react";
 import { site } from "../config/site";
 import OtherDeviceCancel from "./OtherDeviceCancel";
 import { countView } from "../lib/runtime";
@@ -12,6 +12,8 @@ const ROUTE_TITLES: Record<string, string> = {
 
 export default function Layout() {
   const { pathname, search, hash, key } = useLocation();
+  const navType = useNavigationType();
+  const prevPath = useRef<string | null>(null);
   useEffect(() => {
     // Titles: "… | Simculus Sports". Game pages set their own (GameDetail).
     // Parent effects run after children, so only touch known routes and leave other pages' own titles alone.
@@ -20,7 +22,11 @@ export default function Layout() {
   }, [pathname]);
   useEffect(() => {
     countView(pathname, search);
-    if (!hash) { window.scrollTo(0, 0); return; }
+    // Ryan 10/31: a page rewriting its own query string in place (Simulate's Run simulation saves the matchup with
+    // replace) is not a navigation, so don't jump to the top. Real navigations (push/pop or a new path) still do.
+    const samePageReplace = navType === "REPLACE" && prevPath.current === pathname;
+    prevPath.current = pathname;
+    if (!hash) { if (!samePageReplace) window.scrollTo(0, 0); return; }
     // shared links land on #prediction / #log / #pricing after async data renders: retry briefly
     let n = 0; const id = hash.slice(1);
     const t = setInterval(() => { const el = document.getElementById(id); if (el || ++n > 30) { clearInterval(t); el?.scrollIntoView(); } }, 100);

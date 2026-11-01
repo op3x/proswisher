@@ -561,3 +561,68 @@ class QuarterEval(unittest.TestCase):
         self.assertEqual(act, {"g1": {"home": [7, 7, 0, 3], "away": [3, 0, 0, 7]}})   # OT (qtr 5) excluded; g2 incomplete dropped
         res = QE.evaluate([{"id": "g1", "simQ": {"home": [8, 7, 0, 3], "away": [3, 0, 0, 7]}}], act)
         self.assertEqual(res["Q1"]["biasTotal"], 1.0); self.assertEqual(res["Q2"]["maeTotal"], 0.0)
+
+
+class TotalsModel(unittest.TestCase):
+    """Ryan 10/31: better over/under totals. football/totals.py: walk-forward least squares, no look-ahead."""
+    def smp(self, n=120, season=2025, coef=(10.0, 30.0, 0.6, 2.5)):
+        out = []
+        for i in range(n):
+            x = [1.0, (i % 7 - 3) / 10, 40 + (i % 11), float(i % 3 == 0)]
+            out.append((x, sum(c * v for c, v in zip(coef, x)), season - 1 - i % 3, 1 + i % 18))
+        return out
+
+    def test_fit_recovers_coefficients_and_needs_samples(self):
+        from football import totals as TOT
+        m = TOT.fit("nfl", self.smp(), 2025, 1)
+        for got, want in zip(m["coef"], (10.0, 30.0, 0.6, 2.5)):
+            self.assertAlmostEqual(got, want, places=3)
+        self.assertEqual(m["features"], ["const", "x_epa", "x_pts", "indoor"])
+        self.assertIsNone(TOT.fit("nfl", self.smp(n=30), 2025, 1))
+
+    def test_fit_ignores_current_and_future_weeks_and_old_seasons(self):
+        from football import totals as TOT
+        base = TOT.fit("nfl", self.smp(), 2025, 6)
+        junk = [([1.0, 0.1, 45.0, 0.0], 500.0, 2025, w) for w in (6, 7, 12)] + [([1.0, 0.1, 45.0, 0.0], 500.0, 2026, 1),
+                                                                                 ([1.0, 0.1, 45.0, 0.0], 500.0, 2021, 3)]
+        self.assertEqual(TOT.fit("nfl", self.smp() + junk, 2025, 6)["coef"], base["coef"])
+        prior = [([1.0, 0.1, 45.0, 0.0], 500.0, 2025, 5)]                 # an earlier week of the same season is used
+        self.assertNotEqual(TOT.fit("nfl", self.smp() + prior, 2025, 6)["coef"], base["coef"])
+
+    def test_features_are_as_of_and_indoor(self):
+        from football import totals as TOT
+        self.assertEqual([TOT.is_indoor(x) for x in ("dome", "closed", "open", "outdoors", None)], [1, 1, 0, 0, 0])
+        games = []
+        for wk in range(1, 7):
+            for h, a in (("KC", "LV"), ("BUF", "MIA")) if wk % 2 else (("KC", "BUF"), ("LV", "MIA")):
+                games.append({"season": 2025, "week": wk, "home": h, "away": a, "homeScore": 24, "awayScore": 20, "indoor": 0})
+        epa = [[g["season"], g["week"], g["home"], g["away"], 60, 3.0] for g in games]
+        f1 = TOT.samples("nfl", TOT.Fits("nfl", epa, TOT.points_obs(games), dict(R.DEFAULTS)), games)
+        games[-1]["homeScore"] = 70                                       # the game's own (and later) scores never leak in
+        f2 = TOT.samples("nfl", TOT.Fits("nfl", epa, TOT.points_obs(games), dict(R.DEFAULTS)), games)
+        self.assertEqual(f1[-1][0], f2[-1][0]); self.assertEqual(f2[-1][1], 90)
+        self.assertEqual(len(f1[0][0]), 4)
+        self.assertEqual(f1[0][0][2], 0.0)                               # week 1: no prior games, points term is 2m = 0
+
+    def test_refresh_uses_totals_model_and_keeps_margin(self):
+        from football import totals as TOT
+        d = tempfile.mkdtemp(); synth_pbp(os.path.join(d, "play_by_play_2025.csv.gz"), weeks=6)
+        def run(sub, patch):
+            pub, priv = os.path.join(d, sub, "pub"), os.path.join(d, sub, "priv"); os.makedirs(os.path.join(pub, "nfl"))
+            with open(os.path.join(HERE, "fixtures", "football", "nfl-params.json")) as f: p = json.load(f)
+            p["fittedAt"] = "2999-01-01T00:00:00Z"
+            with open(os.path.join(pub, "nfl", "params.json"), "w") as f: json.dump(p, f)
+            now = datetime(2025, 10, 9, 12, tzinfo=timezone.utc)
+            if patch:
+                with mock.patch.object(TOT, "fit", return_value={"coef": [44.0, 0.0, 0.0, 3.0], "n": 99, "features": ["const", "x_epa", "x_pts", "indoor"]}):
+                    RF.refresh_nfl(pub, priv, RF.Blocks(os.path.join(priv, "b.json")), now, prov=FakeNfl(d))
+            else:
+                RF.refresh_nfl(pub, priv, RF.Blocks(os.path.join(priv, "b.json")), now, prov=FakeNfl(d))
+            s = json.load(open(os.path.join(pub, "nfl", "schedule.json")))
+            return {g["id"]: g["expected"] for g in s["games"] if "expected" in g}, json.load(open(os.path.join(pub, "nfl", "ratings.json")))
+        old, r0 = run("a", False); new, r1 = run("b", True)
+        self.assertEqual(r0["totalModel"]["type"], "epa")               # too few games in the fixture: EPA total fallback
+        self.assertEqual(r1["totalModel"]["type"], "blend")
+        for k in old:
+            self.assertAlmostEqual(new[k]["home"] + new[k]["away"], 44.0, places=1)       # fixture schedule has no roof: outdoor
+            self.assertAlmostEqual(new[k]["home"] - new[k]["away"], old[k]["home"] - old[k]["away"], places=1)   # margin unchanged

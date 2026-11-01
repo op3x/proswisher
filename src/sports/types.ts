@@ -75,7 +75,7 @@ export interface SimResult {
   entertainmentOnly: boolean;
   label?: string;
   scheduled?: boolean;      // picked matchup the server matched to a scheduled game (no tag)
-  representative: { final: { home: number; away: number }; periods: { home: number[]; away: number[] }; overtime: boolean; events: PlayEvent[] };
+  representative: { final: { home: number; away: number }; periods: { home: number[]; away: number[] }; overtime: boolean; overtimePoints?: { home: number; away: number }; events: PlayEvent[] };
   sample: boolean;          // true = local mock fixture, not a real simulation
 }
 

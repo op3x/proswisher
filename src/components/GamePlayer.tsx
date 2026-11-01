@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import type { League, PlayEvent, Team, Sport } from "../sports/types";
 import { rendererFor } from "../renderers/registry";
 import { periodLabel } from "../sports/format";
+import LineScore from "./LineScore";
 
 const SPEEDS = [0.5, 1, 2, 4, 8, 12];
 export const DEFAULT_SPEED = 12; // Ryan 10/31 9:37 PM: default 12x, slower options (0.5x to 8x) kept
@@ -59,6 +60,8 @@ export default function GamePlayer({ league, sport, teams, events, autoPlay = fa
         </div>
         <div className="truncate text-right"><span className="text-accent font-semibold">{teams.home.name}</span></div>
       </div>
+      {/* Ryan 10/31: quarter-by-quarter scoreboard + combined total per quarter, filling in live as the game plays. */}
+      <LineScore league={league} teams={teams} events={events} played={index + (progress >= 1 ? 1 : 0)} done={atEnd} />
       <div className="rounded-lg border border-line overflow-hidden bg-[#14532d]">
         {Renderer ? <Suspense fallback={<div className="aspect-[120/53] grid place-items-center text-xs text-slate-300">Loading field…</div>}>
           <Renderer league={league} teams={teams} events={events} index={index} progress={index === 0 && !playing && progress === 0 ? 0 : progress} />

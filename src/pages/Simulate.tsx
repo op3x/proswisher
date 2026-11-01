@@ -1,5 +1,5 @@
 // Matchup page: league -> two teams (a real upcoming game or a fictional one) -> run -> results + animated game.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLeagues, SAMPLE_RETRY_MS } from "../sports/hooks";
 import { getSchedule, getTeams, runGameSim, runSim, Sourced } from "../sports/api";
@@ -53,6 +53,22 @@ function Interval({ label, d, fmt = (x: number) => String(Math.round(x)) }: { la
 }
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/** Same footprint as the game player (scoreboard, quarter line, field), so swapping it for the game doesn't shift the page. */
+function SimSkeleton({ n }: { n: number }) {
+  return (
+    <div className="rounded-xl bg-panel border border-line p-4 space-y-3 sim-skeleton" role="status" aria-live="polite" data-testid="sim-skeleton">
+      <div className="flex items-center gap-3">
+        <span className="inline-block h-5 w-5 rounded-full border-2 border-accent border-t-transparent animate-spin" aria-hidden="true" />
+        <span className="text-sm text-slate-300">Simulating {n.toLocaleString()} games snap by snap… this takes a few seconds.</span>
+      </div>
+      <div className="h-14 rounded-lg bg-black/40 border border-line animate-pulse" aria-hidden="true" />
+      <div className="h-24 rounded-lg bg-black/30 border border-line animate-pulse" aria-hidden="true" />
+      <div className="aspect-[120/53] rounded-lg bg-[#14532d]/60 border border-line animate-pulse" aria-hidden="true" />
+    </div>
+  );
+}
 
 export default function Simulate() {
   const [params, setParams] = useSearchParams();
@@ -68,6 +84,11 @@ export default function Simulate() {
   const [schedule, setSchedule] = useState<Sourced<ScoreGame[]> | null>(null);
   const [result, setResult] = useState<SimResult | null>(null), [busy, setBusy] = useState(false), [err, setErr] = useState("");
   const [revealed, setRevealed] = useState(false); // outcome stays hidden until the simulated game finishes
+  // Ryan 10/31: no jump on Run simulation. The output area keeps its height while the next batch runs (reserve), the old
+  // game fades back instead of unmounting, and the new one cross-fades in. Nothing scrolls unless the area is off screen.
+  const outRef = useRef<HTMLDivElement>(null);
+  const [reserve, setReserve] = useState(0), [runId, setRunId] = useState(0);
+  useLayoutEffect(() => { if (!busy && result && reserve) { const id = setTimeout(() => setReserve(0), 500); return () => clearTimeout(id); } }, [busy, result, reserve]);
   useEffect(() => { setRevealed(false); }, [result]);
 
   useEffect(() => { for (const l of enabled) preloadRenderer(l.sport); }, [enabled]);
@@ -95,7 +116,11 @@ export default function Simulate() {
     if (!home || !away) return setErr("Pick both teams first.");
     if (home === away && hl === al && hs === as) return setErr("Pick two different teams (or different seasons).");
     const h = teamOf(hl, home), a = teamOf(al, away); if (!h || !a) return setErr("Team not found.");
-    setBusy(true); setResult(null);
+    setReserve(outRef.current?.offsetHeight || 0);
+    setBusy(true);
+    // Bring the output area into view only when it's off screen, gently (instantly with reduced motion).
+    requestAnimationFrame(() => { const el = outRef.current; if (!el) return; const top = el.getBoundingClientRect().top;
+      if (top > window.innerHeight * 0.75 || top < 0) el.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" }); });
     setParams({ league, home, away, ...(fictional ? { mode: "fictional" } : {}) }, { replace: true });
     try {
       const req = { league: hl, home, away, n, ...(fictional ? { homeLeague: hl, awayLeague: al, homeSeason: hs, awaySeason: as, neutral: crossLevel } : {}) };
@@ -106,8 +131,8 @@ export default function Simulate() {
       // The server's label wins (it also routes a scheduled pick to the game sim, with no label); the sample fallback uses ours.
       r.label = sched || r.scheduled ? undefined : r.sample ? pickTag ?? undefined : r.label || pickTag || undefined;
       r.entertainmentOnly = !!r.label;
-      setResult(r);
-    } catch { setErr("The simulator didn't respond. Try again in a moment."); }
+      setResult(r); setRunId((x) => x + 1);
+    } catch { setErr("The simulator didn't respond. Try again in a moment."); setReserve(0); }
     finally { setBusy(false); }
   }
 
@@ -162,19 +187,23 @@ export default function Simulate() {
               {[1000, 5000, 10000].map((x) => <option key={x} value={x}>{x.toLocaleString()}</option>)}
             </select>
           </label>
-          <button onClick={run} disabled={busy} className="min-h-11 rounded-lg bg-accent text-ink font-bold px-5 disabled:opacity-60">{busy ? "Simulating…" : "Run simulation"}</button>
+          <button type="button" onClick={run} disabled={busy} aria-busy={busy} className="min-h-11 rounded-lg bg-accent text-ink font-bold px-5 disabled:opacity-60">{busy ? "Simulating…" : "Run simulation"}</button>
           {err && <span className="text-sm text-loss" role="alert">{err}</span>}
         </div>
       </section>
 
-      {busy && (
-        <section className="rounded-xl bg-panel border border-line p-6 flex items-center gap-3" role="status" aria-live="polite">
-          <span className="inline-block h-5 w-5 rounded-full border-2 border-accent border-t-transparent animate-spin" aria-hidden="true" />
-          <span className="text-sm text-slate-300">Simulating {n.toLocaleString()} games snap by snap… this takes a few seconds.</span>
-        </section>
+      <div ref={outRef} className="sim-anchor relative" style={reserve ? { minHeight: reserve } : undefined} data-testid="sim-output">
+      {busy && !r && <SimSkeleton n={n} />}
+      {busy && r && (
+        <div className="sticky top-20 z-10 h-0" aria-hidden="false">
+          <div className="mx-auto w-fit rounded-full bg-panel/95 border border-line shadow-lg px-4 py-2 flex items-center gap-2 text-sm text-slate-200" role="status" aria-live="polite">
+            <span className="inline-block h-4 w-4 rounded-full border-2 border-accent border-t-transparent animate-spin" aria-hidden="true" />
+            Simulating {n.toLocaleString()} games…
+          </div>
+        </div>
       )}
-      {r && fav && !busy && (
-        <section className="space-y-4">
+      {r && fav && (
+        <section key={runId} className={`space-y-4 ${busy ? "sim-fade-out" : "sim-fade-in"}`} aria-busy={busy}>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-bold">{r.teams.away.name} at {r.teams.home.name}</h2>
             {r.sample && <SamplePill />}
@@ -235,6 +264,7 @@ export default function Simulate() {
           </div>
         </section>
       )}
+      </div>
     </div>
   );
 }

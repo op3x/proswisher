@@ -9,3 +9,11 @@ html { color-scheme: dark; }
 .ticker-track { animation: ticker linear infinite; width: max-content; }
 .ticker-viewport:hover .ticker-track, .ticker-viewport:focus-within .ticker-track, .ticker-viewport:focus .ticker-track { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } .ticker-viewport { overflow-x: auto; } }
+
+/* Simulate: Run simulation cross-fades from a same-size placeholder into the game, no layout jump (Ryan 10/31).
+   Reduced motion: no fade, no pulse, no smooth scrolling. */
+@keyframes sim-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.sim-fade-in { animation: sim-fade-in 450ms cubic-bezier(.2,.7,.2,1) both; }
+.sim-fade-out { opacity: .45; transition: opacity 250ms ease; pointer-events: none; }
+.sim-anchor { scroll-margin-top: 5rem; }
+@media (prefers-reduced-motion: reduce) { .sim-fade-in { animation: none; } .sim-fade-out { transition: none; } .sim-skeleton * { animation: none !important; } }

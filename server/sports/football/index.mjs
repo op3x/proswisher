@@ -30,7 +30,7 @@ export const football = {
   prepare: (params, league) => prepareEngine(params, league),
   simulate: (S, opts) => {
     const g = simulateGame(S, opts);
-    return { H: g.H, A: g.A, periods: g.q, ot: g.ot, events: g.plays ? g.plays.map((p, i) => toEvent(p, i, S.rules)) : undefined };
+    return { H: g.H, A: g.A, periods: g.q, otPoints: g.otPoints, ot: g.ot, events: g.plays ? g.plays.map((p, i) => toEvent(p, i, S.rules)) : undefined };
   },
   playLogSchema: {
     envelope: "seq, t (elapsed game seconds), period (5+ = overtime), clock (m:ss left in period), score {home, away}, type, text, payload",

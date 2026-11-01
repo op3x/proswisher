@@ -133,7 +133,7 @@ function fromFootballSim(r: any, req: SimRequest): SimResult {
     entertainmentOnly: !!(r.entertainmentOnly || r.label), label: r.label,
     // /api/sim routes a picked matchup that's on the schedule to that game's own sim (no tag, NFL injury-adjusted when on).
     scheduled: !!r.scheduledGameId, ...(r.scheduledGameId && (r.league || req.league) === "nfl" ? { injuryAdjusted: true } : {}),
-    representative: { final: rep.final, periods: rep.periods || rep.quarters, overtime: !!rep.overtime, events },
+    representative: { final: rep.final, periods: rep.periods || rep.quarters, overtime: !!rep.overtime, overtimePoints: rep.overtimePoints, events },
   };
 }
 

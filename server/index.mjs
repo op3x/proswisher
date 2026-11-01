@@ -12,6 +12,7 @@ import { purgeConsent } from "./consent-purge.mjs";
 import { legalEffective, legalVersions } from "./legal.mjs";
 import { assertRelease, portalLoginUrl } from "./release.mjs";
 import { resolveDataDirs, createPipeline } from "./pipeline.mjs";
+import { scrubApiJson, scrubMarket } from "./public-safety.mjs";
 import { fetchGeoip } from "../scripts/fetch-geoip.mjs";
 import { createFootballStore } from "./football/store.mjs";
 import { createFootballPipeline } from "./football/scheduler.mjs";
@@ -106,6 +107,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   });
 
   app.use(express.json({ limit: "16kb" }));
+  app.use("/api", scrubApiJson); // Larry round 4 (b): no closing lines or odds in any public API body
 
   // ---- counting (no cookies; nothing raw stored; off unless COUNTING_ENABLED=true) ----
   // Larry memo 21 R7: never count visitors whose IP geolocates to the EEA, UK or Switzerland (local GeoLite2 lookup;
@@ -315,8 +317,18 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   // LEGACY_NBA_PAGES=1. The code stays so they can come back.
   const legacyNba = env.LEGACY_NBA_PAGES === "1";
   if (legacyNba) { app.get("/game/:id", gamePage); app.get("/games/:date/:slug", gamePage); }
-  app.use("/data", (req, res, next) => (/^\/(games|predictions|stats|prior)\.json$/.test(req.path) ? next() : res.status(404).end()));
-  if (publicDataDir) app.use("/data", express.static(publicDataDir, { maxAge: "1m" }));
+  // Legacy NBA data files: 404 unless LEGACY_NBA_PAGES=1 (nothing in the football site reads them). When on, each file is
+  // served through scrubMarket so a recorded market spread or ATS grade can never be returned (Larry round 4 (b)).
+  app.get("/data/:file", (req, res) => {
+    const m = /^(games|predictions|stats|prior)\.json$/.exec(req.params.file);
+    if (!legacyNba || !m) return res.status(404).end();
+    for (const dir of [publicDataDir, path.join(dist, "data")].filter(Boolean)) {
+      let raw; try { raw = fs.readFileSync(path.join(dir, m[0]), "utf8"); } catch { continue; }
+      try { res.set("Cache-Control", "public, max-age=60"); return res.json(scrubMarket(JSON.parse(raw))); } catch { return res.status(500).end(); }
+    }
+    res.status(404).end();
+  });
+  app.use("/data", (req, res) => res.status(404).end());
   app.use(express.static(dist, { index: false, maxAge: "5m", setHeaders: (r, p) => { if (p.includes("/assets/")) r.setHeader("Cache-Control", "public, max-age=31536000, immutable"); } }));
   // Sal #9: only real SPA routes get 200; everything else (incl. /refunds, held per P11) is a 404 with the SPA's not-found view.
   const SPA_ROUTES = new Set(["/", "/simulate", ...(legacyNba ? ["/track-record"] : []), "/how-it-works", "/responsible-gaming", "/terms", "/privacy", "/faq", "/subscribe", "/account", "/cancel", "/contact", "/credits"]);

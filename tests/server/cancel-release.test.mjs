@@ -84,9 +84,9 @@ test("'Paid on another device?' login link: exposed only when it's a billing.str
   assert.match(read("src/main.tsx"), /path="cancel"/);
 });
 
-test("Terms §5(c) is Larry's 10:31 PM text, word for word", () => {
+test("Terms §5(c) is Larry's 10:31 PM text + 10:44 PM sentence, word for word", () => {
   const t = read("src/content/terms-v2.md");
-  assert.ok(t.includes(`**(c) Cancel online any time.** Go to Account settings (https://simculus.com/account) and choose Cancel subscription, then confirm. If you're on a different device, use the "Paid on another device?" link there and we'll email you a code to sign in and cancel. No call is required. You can also email support@simculus.com from your account email with the word "cancel" and we'll cancel it within one business day.\n`));
+  assert.ok(t.includes(`**(c) Cancel online any time.** Go to Account settings (https://simculus.com/account) and choose Cancel subscription, then confirm. If you're on a different device, use the "Paid on another device?" link there and we'll email you a code to sign in and cancel. No call is required. You can also email support@simculus.com from your account email with the word "cancel" and we'll cancel it within one business day. Cancelling stops future charges; you keep access through the end of the period you've already paid for, and you'll see a confirmation on screen.\n`));
   assert.ok(!/one click/.test(t));
   assert.ok(!/did our lean|Against the spread/.test(t), "§9: legacy lean sentence dropped (no public legacy record)");
   const email = read("docs/email/subscription-confirmation-DRAFT.md");

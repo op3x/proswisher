@@ -1,0 +1,5 @@
+{
+  "_note": "Larry round 4 (a): the ONLY labels an accuracy figure (Brier, MAE, winner %, ATS %, O/U %) may carry on the site or in an API. Seasons and game counts come from the backtest outputs: NFL scratch/bt3/results.json + research/backtest-nfl/report.json (285+285+285+108 = 963 games, 2023 wk1 to 2026 wk8; docs/football-model.md, docs/sim-methodology.md 5-5c); NCAAF docs/sim-methodology.md 5f (2,442 FBS-vs-FBS games, 2024 to 2026 wk9). Quote all-games figures only, never a hand-picked season or subset. Never call them a win rate or a record.",
+  "nfl": { "seasons": "2023–26", "through": "2026 week 8", "games": 963, "label": "2023–26 backtest (2026 through week 8), 963 games" },
+  "ncaaf": { "seasons": "2024–26", "through": "2026 week 9", "games": 2442, "label": "2024–26 backtest (2026 through week 9), 2,442 games" }
+}

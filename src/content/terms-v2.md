@@ -26,7 +26,7 @@ Subscriptions aren't available to people located in, or with a billing address i
 
 **(b) Confirmation.** After your first charge, we email you a confirmation with the plan, price, renewal terms and how to cancel.
 
-**(c) Cancel online any time.** Go to Account settings (https://simculus.com/account) and choose Cancel subscription, then confirm. If you're on a different device, use the "Paid on another device?" link there and we'll email you a code to sign in and cancel. No call is required. You can also email support@simculus.com from your account email with the word "cancel" and we'll cancel it within one business day.
+**(c) Cancel online any time.** Go to Account settings (https://simculus.com/account) and choose Cancel subscription, then confirm. If you're on a different device, use the "Paid on another device?" link there and we'll email you a code to sign in and cancel. No call is required. You can also email support@simculus.com from your account email with the word "cancel" and we'll cancel it within one business day. Cancelling stops future charges; you keep access through the end of the period you've already paid for, and you'll see a confirmation on screen.
 
 **(d) Reminders.** We email you a reminder of your plan, price and how to cancel at least once a year.
 
@@ -50,11 +50,8 @@ Quoting a single free featured prediction with credit to Simculus and a link is 
 ### 8. Refunds
 > Refunds. You can cancel anytime online in Account settings. Cancellation stops future charges, and you keep paid access until the end of your current billing period. Because predictions are delivered as soon as they're posted, we don't refund partial months or unused time, except where the law requires. If you were charged in error or charged after you canceled, email support@simculus.com within 60 days and we'll refund that charge. If you dispute a charge with your card issuer, we may suspend paid access while it's reviewed.
 
-### 9. Track record and grading
-We timestamp every prediction before game start, add it to our public Track record, and grade it when the game is final:
-> Each prediction is graded once the game is final. Winner: did the team our model favored win? Pushes and postponed games are shown and not counted as wins or losses. Grades are never changed after the fact.
-
-Past results do not guarantee future results.
+### 9. Accuracy figures and track record
+Track record. We don't publish a live football track record yet. Any accuracy figures we show come from testing our model on past seasons (a backtest), which isn't the same as live results, and past performance doesn't guarantee future results. When we launch a public track record, we'll timestamp each prediction before game start and grade it when the game is final, and we'll update these Terms.
 
 ### 10. Our content and intellectual property
 The Service belongs to Op3x LLC and its licensors and is protected by copyright, trademark and other laws. That includes our predictions, model outputs, write-ups, track-record compilation, software, design and the Simculus name and logo. While your membership is active, we give you a limited, personal, non-transferable, revocable license to view predictions for your own use under §7. "Simculus" is our brand; don't use it in a way that suggests we endorse you. Game schedules and scores are facts we get from third-party sources, and market spreads are credited to their source.

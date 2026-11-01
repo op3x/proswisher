@@ -107,7 +107,7 @@ export const site = {
     freeTitle: "Free, every day. No sign-up",
     free: [
       ["Today's featured game, in full:", "projected score, projected spread and our model's lean, right on the game page."],
-      ["The public track record:", "every prediction we've posted, timestamped and graded."],
+      ["The simulator:", "pick any two teams and run the game snap by snap."],
     ],
     paidTitle: "Members, $9/month",
     paid: [
@@ -125,7 +125,7 @@ export const site = {
     title: "One game free every day. Every game for $9/month.",
     freeName: "Free",
     freePrice: "$0",
-    freeIncludes: ["Today's featured game, in full", "Public track record", "No account needed"],
+    freeIncludes: ["Today's featured game, in full", "The simulator, any matchup", "No account needed"],
     freeCta: "See today's free game",
     planName: "Simculus Monthly",
     interval: "per month, plus applicable tax",
@@ -192,13 +192,13 @@ export const site = {
   },
   predictionCard: {
     projectedScore: "Projected score", lean: "Our model's lean", why: "Why the model leans this way",
-    postedAt: "Posted {timestamp} CT, before game start · Logged in our public track record",
+    postedAt: "Posted {timestamp} CT, before game start",
     freeBadge: "Today's free game",
     freeNote: "Free today, no sign-up needed.",
     lockedTeaser: "Members see every game on the slate. $9/month, cancel online any time.",
     lockedCta: "Get every game: $9/month",
     lockedUnavailable: "Memberships aren't open yet.", // shown under the disabled CTA while payments are off
-    lockedLogNote: "This prediction was posted before game start and appears in the track record once the game starts.",
+    lockedLogNote: "This prediction was posted before game start.",
   },
   ...framings[FRAMING],
   nav: [

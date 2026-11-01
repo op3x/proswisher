@@ -61,7 +61,7 @@ export interface FootballPayload {
 }
 
 export interface SimResult {
-  injuryAdjusted?: boolean; // true only for a scheduled NFL game sim served with availability adjustments
+  injuryAdjusted?: boolean; // true for a scheduled NFL game sim (the injury-adjusted path); custom matchups never
   league: string;
   sport: Sport;
   n: number;

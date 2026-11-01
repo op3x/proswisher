@@ -142,7 +142,8 @@ export async function runGameSim(gameId: string, req: SimRequest, names: { home:
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const j = await getJson<any>(`/api/football/games/${encodeURIComponent(gameId)}/sim`);
     const r = fromFootballSim(j, req);
-    r.injuryAdjusted = req.league === "nfl" && !!j?.game?.availabilityAdj;
+    // Scheduled NFL game: the server applies availability whenever a report exists (no report yet = no adjustment needed).
+    r.injuryAdjusted = req.league === "nfl";
     return r;
   } catch { return runSim(req, names); }
 }

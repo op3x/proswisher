@@ -66,6 +66,8 @@ export default function SubscribePage() {
           <button onClick={submit} disabled={busy || !consent} className="min-h-11 rounded-lg bg-accent text-ink font-semibold px-4 py-2 disabled:opacity-50">{c.cta.replace("{price}", price)}</button>
         </div>
       )}
+      {/* Responsible-betting line stays on checkout (Ryan 10:05 PM); the full one is in the footer. */}
+      <p className="text-xs text-slate-300">{site.pickDisclaimer}</p>
     </div>
   );
 }

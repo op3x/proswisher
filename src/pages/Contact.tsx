@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { site } from "../config/site";
 
-// Larry footer spec: "Contact". Placeholder until support@ works (P11): the address is NOT shown here yet.
+// Larry footer spec: "Contact". Email only, no physical address (Ryan 10/31). The email stays hidden until it works (P11).
 export default function Contact() {
   return (
     <div className="max-w-xl space-y-4">
@@ -14,7 +14,6 @@ export default function Contact() {
       <p className="text-slate-300">To cancel a membership, go to <Link className="text-accent underline underline-offset-4" to="/account">Account settings</Link>.</p>
       <p className="text-slate-300">If you or someone you know has a gambling problem, call 1-800-GAMBLER. See <Link className="text-accent underline underline-offset-4" to="/responsible-gaming">Responsible gaming</Link>.</p>
       <p className="text-sm text-slate-400">{site.operatedBy}</p>
-      <p className="text-sm text-slate-400">{site.company} · {site.mailingAddress}</p>
     </div>
   );
 }

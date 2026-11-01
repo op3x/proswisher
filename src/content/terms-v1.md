@@ -87,6 +87,6 @@ We may update these Terms. We'll post the new version with its effective date, a
 These Terms, the Privacy Policy and the refund policy are the whole agreement. If a provision is unenforceable, the rest still applies. Not enforcing a provision isn't a waiver. You can't transfer these Terms. We may transfer them to a successor to the Service, with notice.
 
 ### 20. Contact
-Op3x LLC · [Op3x LLC mailing address] · support@simculus.com
+Op3x LLC · support@simculus.com
 
 Gambling problem? Call 1-800-GAMBLER.

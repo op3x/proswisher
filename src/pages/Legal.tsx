@@ -8,9 +8,9 @@ import termsV1 from "../content/terms-v1.md?raw";
 const SUPPORT = site.supportEmailActive ? site.supportEmail : "[support contact: not yet active]";
 const fill = (t: string, effective = "Effective on launch") => t
   .replace(/Effective: \{EFFECTIVE\}/g, /^Effective/.test(effective) ? effective : `Effective: ${effective}`)
-  .replace(/\{CONTACT\}/g, site.supportEmailActive ? `Questions about privacy? Email ${site.supportEmail}.` : `${site.company} · ${site.mailingAddress}`)
+  .replace(/\{CONTACT\}/g, site.supportEmailActive ? `Questions about privacy? Email ${site.supportEmail}.` : `${site.company} · ${SUPPORT}`)
   .replace(/\{SUPPORT\}/g, SUPPORT)
-  .replace(/support@(?:proswisher|simculus)\.com/g, SUPPORT); // Larry P11: never show the alias while it's inactive
+  .replace(/support@(?:proswisher|simculus)\.com/g, SUPPORT); // (SUPPORT = CONTACT_EMAIL once active) // Larry P11: never show the alias while it's inactive
 
 function Shell({ title, children }: { title?: string; children: React.ReactNode }) {
   return (

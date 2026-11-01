@@ -42,9 +42,8 @@ export const site = {
   operatedBy: "Simculus is operated by Op3x LLC.",
   year: 2026,
   // ── Placeholders: clearly marked, must be filled before launch ──
-  supportEmail: "support@simculus.com",
+  supportEmail: __CONTACT_EMAIL__, // CONTACT_EMAIL env (build time), default support@simculus.com. Contact is email only.
   supportEmailActive: commerce.supportEmailActive === true, // Larry P11: support@ is HIDDEN everywhere until it works (commerce.json)
-  mailingAddress: "[MAILING ADDRESS TBD]",
   // refund text: see legal.refunds (Larry's exact wording, 9:36)
   cancelUrl: "[CANCEL_URL TBD]",
   proofLine: "Real play-by-play data. Thousands of simulated games per matchup.",

@@ -55,8 +55,8 @@ export default function Layout() {
           <nav aria-label="Footer" className="flex flex-wrap gap-x-4">
             {site.footerLinks.map((l) => <Link key={l.to} to={l.to} className="inline-flex items-center min-h-11 text-slate-300 underline underline-offset-4 hover:text-white">{l.label}</Link>)}
           </nav>
-          {/* Larry P11: support alias hidden until it works. P14: mailing address stays a marked placeholder. */}
-          <p className="text-xs">{site.supportEmailActive ? <>Support: {site.supportEmail} · </> : null}{site.mailingAddress}</p>
+          {/* Contact is email only, no physical address (Ryan 10/31). Larry P11: the email stays hidden until it works. */}
+          {site.supportEmailActive && <p className="text-xs">Support: {site.supportEmail}</p>}
           <p className="text-xs text-slate-400">{site.geoCredit}</p>
           <p className="text-xs">{site.operatedBy} © {site.year} {site.company}</p>
         </div>

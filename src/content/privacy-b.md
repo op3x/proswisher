@@ -64,4 +64,4 @@ Simculus is only for adults **21 and older**. We don't knowingly collect informa
 If we change this policy, we'll post the new version with its effective date. If the change is material, we'll email members before it takes effect.
 
 **10. Contact**
-Op3x LLC · [Op3x LLC mailing address] · {SUPPORT}. Gambling problem? Call 1-800-GAMBLER.
+Op3x LLC · {SUPPORT}. Gambling problem? Call 1-800-GAMBLER.

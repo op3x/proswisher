@@ -6,7 +6,7 @@
   "consentVersion": "consent-v1-2026-10-25",
   "renewalDisclosure": "You'll be charged $9 today and $9 every month after that until you cancel. Cancel online any time in Account settings. Cancellation takes effect at the end of your current billing period.",
   "gamePageTitle": "{Away} vs. {Home} Prediction, {date} | NBA | Simculus Sports",
-  "gamePageDescription": "Projected score, projected spread and our model's lean for {Away} vs {Home}, posted before tip-off. Entertainment only. 21+. 1-800-GAMBLER.",
+  "gamePageDescription": "Projected score, projected spread and our model's lean for {Away} vs {Home}, posted before tip-off. Not betting advice. 21+. 1-800-GAMBLER.",
   "geoBlockCopy": {
     "title": "Subscriptions aren't available in your location",
     "body": "Sorry, Simculus subscriptions aren't available in Washington, Hawaii, Utah or Japan. You're still welcome to browse our public pages, today's featured game and the track record.",
@@ -41,6 +41,6 @@
   "disclaimers": {
     "_note": "Larry's verbatim texts (disclaimer-footer.md §1-2). Shared by the SPA (site.ts) and the server block page. Don't edit without Larry.",
     "footer": "Simculus provides sports simulations and predictions for entertainment and informational purposes only. It is not betting, financial or legal advice, and no outcome is guaranteed. Past results do not guarantee future results. Op3x LLC is not a sportsbook and does not accept wagers. Op3x LLC does not hold your money or pay out winnings. You must be 21+ and located where sports betting is legal to place bets; check your local laws. If you or someone you know has a gambling problem, call 1-800-GAMBLER. Not affiliated with, endorsed or sponsored by the NFL, NCAA or any team.",
-    "short": "Entertainment only. Not betting advice. 21+. 1-800-GAMBLER."
+    "short": "Not betting advice. 21+. 1-800-GAMBLER."
   }
 }

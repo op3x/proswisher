@@ -11,7 +11,9 @@ import { preloadRenderer } from "../renderers/registry";
 import { site } from "../config/site";
 
 const THIS_SEASON = 2026;
-const ENTERTAINMENT = "For entertainment only";
+// Ryan + Larry 10/31: cross-era/cross-level label (replaces "For entertainment only"). Shown instead of the API label.
+const HYPOTHETICAL = "Hypothetical matchup. Not a real game.";
+const FULL_DISCLAIMER = "Injuries, weather, coaching changes and market prices aren't modeled yet. A simulation is an estimate, not a guarantee.";
 const sel = "w-full min-h-11 rounded-md bg-ink border border-line px-3 text-sm";
 
 function SamplePill() { return <span className="rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 text-[11px] font-semibold">Sample data, not a real simulation</span>; }
@@ -145,7 +147,7 @@ export default function Simulate() {
           <TeamPick label="Home" fictional={fictional} league={hl} leagues={leagues?.data || []} teams={teams[hl]?.data || []} value={home} season={homeSeason}
             onLeague={(v) => { setHomeLeague(v); setHome(""); }} onTeam={setHome} onSeason={setHomeSeason} />
         </div>
-        {entertainment && <p className="rounded-md bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-200 text-sm px-3 py-2"><b>{ENTERTAINMENT}.</b> {crossLevel ? "College vs. pro" : "Cross-era"} matchups can't be checked against a real game.{crossLevel ? " Played on a neutral field." : ""}</p>}
+        {entertainment && <p className="rounded-md bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-200 text-sm px-3 py-2"><b>{HYPOTHETICAL}</b> {crossLevel ? "College vs. pro" : "Cross-era"} matchups can't be checked against a real game.{crossLevel ? " Played on a neutral field." : ""}</p>}
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-sm text-slate-400 flex items-center gap-2">Simulations
             <select className="min-h-11 rounded-md bg-ink border border-line px-2 text-sm text-slate-100" value={n} onChange={(e) => setN(Number(e.target.value))}>
@@ -168,7 +170,7 @@ export default function Simulate() {
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-bold">{r.teams.away.name} at {r.teams.home.name}</h2>
             {r.sample && <SamplePill />}
-            {r.entertainmentOnly && <span className="rounded bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-500/30 px-2 py-0.5 text-[11px] font-semibold">{ENTERTAINMENT}</span>}
+            {r.entertainmentOnly && <span className="rounded bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-500/30 px-2 py-0.5 text-[11px] font-semibold">{HYPOTHETICAL}</span>}
           </div>
 
           {/* Ryan 10/31: the simulated game plays first (8x by default) and no outcome is shown until it ends. */}
@@ -217,10 +219,10 @@ export default function Simulate() {
                 </div>
               </div>
             )}
-            {/* Always rendered, outside the hidden part: quarter note, entertainment label, 21+ disclaimer, data sources. */}
+            {/* Always rendered, outside the hidden part: quarter note, hypothetical label, 21+ disclaimer, data sources. */}
             <p className="text-[11px] text-slate-400">Quarter scores show a typical scoring shape, not a precise forecast. {r.periodKind === "line" ? "They add up to the median final score; regular time only." : "Each quarter's median is taken on its own, so they needn't add up to the median final."}</p>
-            {r.label && <p className="text-xs text-fuchsia-200">{r.label}</p>}
-            <p className="text-xs text-slate-400">{site.pickDisclaimer}</p>
+            {r.entertainmentOnly && <p className="text-xs text-fuchsia-200">{HYPOTHETICAL}</p>}
+            <p className="text-xs text-slate-400">{FULL_DISCLAIMER} {site.pickDisclaimer}</p>
             <DataSources only={[hl, al]} />
           </div>
         </section>

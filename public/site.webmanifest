@@ -1,7 +1,7 @@
 {
   "name": "Simculus Sports",
   "short_name": "Simculus",
-  "description": "NFL and college football game simulations. Entertainment only. 21+.",
+  "description": "NFL and college football game simulations. Not betting advice. 21+.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0A0F1F",

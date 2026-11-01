@@ -55,8 +55,8 @@ export const site = {
   meta: {
     title: `NFL & College Football Game Simulations | ${__APP_NAME__}`,
     // Laye's description mentions "$9/month"; the price-free variant is used while nothing is for sale (payments off).
-    description: "Simulate any NFL or college football matchup: win probability, margin, total and score by quarter, plus a play-by-play drive chart. Entertainment only. 21+.",
-    descriptionWhenSelling: "Simulate any NFL or college football matchup. One featured game free every day; more sims with Pro. Entertainment only. 21+.",
+    description: "Simulate any NFL or college football matchup: win probability, margin, total and score by quarter, plus a play-by-play drive chart. Not betting advice. 21+.",
+    descriptionWhenSelling: "Simulate any NFL or college football matchup. One featured game free every day; more sims with Pro. Not betting advice. 21+.",
     // Larry 9:36 (approved): "NBA" as plain text in game-page SEO titles, exactly this format. Never "Official", no logos.
     gamePageTitle: commerce.gamePageTitle,
     gamePageDescription: commerce.gamePageDescription,
@@ -123,7 +123,7 @@ export const site = {
   // (they describe checkout/cancel flows that don't exist yet).
   faq: [
     // Simculus football FAQ (rewritten from NBA-era copy, 10/31). Memo 24 rules: never the word "official", no
-    // betting-edge or win-rate claims, cross-era/cross-level = "For entertainment only", no real player names.
+    // betting-edge or win-rate claims, cross-era/cross-level = "Hypothetical matchup. Not a real game." (Ryan + Larry 10/31: no "Entertainment only"), no real player names.
     ["What is Simculus?", "Simculus simulates football games. Pick an NFL or college matchup and we play it out snap by snap thousands of times, then show how often each team won, the typical score and margin, and one representative game you can watch on a drive chart."],
     ["Do you take bets?", "No. Simculus is not a sportsbook. Op3x LLC doesn't accept wagers, hold your money or pay out winnings."],
     ["How does a simulation work?", "Each simulated game is built play by play from team-level tendencies estimated from past seasons: how often a team runs or passes, how many yards plays tend to gain, and how drives end. We repeat the game thousands of times and summarize the results as ranges, not a single answer."],
@@ -134,7 +134,7 @@ export const site = {
     ["Where does the data come from?", "NFL data comes from nflverse and college data from CollegeFootballData.com. The full credits are listed under Data sources at the bottom of every page. Data is refreshed daily."],
     ["What does the scores bar show?", "Schedule & final scores: teams, score, quarter, clock and status. College games show final scores only."],
     ["Are you affiliated with the league or any team?", "No. Simculus is independent. Not affiliated with, endorsed or sponsored by the NFL, NCAA or any team. Team names are used only to identify games."],
-    ["What is a fictional or cross-era matchup?", "You can pit teams that will never meet, such as teams from different seasons or a college team against an NFL team. Those results are labeled For entertainment only, because they can't be checked against a real game."],
+    ["What is a fictional or cross-era matchup?", "You can pit teams that will never meet, such as teams from different seasons or a college team against an NFL team. Those results are labeled "Hypothetical matchup. Not a real game." because they can't be checked against a real game."],
     ["Who can use Simculus?", "Adults 21 and older. Subscriptions won't be available in Washington, Hawaii, Utah or Japan, though anyone 21+ can browse the public pages."],
     ["How much does it cost?", "The price and what it includes are shown on the Subscribe page before you pay, plus applicable tax. Membership renews monthly until you cancel. If the price or other terms ever change, we'll email you first, and changes apply from your first renewal at least 14 days after that email.", true],
     ["How do I cancel?", "Go to Account settings → Cancel subscription and confirm. It takes about a minute, with no call or email required. Your access continues through the end of your current billing period, and we email you a confirmation.", true],

@@ -19,8 +19,8 @@ export default function HowItWorks() {
       <Step n={4} t="Watch a representative game">
         We pick the simulated game whose margin and total sit closest to the median and replay it on the field: drive arrows, down and distance, the scoreboard and the clock. Players appear only by position. Simulations never use real names or likenesses.
       </Step>
-      <Step n={5} t="Dream matchups are for entertainment only">
-        You can pit any two teams, including different seasons or a college team against a pro team. Those games can never be played, so they are labeled "For entertainment only" and can't be checked against a real result.
+      <Step n={5} t="Dream matchups are hypothetical">
+        You can pit any two teams, including different seasons or a college team against a pro team. Those games can never be played, so they are labeled "Hypothetical matchup. Not a real game." and can't be checked against a real result.
       </Step>
       <h2 className="text-lg font-bold pt-2">What it ignores</h2>
       <p className="text-slate-400 text-sm">Injuries, weather, coaching changes and market prices aren't modeled yet. A simulation is an estimate, not a guarantee. {site.pickDisclaimer}</p>

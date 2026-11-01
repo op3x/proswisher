@@ -55,7 +55,7 @@ ratings' expected points (Monte Carlo calibration converges within ~1 point).
 Monte Carlo output: win/tie probability, margin and total distributions (mean, median, percentiles, histogram),
 median score by quarter, and a representative game (the sim closest to the median outcome) with its full play log.
 Fictional matchups: any two teams, optionally from past seasons (`homeSeason`/`awaySeason`) or across levels
-(NFL vs college, using an assumed `FOOTBALL_LEVEL_GAP_POINTS` = 30); these are labelled **"for entertainment only"**.
+(NFL vs college, using an assumed `FOOTBALL_LEVEL_GAP_POINTS` = 30); these are labelled **"Hypothetical matchup. Not a real game, and not a prediction of one."**.
 
 **NCAAF caveat:** NCAAF play-level distributions are the NFL fit with NCAAF rule changes and a few documented
 assumptions (shorter FG range, PAT 97%, touchbacks at the 25). Team scoring is still calibrated to CFBD-based ratings.

@@ -127,7 +127,7 @@ test("football API: teams, games, game sim with play log, custom and cross-era s
     assert.equal(plays.status, 200); assert.ok(Array.isArray(plays.body.events)); assert.ok(plays.body.fields);
     assert.equal((await j("/api/football/games/nope/sim")).status, 404);
     const c = await j("/api/football/sim?home=KC&away=LV&homeSeason=2022&neutral=1&n=100000&plays=0");
-    assert.equal(c.status, 200); assert.equal(c.body.n, 800, "N capped"); assert.match(c.body.label, /entertainment only/);
+    assert.equal(c.status, 200); assert.equal(c.body.n, 800, "N capped"); assert.equal(c.body.label, "Hypothetical matchup. Not a real game, and not a prediction of one.");
     assert.equal(c.body.representative.events, undefined); assert.equal(c.body.teams.home.name, "2022 Kansas City Chiefs");
     assert.equal((await j("/api/football/sim?home=KC&away=XYZ")).status, 404);
     assert.equal((await j("/api/football/sim?home=KC")).status, 400);

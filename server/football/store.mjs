@@ -10,11 +10,11 @@ import { ATTRIBUTION, NFL_ATTRIBUTION, NCAAF_ATTRIBUTION } from "./attribution.m
 export { ATTRIBUTION, NFL_ATTRIBUTION, NCAAF_ATTRIBUTION };
 // Larry's binding rules (Oct 31): betting disclaimers + non-affiliation line; teams as plain-text "City Name" only; no
 // player names/likenesses, logos, helmets or mascot art anywhere (UI, play logs, API).
-export const disclaimer = (name) => `${name} provides sports simulations and predictions for entertainment and informational purposes only. ` +
+export const disclaimer = (name) => `${name} provides sports simulations and predictions for informational purposes only. ` +
   "It is not betting, financial or legal advice, and no outcome is guaranteed. Op3x LLC is not a sportsbook and does not accept wagers. " +
   "You must be 21+ and located where sports betting is legal to place bets; check your local laws. If you or someone you know has a gambling problem, call 1-800-GAMBLER. " +
   `${name} is not affiliated with or endorsed by the NFL, the NCAA, any conference or any team.`;
-export const ENTERTAINMENT = "For entertainment only: a hypothetical matchup that cannot be played, not a prediction of a real game.";
+export const HYPOTHETICAL_LABEL = "Hypothetical matchup. Not a real game, and not a prediction of one.";
 const readJson = (p) => { try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return null; } };
 
 // Rigor step 2 (docs/sim-methodology.md 5b): game-environment shock, chosen on the 2023 test season only (envSd 0.6/0.8 compared;
@@ -90,8 +90,8 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
       notes.push(`Cross-level: assumes an average NFL team is ${levelGap} points better than an average FBS team (an assumption, not data). NFL rules.`);
     }
     const floor = (v) => Math.max(3, v);
-    const entertainment = h.season !== a.season || home.league !== away.league;
-    return { home: h, away: a, target: { H: floor(H), A: floor(A) }, rules, neutral, notes, entertainment };
+    const hypothetical = h.season !== a.season || home.league !== away.league;
+    return { home: h, away: a, target: { H: floor(H), A: floor(A) }, rules, neutral, notes, hypothetical };
   }
 
   function simulate(m, { n = 2000, seed = 20261031, playoff = false } = {}) {
@@ -99,7 +99,7 @@ export function createFootballStore({ publicDir, env = process.env, log = consol
     const res = runMonteCarlo(L[lg].S, { target: m.target, n, seed, playoff, curve: curveFor(lg), ...SIM_UNCERTAINTY[lg], names: { H: m.home.name || m.home.team, A: m.away.name || m.away.team } });
     return { ...res, teams: { home: { id: m.home.team, name: m.home.name, season: m.home.season }, away: { id: m.away.team, name: m.away.name, season: m.away.season } },
              neutral: m.neutral, rules: m.rules, expectedPoints: { home: Math.round(m.target.H * 10) / 10, away: Math.round(m.target.A * 10) / 10 },
-             notes: m.notes, ...(m.entertainment ? { label: ENTERTAINMENT } : {}), attribution: ATTRIBUTION[m.rules] };
+             notes: m.notes, ...(m.hypothetical ? { label: HYPOTHETICAL_LABEL } : {}), attribution: ATTRIBUTION[m.rules] };
   }
 
   const games = (lg) => (L[lg]?.schedule?.games || []);

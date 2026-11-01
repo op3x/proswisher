@@ -162,14 +162,16 @@ test("/api/config has no internal notes; 404s for unknown routes, /refunds and p
   } finally { p.close(); }
 });
 
-test("451 block page carries the full footer disclaimer and never the support address", async () => {
+test("451 block page carries the full footer disclaimer; support address only once active", async () => {
   const commerce = (await import("../../src/config/commerce.json", { with: { type: "json" } })).default;
   const s = await serve(await createApp({ env: payEnv, stripe: mock(), geoLookup: fresh(), log: quiet }));
   try {
     const r = await fetch(s.url + "/subscribe", { headers: { "x-forwarded-for": "198.51.100.20" } });
     assert.equal(r.status, 451);
     const h = await r.text();
-    assert.ok(h.includes(commerce.disclaimers.footer)); assert.ok(!h.includes("support@"));
+    assert.ok(h.includes(commerce.disclaimers.footer));
+    // P11: support@ hidden while inactive; once verified (10/31 9:44 PM CT) only the real alias appears
+    if (commerce.supportEmailActive) assert.ok(h.includes("support@simculus.com") && !h.includes("proswisher.com")); else assert.ok(!h.includes("support@"));
     assert.equal((h.match(/<h1/g) || []).length, 1);
   } finally { s.close(); }
 });

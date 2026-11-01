@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import Stripe from "stripe";
@@ -64,7 +65,7 @@ test("451 only on sign-up page and checkout creation; health and webhook never g
     for (const ip of ["203.0.113.10", "198.51.100.20"]) {
       const bp = await fetch(s.url + "/subscribe", { headers: xff(ip) });
       assert.equal(bp.status, 451);
-      assert.ok(!(await bp.text()).includes("support@")); // P11: hidden until the alias works
+      { const t = await bp.text(); const on = JSON.parse(fs.readFileSync(new URL("../../src/config/commerce.json", import.meta.url), "utf8")).supportEmailActive; assert.ok(on ? !t.includes("proswisher.com") : !t.includes("support@")); } // P11: hidden until the alias works
       const r = await fetch(s.url + "/api/checkout", { method: "POST", headers: { "content-type": "application/json", ...xff(ip) }, body: JSON.stringify({ consent: true, age21: true, country: "US", state: "TX" }) });
       assert.equal(r.status, 451);
       const rj = await r.json(); assert.equal(rj.error, "geoblocked"); assert.equal(rj.help, undefined);

@@ -28,7 +28,7 @@ export async function createApp({ env = process.env, stripe: stripeOverride, geo
   app.disable("x-powered-by");
   const commerce = JSON.parse(fs.readFileSync(path.join(ROOT, "src/config/commerce.json"), "utf8"));
   const state = { geo: geoLookup === undefined ? await openGeoip() : geoLookup, revoked: new Set() };
-  // CHECKOUT GATE. Larry 10/31: paid checkout stays OFF (payments disabled, checkout gate closed) until Larry signs off; business address (box number optional, never blocks launch) and the California notice are live. See commerce.json _checkoutGate. Do not set STRIPE_* keys before then.
+  // CHECKOUT GATE. Larry 10/31: paid checkout stays OFF (payments disabled, checkout gate closed) until Larry signs off; business address (box number optional, never blocks launch) is live; the California notice is in Terms §20 only, not at checkout. See commerce.json _checkoutGate. Do not set STRIPE_* keys before then.
   let mode = paymentsMode(env);
   const stripe = mode.enabled ? (stripeOverride || makeStripe(mode)) : null;
   if (mode.enabled && !stripeOverride) {

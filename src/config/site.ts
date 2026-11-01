@@ -167,9 +167,11 @@ export const site = {
     // Laye's text has "at [CANCEL_URL]"; dropped until a cancel URL exists (cancel is via the Stripe customer portal).
     renewalDisclosure: commerce.renewalDisclosure,
     whatItIs: "Simculus sells sports predictions for information only. Op3x LLC is not a sportsbook, doesn't accept wagers and doesn't hold your money or pay out winnings.",
-    // Larry's EXACT text (9:36). Rendered next to an UNCHECKED checkbox (the box is UI, not copy). Swap here only.
-    consentCheckbox:
-      "I'm 21 or older. I understand Simculus sells sports predictions for information only, not betting advice, and that Op3x LLC is not a sportsbook, accepts no wagers and guarantees no results. I agree that my {price}/month subscription renews automatically each month until I cancel. You can cancel anytime online in Account settings. I agree to the Terms and Privacy Policy.",
+    // Ryan 10/31 10:03 PM: no legal terms listed on the checkout page; everything lives behind the linked Terms and
+    // Conditions, which must be checked before checkout. Only the price and the one auto-renew line stay visible
+    // (ROSCA / California auto-renewal law) pending Larry's review. {terms} renders the Terms link.
+    consentCheckbox: "I'm 21 or older and I agree to the {terms}, including that my {price}/month subscription renews automatically until I cancel.",
+    termsLinkLabel: "Terms and Conditions",
     cta: "Subscribe for {price}/month",
     consentDefaultChecked: false,
     consentRequiredError: "Please check the box to confirm before continuing.",

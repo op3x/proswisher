@@ -41,10 +41,6 @@ export default function SubscribePage() {
       <div className="rounded-xl bg-panel border border-line p-4 space-y-2 text-sm">
         <p className="font-semibold">{c.summary.replace("{price}", price)}</p>
         <p className="text-slate-300">{c.renewalDisclosure}</p>
-        <p className="text-slate-400">{c.whatItIs}</p>
-        {/* Paid checkout disclosure (stays OFF while payments are disabled): business address + email, Larry's CA notice */}
-        <p className="text-xs text-slate-400">{site.company} · {site.businessAddress}{site.supportEmailActive && <> · {site.supportEmail}</>}</p>
-        <p className="text-xs text-slate-400">{site.caComplaintNotice}</p>
       </div>
       {!selling ? (
         <p className="rounded-xl border border-line bg-panel p-4 text-sm text-slate-300">{payments && geoOk === false ? site.geoBlockCopy.unavailable : site.pricing.unavailable}</p>
@@ -62,15 +58,14 @@ export default function SubscribePage() {
           </div>
           <label className="flex gap-2 items-start">
             <input type="checkbox" className="mt-1 h-6 w-6 shrink-0" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-            <span className="text-slate-300">{c.consentCheckbox.replace("{price}", price)}</span>
+            <span className="text-slate-300">{(() => { const [pre, post] = c.consentCheckbox.replace("{price}", price).split("{terms}");
+              return <>{pre}<Link className="text-accent underline" to="/terms" target="_blank">{c.termsLinkLabel}</Link>{post}</>; })()}</span>
           </label>
-          <p className="text-xs text-slate-400">Read the <Link className="text-accent underline" to="/terms" target="_blank">Terms</Link> and <Link className="text-accent underline" to="/privacy" target="_blank">Privacy Policy</Link>.</p>
+          <p className="text-xs text-slate-400"><Link className="text-accent underline" to="/privacy" target="_blank">Privacy Policy</Link></p>
           {err && <p role="alert" className="text-loss">{err}</p>}
           <button onClick={submit} disabled={busy || !consent} className="min-h-11 rounded-lg bg-accent text-ink font-semibold px-4 py-2 disabled:opacity-50">{c.cta.replace("{price}", price)}</button>
         </div>
       )}
-      {/* Sal #5 / Larry §5: short disclaimer on checkout; the full one is in the footer (shown once per page). */}
-      <p className="text-xs text-slate-300">{site.pickDisclaimer}</p>
     </div>
   );
 }

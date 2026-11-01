@@ -22,7 +22,7 @@ Subscriptions aren't available to people located in, or with a billing address i
 ### 5. Automatic renewal, cancellation and price changes
 **(a) Renewal.** Your membership **renews automatically every month** at the price shown at checkout, plus applicable tax, and we charge your payment method on each renewal date **until you cancel**. You'll see the price, the renewal terms and how to cancel before you pay. To subscribe you must check the box confirming:
 
-> I'm 21 or older. I understand Simculus sells sports predictions for information only, not betting advice, and that Op3x LLC is not a sportsbook, accepts no wagers and guarantees no results. I agree that my $9/month subscription renews automatically each month until I cancel. You can cancel anytime online in Account settings. I agree to the Terms and Privacy Policy.
+> I'm 21 or older and I agree to the Terms and Conditions, including that my $9/month subscription renews automatically until I cancel.
 
 **(b) Confirmation.** After your first charge, we email you a confirmation with the plan, price, renewal terms and how to cancel.
 
@@ -86,9 +86,12 @@ We may update these Terms. We'll post the new version with its effective date, a
 ### 19. General
 These Terms, the Privacy Policy and the refund policy are the whole agreement. If a provision is unenforceable, the rest still applies. Not enforcing a provision isn't a waiver. You can't transfer these Terms. We may transfer them to a successor to the Service, with notice.
 
-### 20. Contact
-Op3x LLC · {ADDRESS} · support@simculus.com
+### 20. California users
+Simculus Sports is provided by Op3x LLC, {ADDRESS}. The daily featured game is free. Membership costs $9 per month plus applicable tax, renewing monthly until you cancel (see §4 and §5).
 
 California users: The Complaint Assistance Unit of the Division of Consumer Services of the California Department of Consumer Affairs may be contacted in writing at 1625 North Market Blvd., Suite N 112, Sacramento, CA 95834, or by telephone at (916) 445-1254 or (800) 952-5210.
+
+### 21. Contact
+Op3x LLC · {ADDRESS} · support@simculus.com
 
 Gambling problem? Call 1-800-GAMBLER.

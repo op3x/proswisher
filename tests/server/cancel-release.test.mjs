@@ -106,9 +106,21 @@ test("release checks: production refuses empty/invalid effective date and paymen
   assert.deepEqual(releaseProblems({ APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01" }).map((x) => x.split(" ")[0]), ["LEGAL_EFFECTIVE_PRIVACY_A"]);
   assert.match(releaseProblems({ APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01", LEGAL_EFFECTIVE_PRIVACY_A: "Nov 1" })[0], /LEGAL_EFFECTIVE_PRIVACY_A is not a YYYY-MM-DD/);
   assert.deepEqual(releaseProblems({ APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01", LEGAL_EFFECTIVE_PRIVACY_A: "2026-11-01" }), []); // payments off: link not required
-  const live = { APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01", LEGAL_EFFECTIVE_PRIVACY_A: "2026-11-01", STRIPE_SECRET_KEY: LIVE_KEY, STRIPE_WEBHOOK_SECRET: "x", STRIPE_PRICE_ID: "price_x", STRIPE_LIVE_ENABLED: "true" };
+  const live = { APP_ENV: "production", LEGAL_EFFECTIVE_TERMS: "2026-11-01", LEGAL_EFFECTIVE_PRIVACY_A: "2026-11-01", STRIPE_SECRET_KEY: LIVE_KEY, STRIPE_WEBHOOK_SECRET: "x", STRIPE_PRICE_ID: "price_x", STRIPE_LIVE_ENABLED: "true", LEGAL_EFFECTIVE_PRIVACY_B: "2026-11-01" };
   assert.match(releaseProblems(live).join(), /STRIPE_PORTAL_LOGIN_URL/);
   assert.deepEqual(releaseProblems({ ...live, STRIPE_PORTAL_LOGIN_URL: LOGIN }), []);
+  // Larry 11:02 PM: Privacy §B date is required in production only when payments are on (empty or not YYYY-MM-DD)
+  const liveOk = { ...live, STRIPE_PORTAL_LOGIN_URL: LOGIN };
+  const { LEGAL_EFFECTIVE_PRIVACY_B: _b, ...noB } = liveOk;
+  assert.deepEqual(releaseProblems(noB), ["payments are on but LEGAL_EFFECTIVE_PRIVACY_B is empty (production Privacy Policy §B would show \"Effective on launch\")"]);
+  assert.match(releaseProblems({ ...liveOk, LEGAL_EFFECTIVE_PRIVACY_B: "  " }).join(), /LEGAL_EFFECTIVE_PRIVACY_B is empty/);
+  const badB = releaseProblems({ ...liveOk, LEGAL_EFFECTIVE_PRIVACY_B: "Nov 1 2026" });
+  assert.equal(badB.length, 1); assert.match(badB[0], /LEGAL_EFFECTIVE_PRIVACY_B is not a YYYY-MM-DD date/); assert.ok(!badB[0].includes("Nov 1 2026"), "value never printed");
+  const { STRIPE_LIVE_ENABLED: _l, STRIPE_SECRET_KEY: _k, STRIPE_WEBHOOK_SECRET: _w, STRIPE_PRICE_ID: _p, ...payOff } = noB;
+  assert.deepEqual(releaseProblems(payOff), [], "payments off: §B date not required");
+  await assert.rejects(createApp({ env: noB, geoLookup: () => null, log: quiet }), /LEGAL_EFFECTIVE_PRIVACY_B/);
+  const gb = spawnSync(process.execPath, [path.join(ROOT, "scripts/guard.mjs")], { env: { PATH: process.env.PATH, ...liveOk, LEGAL_EFFECTIVE_PRIVACY_B: "Nov 1 2026" }, encoding: "utf8" });
+  assert.equal(gb.status, 1); assert.match(gb.stdout + gb.stderr, /LEGAL_EFFECTIVE_PRIVACY_B/); assert.ok(!(gb.stdout + gb.stderr).includes("Nov 1 2026"));
   // startup refuses
   await assert.rejects(createApp({ env: { APP_ENV: "production" }, geoLookup: () => null, log: quiet }), /REFUSING production/);
   // build/start guard refuses (prebuild + prestart run scripts/guard.mjs); values never printed
@@ -124,7 +136,7 @@ test("release checks: production refuses empty/invalid effective date and paymen
 
 test("consent record stores the Terms and Privacy versions + effective dates (jsonl + both Stripe metadata)", async () => {
   for (const [env, want] of [[{ ...payEnv }, ON_LAUNCH],
-    [{ ...payEnv, APP_ENV: "production", STRIPE_SECRET_KEY: LIVE_KEY, STRIPE_LIVE_ENABLED: "true", LEGAL_EFFECTIVE_TERMS: "2026-11-01", LEGAL_EFFECTIVE_PRIVACY_A: "2026-11-01", STRIPE_PORTAL_LOGIN_URL: LOGIN }, "November 1, 2026"]]) {
+    [{ ...payEnv, APP_ENV: "production", STRIPE_SECRET_KEY: LIVE_KEY, STRIPE_LIVE_ENABLED: "true", LEGAL_EFFECTIVE_TERMS: "2026-11-01", LEGAL_EFFECTIVE_PRIVACY_A: "2026-11-01", LEGAL_EFFECTIVE_PRIVACY_B: "2026-11-01", STRIPE_PORTAL_LOGIN_URL: LOGIN }, "November 1, 2026"]]) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "psw-eff-")); const calls = [];
     const stripe = { webhooks: new Stripe(TEST_KEY).webhooks, checkout: { sessions: { create: async (p) => { calls.push(p); return { id: "cs_test_eff", url: "https://checkout.stripe.test/x" }; } } } };
     const s = await serve(await createApp({ env: { ...env, CONSENT_DIR: dir }, stripe, geoLookup: (ip) => (ip === "192.0.2.77" ? { country: "US", region: "TX" } : null), log: quiet }));

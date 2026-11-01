@@ -144,7 +144,7 @@ First-party and cookieless, with no third-party analytics, trackers or pixels. I
 - The pages show `Effective: {date}` only in production. The date comes from release-time Railway variables, in `YYYY-MM-DD` form: `LEGAL_EFFECTIVE_TERMS`, `LEGAL_EFFECTIVE_PRIVACY_A`, `LEGAL_EFFECTIVE_PRIVACY_B` and `LEGAL_EFFECTIVE_REFUND`. It is rendered as "October 26, 2026" (US Central calendar day).
 - Set each variable on the day that version first goes live in production. If a variable is unset, or the app runs in preview, the page says **"Effective on launch"**. Nothing is hard-coded.
 - Privacy §B and the refund page stay unpublished: §B renders only when payments are on, and there is no refund page yet. They get their own dates on the day checkout opens.
-- Release check: a production build or start refuses to run if `LEGAL_EFFECTIVE_TERMS` or `LEGAL_EFFECTIVE_PRIVACY_A` is empty or not `YYYY-MM-DD` (scripts/guard.mjs + createApp).
+- Release check: a production build or start refuses to run if `LEGAL_EFFECTIVE_TERMS` or `LEGAL_EFFECTIVE_PRIVACY_A` is empty or not `YYYY-MM-DD`, and, when payments are on, if `LEGAL_EFFECTIVE_PRIVACY_B` is (scripts/guard.mjs + createApp; errors name the variable, never its value).
 - Version strings: terms-v2, privacy-a3, privacy-b1. Superseded texts are kept in `legal/archive/`.
 
 ## First data run (runbook)
